@@ -1,0 +1,507 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { db } from '../lib/db'
+
+const routineSchema = z.object({
+  nombre: z.string().min(2).max(80),
+  descripcion: z.string().max(200).optional(),
+  diasSemana: z.string().min(1),
+  color: z.string().min(4).max(20),
+})
+
+type RoutineForm = z.infer<typeof routineSchema>
+
+export function MisRutinasPage() {
+  const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
+  const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
+  const routineExercises = useLiveQuery(() => db.rutinaEjercicios.toArray(), []) ?? []
+  const [selectedRoutineId, setSelectedRoutineId] = useState<string>('')
+  const [editingRoutineId, setEditingRoutineId] = useState<string>('')
+  const [editRoutineNombre, setEditRoutineNombre] = useState('')
+  const [editRoutineDescripcion, setEditRoutineDescripcion] = useState('')
+  const [editRoutineDiasSemana, setEditRoutineDiasSemana] = useState('')
+  const [editRoutineColor, setEditRoutineColor] = useState('#E63946')
+  const [exerciseId, setExerciseId] = useState<string>('')
+  const [series, setSeries] = useState<number>(4)
+  const [repeticiones, setRepeticiones] = useState<string>('8-12')
+  const [descansoSegundos, setDescansoSegundos] = useState<number>(90)
+  const [draggedRoutineExerciseId, setDraggedRoutineExerciseId] = useState<string | null>(null)
+  const [editingRoutineExerciseId, setEditingRoutineExerciseId] = useState<string>('')
+  const [editSeries, setEditSeries] = useState(4)
+  const [editRepeticiones, setEditRepeticiones] = useState('8-12')
+  const [editDescansoSegundos, setEditDescansoSegundos] = useState(90)
+  const form = useForm<RoutineForm>({
+    resolver: zodResolver(routineSchema),
+    defaultValues: {
+      color: '#E63946',
+      diasSemana: 'lunes,miercoles,viernes',
+    },
+  })
+
+  const onCreate = form.handleSubmit(async (values) => {
+    const now = new Date().toISOString()
+    await db.rutinas.add({
+      id: crypto.randomUUID(),
+      nombre: values.nombre,
+      descripcion: values.descripcion,
+      diasSemana: values.diasSemana
+        .split(',')
+        .map((day) => day.trim())
+        .filter(Boolean),
+      activa: true,
+      color: values.color,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    form.reset({ color: '#E63946', diasSemana: 'lunes,miercoles,viernes' })
+  })
+
+  const toggleRoutineStatus = async (routineId: string, activa: boolean) => {
+    await db.rutinas.update(routineId, {
+      activa: !activa,
+      updatedAt: new Date().toISOString(),
+    })
+  }
+
+  const deleteRoutine = async (routineId: string) => {
+    await db.transaction('rw', db.rutinas, db.rutinaEjercicios, async () => {
+      await db.rutinas.delete(routineId)
+      const linkedExercises = await db.rutinaEjercicios.where('rutinaId').equals(routineId).toArray()
+      await Promise.all(linkedExercises.map((item) => db.rutinaEjercicios.delete(item.id)))
+    })
+  }
+
+  const startEditRoutine = (routineId: string) => {
+    const routine = routines.find((item) => item.id === routineId)
+    if (!routine) return
+
+    setEditingRoutineId(routineId)
+    setEditRoutineNombre(routine.nombre)
+    setEditRoutineDescripcion(routine.descripcion ?? '')
+    setEditRoutineDiasSemana(routine.diasSemana.join(','))
+    setEditRoutineColor(routine.color)
+  }
+
+  const cancelEditRoutine = () => {
+    setEditingRoutineId('')
+  }
+
+  const saveRoutineEdits = async () => {
+    if (!editingRoutineId) return
+
+    await db.rutinas.update(editingRoutineId, {
+      nombre: editRoutineNombre.trim() || 'Rutina',
+      descripcion: editRoutineDescripcion.trim() || undefined,
+      diasSemana: editRoutineDiasSemana
+        .split(',')
+        .map((day) => day.trim())
+        .filter(Boolean),
+      color: editRoutineColor,
+      updatedAt: new Date().toISOString(),
+    })
+
+    setEditingRoutineId('')
+  }
+
+  const selectedRoutineExercises = useMemo(() => {
+    if (!selectedRoutineId) return []
+
+    return routineExercises
+      .filter((item) => item.rutinaId === selectedRoutineId)
+      .sort((a, b) => a.orden - b.orden)
+      .map((item) => ({
+        ...item,
+        ejercicio: exercises.find((exercise) => exercise.id === item.ejercicioId),
+      }))
+  }, [exercises, routineExercises, selectedRoutineId])
+
+  const addExerciseToRoutine = async () => {
+    if (!selectedRoutineId || !exerciseId) return
+
+    const existing = routineExercises.find(
+      (item) => item.rutinaId === selectedRoutineId && item.ejercicioId === exerciseId,
+    )
+    if (existing) return
+
+    const currentOrders = routineExercises
+      .filter((item) => item.rutinaId === selectedRoutineId)
+      .map((item) => item.orden)
+    const nextOrder = (currentOrders.length ? Math.max(...currentOrders) : 0) + 1
+
+    await db.rutinaEjercicios.add({
+      id: crypto.randomUUID(),
+      rutinaId: selectedRoutineId,
+      ejercicioId: exerciseId,
+      orden: nextOrder,
+      series: Math.max(1, series),
+      repeticiones: repeticiones || '8-12',
+      descansoSegundos: Math.max(15, descansoSegundos),
+    })
+  }
+
+  const removeRoutineExercise = async (routineExerciseId: string) => {
+    await db.rutinaEjercicios.delete(routineExerciseId)
+  }
+
+  const moveRoutineExercise = async (routineExerciseId: string, direction: 'up' | 'down') => {
+    const sorted = selectedRoutineExercises
+    const currentIndex = sorted.findIndex((item) => item.id === routineExerciseId)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= sorted.length) return
+
+    const current = sorted[currentIndex]
+    const target = sorted[targetIndex]
+
+    await db.transaction('rw', db.rutinaEjercicios, async () => {
+      await db.rutinaEjercicios.update(current.id, { orden: target.orden })
+      await db.rutinaEjercicios.update(target.id, { orden: current.orden })
+    })
+  }
+
+  const reorderRoutineExercises = async (sourceId: string, targetId: string) => {
+    if (!selectedRoutineId || sourceId === targetId) return
+
+    const ordered = selectedRoutineExercises.slice()
+    const sourceIndex = ordered.findIndex((item) => item.id === sourceId)
+    const targetIndex = ordered.findIndex((item) => item.id === targetId)
+    if (sourceIndex === -1 || targetIndex === -1) return
+
+    const [moved] = ordered.splice(sourceIndex, 1)
+    ordered.splice(targetIndex, 0, moved)
+
+    await db.transaction('rw', db.rutinaEjercicios, async () => {
+      await Promise.all(
+        ordered.map((item, index) =>
+          db.rutinaEjercicios.update(item.id, {
+            orden: index + 1,
+          }),
+        ),
+      )
+    })
+  }
+
+  const startEditRoutineExercise = (routineExerciseId: string) => {
+    const routineExercise = selectedRoutineExercises.find((item) => item.id === routineExerciseId)
+    if (!routineExercise) return
+
+    setEditingRoutineExerciseId(routineExerciseId)
+    setEditSeries(routineExercise.series)
+    setEditRepeticiones(routineExercise.repeticiones)
+    setEditDescansoSegundos(routineExercise.descansoSegundos)
+  }
+
+  const saveRoutineExerciseEdits = async () => {
+    if (!editingRoutineExerciseId) return
+
+    await db.rutinaEjercicios.update(editingRoutineExerciseId, {
+      series: Math.max(1, editSeries),
+      repeticiones: editRepeticiones || '8-12',
+      descansoSegundos: Math.max(15, editDescansoSegundos),
+    })
+
+    setEditingRoutineExerciseId('')
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Mis rutinas</h1>
+
+      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+        <h2 className="mb-3 text-lg font-semibold">Nueva rutina</h2>
+        <form onSubmit={onCreate} className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <input
+            {...form.register('nombre')}
+            placeholder="Nombre de rutina"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          <input
+            {...form.register('diasSemana')}
+            placeholder="lunes,miercoles,viernes"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          <input
+            {...form.register('descripcion')}
+            placeholder="Descripción"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          />
+          <input
+            type="color"
+            {...form.register('color')}
+            className="h-10 w-full rounded-lg border border-slate-300"
+          />
+          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white md:col-span-2">
+            Crear rutina
+          </button>
+        </form>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {routines.map((routine) => (
+          <article key={routine.id} className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="font-semibold">{routine.nombre}</h3>
+              <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
+            </div>
+
+            {editingRoutineId === routine.id ? (
+              <div className="space-y-2">
+                <input
+                  value={editRoutineNombre}
+                  onChange={(event) => setEditRoutineNombre(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                  placeholder="Nombre"
+                />
+                <input
+                  value={editRoutineDescripcion}
+                  onChange={(event) => setEditRoutineDescripcion(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                  placeholder="Descripción"
+                />
+                <input
+                  value={editRoutineDiasSemana}
+                  onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                  placeholder="lunes,miercoles,viernes"
+                />
+                <input
+                  type="color"
+                  value={editRoutineColor}
+                  onChange={(event) => setEditRoutineColor(event.target.value)}
+                  className="h-8 w-full rounded-lg border border-slate-300"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void saveRoutineEdits()}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditRoutine}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || 'Sin descripción'}</p>
+                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
+              </>
+            )}
+
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedRoutineId(routine.id)}
+                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
+              >
+                Gestionar ejercicios
+              </button>
+              <button
+                type="button"
+                onClick={() => startEditRoutine(routine.id)}
+                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
+                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
+              >
+                {routine.activa ? 'Desactivar' : 'Activar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void deleteRoutine(routine.id)}
+                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-red-600"
+              >
+                Borrar
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {selectedRoutineId && (
+        <section className="space-y-4 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              Constructor de rutina: {routines.find((routine) => routine.id === selectedRoutineId)?.nombre}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setSelectedRoutineId('')}
+              className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+            <select
+              value={exerciseId}
+              onChange={(event) => setExerciseId(event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 md:col-span-2"
+            >
+              <option value="">Selecciona ejercicio</option>
+              {exercises.map((exercise) => (
+                <option key={exercise.id} value={exercise.id}>
+                  {exercise.nombre}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              value={series}
+              onChange={(event) => setSeries(Number(event.target.value) || 1)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Series"
+            />
+
+            <input
+              value={repeticiones}
+              onChange={(event) => setRepeticiones(event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Reps"
+            />
+
+            <input
+              type="number"
+              value={descansoSegundos}
+              onChange={(event) => setDescansoSegundos(Number(event.target.value) || 15)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Descanso (s)"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void addExerciseToRoutine()}
+            className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
+          >
+            Añadir ejercicio
+          </button>
+
+          <ul className="space-y-2">
+            {selectedRoutineExercises.map((item, index) => (
+              <li
+                key={item.id}
+                draggable
+                onDragStart={() => setDraggedRoutineExerciseId(item.id)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => {
+                  if (draggedRoutineExerciseId) {
+                    void reorderRoutineExercises(draggedRoutineExerciseId, item.id)
+                  }
+                  setDraggedRoutineExerciseId(null)
+                }}
+                onDragEnd={() => setDraggedRoutineExerciseId(null)}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+              >
+                <div>
+                  <p className="font-medium">
+                    {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
+                  </p>
+                  {editingRoutineExerciseId === item.id ? (
+                    <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
+                      <input
+                        type="number"
+                        value={editSeries}
+                        onChange={(event) => setEditSeries(Number(event.target.value) || 1)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                        placeholder="Series"
+                      />
+                      <input
+                        value={editRepeticiones}
+                        onChange={(event) => setEditRepeticiones(event.target.value)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                        placeholder="Reps"
+                      />
+                      <input
+                        type="number"
+                        value={editDescansoSegundos}
+                        onChange={(event) => setEditDescansoSegundos(Number(event.target.value) || 15)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                        placeholder="Descanso"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {editingRoutineExerciseId === item.id ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void saveRoutineExerciseEdits()}
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRoutineExerciseId('')}
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEditRoutineExercise(item.id)}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void moveRoutineExercise(item.id, 'up')}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void moveRoutineExercise(item.id, 'down')}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removeRoutineExercise(item.id)}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-red-600"
+                  >
+                    Borrar
+                  </button>
+                </div>
+              </li>
+            ))}
+            {selectedRoutineExercises.length === 0 && (
+              <li className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:text-slate-300">
+                Esta rutina todavía no tiene ejercicios asignados.
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
+    </div>
+  )
+}

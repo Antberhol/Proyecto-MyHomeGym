@@ -1,0 +1,9 @@
+- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+- [x] Clarify Project Requirements (React + TypeScript + Vite for offline-first gym app).
+- [x] Scaffold the Project.
+- [x] Customize the Project (base dependencies and Tailwind initialized).
+- [x] Install Required Extensions (no extensions required from setup info).
+- [x] Compile the Project (build passes).
+- [x] Create and Run Task.
+- [x] Launch the Project.
+- [x] Ensure Documentation is Complete (README exists).
