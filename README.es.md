@@ -104,8 +104,8 @@ Este enfoque también fortalece privacidad y soberanía de datos: el usuario con
 ### Setup para developers
 
 ```bash
-git clone https://github.com/<tu-usuario>/proyecto-hevy.git
-cd proyecto-hevy
+git clone https://github.com/<tu-usuario>/Proyecto-MyHomeGym.git
+cd Proyecto-MyHomeGym
 npm install
 npm run dev
 ```

@@ -51,7 +51,7 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
 }
 
 export function downloadBackup(payload: BackupPayload): void {
-    const fileName = `hevy-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
+    const fileName = `myhomegym-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')

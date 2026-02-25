@@ -6,7 +6,7 @@ export function registerServiceWorker(): void {
     registerSW({
         immediate: true,
         onOfflineReady() {
-            console.info('Proyecto Hevy listo para uso offline.')
+            console.info('MyHomeGym listo para uso offline.')
         },
         onNeedRefresh() {
             console.info('Nueva versión disponible. Recarga para actualizar.')

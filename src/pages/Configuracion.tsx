@@ -36,7 +36,7 @@ export function ConfiguracionPage() {
 
     const handleTestNotification = () => {
         try {
-            sendLocalNotification('Proyecto Hevy', 'Recordatorio: registra tu entrenamiento de hoy 💪')
+            sendLocalNotification('MyHomeGym', 'Recordatorio: registra tu entrenamiento de hoy 💪')
             setStatusMessage('Notificación de prueba enviada.')
         } catch (error) {
             setStatusMessage(error instanceof Error ? error.message : 'No se pudo enviar notificación.')

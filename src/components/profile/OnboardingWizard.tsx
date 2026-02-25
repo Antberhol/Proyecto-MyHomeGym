@@ -76,7 +76,7 @@ export function OnboardingWizard() {
     <div className="flex min-h-screen items-center justify-center bg-gym-bgLight p-4 dark:bg-gym-bgDark">
       <form onSubmit={onSubmit} className="w-full max-w-xl">
         <Card className="space-y-4">
-          <h1 className="text-2xl font-bold">Bienvenido a Proyecto Hevy</h1>
+          <h1 className="text-2xl font-bold">Bienvenido a proyecto MyHomeGym</h1>
           <p className="text-sm text-slate-500 dark:text-slate-300">Configuración inicial offline</p>
 
           {step === 1 && (

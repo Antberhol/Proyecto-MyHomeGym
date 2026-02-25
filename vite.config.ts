@@ -23,8 +23,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
-        name: 'Proyecto Hevy',
-        short_name: 'Hevy',
+        name: 'MyHomeGym',
+        short_name: 'MyHomeGym',
         description: 'Gestión de entrenamientos de gimnasio offline-first',
         theme_color: '#E63946',
         background_color: '#F8F9FA',

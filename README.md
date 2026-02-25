@@ -112,8 +112,8 @@ This approach also strengthens privacy and data sovereignty: users keep control 
 ### Developer setup
 
 ```bash
-git clone https://github.com/<your-username>/proyecto-hevy.git
-cd proyecto-hevy
+git clone https://github.com/<your-username>/Proyecto-MyHomeGym.git
+cd Proyecto-MyHomeGym
 npm install
 npm run dev
 ```

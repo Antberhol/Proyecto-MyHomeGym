@@ -42,7 +42,7 @@ export async function exportAllDataJson(): Promise<void> {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `hevy-backup-${new Date().toISOString().slice(0, 10)}.json`
+    link.download = `myhomegym-backup-${new Date().toISOString().slice(0, 10)}.json`
     link.click()
     URL.revokeObjectURL(url)
 }
@@ -159,7 +159,7 @@ export async function exportTrainingsCsv(): Promise<void> {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `hevy-entrenamientos-${new Date().toISOString().slice(0, 10)}.csv`
+    link.download = `myhomegym-trainings-${new Date().toISOString().slice(0, 10)}.csv`
     link.click()
     URL.revokeObjectURL(url)
 }
@@ -424,12 +424,12 @@ export async function exportSummaryPdf(): Promise<void> {
         doc.setFontSize(8)
         doc.setFont('helvetica', 'normal')
         doc.text(
-            `Proyecto Hevy - Página ${i} de ${pageCount}`,
+            `MyHomeGym - Página ${i} de ${pageCount}`,
             pageWidth / 2,
             doc.internal.pageSize.getHeight() - 10,
             { align: 'center' },
         )
     }
 
-    doc.save(`hevy-resumen-${new Date().toISOString().slice(0, 10)}.pdf`)
+    doc.save(`myhomegym-summary-${new Date().toISOString().slice(0, 10)}.pdf`)
 }
