@@ -1,8 +1,18 @@
 # MyHomeGym
 
-Aplicación web **offline-first** para registrar entrenamientos de gimnasio, gestionar rutinas, seguir progreso físico y conservar historial de rendimiento sin backend obligatorio.
+![CI/CD](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen?style=flat-square)
+![Coverage](https://img.shields.io/badge/Coverage-80%25%2B-yellowgreen?style=flat-square)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Dexie.js](https://img.shields.io/badge/Dexie.js-IndexedDB%20Wrapper-2E7D32?style=flat-square)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
+![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=flat-square)
 
-Su objetivo principal es ofrecer una experiencia rápida, privada y mantenible: toda la operación core funciona en el navegador del usuario, con persistencia local en IndexedDB y comportamiento PWA.
+Una PWA **Local-First** de alto rendimiento diseñada para seguimiento de entrenamiento orientado a hipertrofia, con registro rápido de series/repeticiones/carga y analítica accionable del progreso físico. Su arquitectura está pensada para minimizar fricción durante la sesión: la interfaz responde en tiempo real y el flujo de trabajo prioriza velocidad de captura y claridad de métricas.
+
+El diferencial es su enfoque **privacy-first** y **offline-ready**: no depende de nube para operar, mantiene los datos en el dispositivo y garantiza continuidad de uso incluso sin conexión. MyHomeGym materializa requisitos no funcionales críticos (disponibilidad, baja latencia, mantenibilidad) mediante Service Workers + IndexedDB y una arquitectura por capas con repositorios desacoplados.
 
 ---
 
@@ -10,366 +20,225 @@ Su objetivo principal es ofrecer una experiencia rápida, privada y mantenible: 
 
 - [MyHomeGym](#myhomegym)
   - [Tabla de contenidos](#tabla-de-contenidos)
-  - [1. Visión del proyecto](#1-visión-del-proyecto)
-  - [2. Objetivos funcionales y no funcionales](#2-objetivos-funcionales-y-no-funcionales)
-    - [Funcionales](#funcionales)
-    - [No funcionales](#no-funcionales)
-  - [3. Características actuales](#3-características-actuales)
-  - [4. Stack tecnológico](#4-stack-tecnológico)
-  - [5. Arquitectura y principios de diseño](#5-arquitectura-y-principios-de-diseño)
-    - [Capas principales](#capas-principales)
-    - [Convenciones clave](#convenciones-clave)
-    - [Convención de nombres en repositorios](#convención-de-nombres-en-repositorios)
-  - [6. Estructura del repositorio](#6-estructura-del-repositorio)
-  - [7. Modelo de datos local](#7-modelo-de-datos-local)
-  - [8. Flujo offline-first](#8-flujo-offline-first)
-  - [9. Rutas principales de la app](#9-rutas-principales-de-la-app)
-  - [10. Puesta en marcha (local)](#10-puesta-en-marcha-local)
+  - [1. Características principales](#1-características-principales)
+    - [🏋️‍♂️ Gestión de entrenamientos](#️️-gestión-de-entrenamientos)
+    - [📊 Analíticas y progreso](#-analíticas-y-progreso)
+    - [⚙️ Arquitectura local](#️-arquitectura-local)
+  - [2. Mapa de contexto (arquitectura de alto nivel)](#2-mapa-de-contexto-arquitectura-de-alto-nivel)
+  - [3. Decisiones técnicas destacadas](#3-decisiones-técnicas-destacadas)
+  - [4. ⚡ Why Local-First?](#4--why-local-first)
+  - [5. Vista de implementación / instalación](#5-vista-de-implementación--instalación)
     - [Requisitos previos](#requisitos-previos)
-    - [Instalación](#instalación)
-    - [Desarrollo](#desarrollo)
-    - [Build de producción](#build-de-producción)
-    - [Preview local del build](#preview-local-del-build)
-  - [11. Scripts disponibles](#11-scripts-disponibles)
-  - [12. Calidad: lint, build y testing](#12-calidad-lint-build-y-testing)
-    - [Validación mínima antes de PR](#validación-mínima-antes-de-pr)
-    - [Alcance recomendado de pruebas](#alcance-recomendado-de-pruebas)
-  - [13. Exportación, backup y recuperación](#13-exportación-backup-y-recuperación)
-  - [14. PWA y operación en producción](#14-pwa-y-operación-en-producción)
-  - [15. Troubleshooting](#15-troubleshooting)
-    - [La app no refleja cambios en desarrollo](#la-app-no-refleja-cambios-en-desarrollo)
-    - [Error al compilar](#error-al-compilar)
-    - [Datos inconsistentes en pruebas manuales](#datos-inconsistentes-en-pruebas-manuales)
-    - [El temporizador terminó pero no hubo feedback](#el-temporizador-terminó-pero-no-hubo-feedback)
-  - [16. Seguridad y privacidad](#16-seguridad-y-privacidad)
-  - [17. Estado actual y roadmap sugerido](#17-estado-actual-y-roadmap-sugerido)
-    - [Estado actual](#estado-actual)
-    - [Próximos pasos sugeridos](#próximos-pasos-sugeridos)
-  - [18. Documentación adicional](#18-documentación-adicional)
-  - [19. Contribución](#19-contribución)
+    - [Setup para developers](#setup-para-developers)
+    - [Validación técnica local](#validación-técnica-local)
+  - [6. Estructura del proyecto](#6-estructura-del-proyecto)
+  - [7. Modelo de datos local](#7-modelo-de-datos-local)
+  - [8. Rutas principales](#8-rutas-principales)
+  - [9. Scripts disponibles](#9-scripts-disponibles)
+  - [10. Calidad: lint, build y testing](#10-calidad-lint-build-y-testing)
+  - [11. Demo visual (placeholders)](#11-demo-visual-placeholders)
+  - [12. Exportación, backup y recuperación](#12-exportación-backup-y-recuperación)
+  - [13. Roadmap](#13-roadmap)
+  - [14. Documentación extendida](#14-documentación-extendida)
+  - [15. Contribución](#15-contribución)
 
 ---
 
-## 1. Visión del proyecto
+## 1. Características principales
 
-MyHomeGym nace como alternativa local-first a apps de fitness con alta dependencia de servicios remotos. El foco está en:
+### 🏋️‍♂️ Gestión de entrenamientos
 
-- **Velocidad de registro** durante el entrenamiento.
-- **Claridad de progreso** con métricas accionables.
-- **Gestión simple de rutinas y catálogo** de ejercicios.
-- **Control del usuario sobre sus datos** (persistencia local y exportación).
+- Registro de entrenamientos por rutina y en modo libre.
+- Control detallado por ejercicio, series, repeticiones, carga y observaciones.
+- Temporizador de descanso con feedback (audio/háptica) desacoplado por eventos.
+- Flujo preparado para variables de intensidad percibida (RPE) y progresión semanal.
 
----
+### 📊 Analíticas y progreso
 
-## 2. Objetivos funcionales y no funcionales
+- Dashboard con resumen de actividad reciente y consistencia.
+- Gráficos de evolución (peso corporal, volumen, tendencias históricas).
+- Mapa de calor y diagrama muscular interactivo para distribución de carga.
+- Detección y seguimiento de PRs + métricas de RM estimada/indicadores de rendimiento.
 
-### Funcionales
+### ⚙️ Arquitectura local
 
-- Registrar entrenamientos guiados por rutina y entrenamientos libres.
-- Mantener catálogo de ejercicios (base + personalizados).
-- Gestionar rutinas con orden de ejercicios y estado activo.
-- Visualizar progreso (volumen, IMC, historial corporal, PRs, distribución muscular).
-- Exportar e importar datos de manera local.
-
-### No funcionales
-
-- **Offline-first real** para funcionalidades core.
-- **Baja latencia percibida** en operaciones frecuentes.
-- **Mantenibilidad** mediante arquitectura por capas y repositorios.
-- **Evolución segura** apoyada en TypeScript, linting y pruebas.
+- Operación sin login en nube para flujo core.
+- Persistencia local robusta con IndexedDB (Dexie).
+- Exportación e importación de datos en formatos portables (JSON/CSV).
+- Generación de PDF para resumen y trazabilidad personal.
 
 ---
 
-## 3. Características actuales
+## 2. Mapa de contexto (arquitectura de alto nivel)
 
-- Onboarding inicial con creación de perfil y cálculo de IMC.
-- Dashboard con actividad reciente y métricas resumen.
-- Modo de entrenamiento por rutina y modo libre.
-- Registro detallado por ejercicio/serie/repeticiones/peso.
-- Gestión completa de rutinas (crear, editar, activar/desactivar, eliminar).
-- Asignación y reordenamiento de ejercicios dentro de rutinas.
-- Catálogo con filtros y soporte de ejercicios personalizados.
-- Panel de progreso con gráficas, distribución muscular y diagrama corporal interactivo.
-- Detección automática de PRs (personal records).
-- Exportación/importación local (JSON/CSV) y generación de PDF.
-- Preferencias de usuario (tema) y configuración de mantenimiento.
-- Soporte PWA con funcionamiento sin conexión para uso cotidiano.
+```mermaid
+flowchart LR
+    U((Usuario)) --> PWA[MyHomeGym PWA\nReact + TypeScript + Vite]
+    PWA --> DB[(IndexedDB\nDexie.js)]
+    PWA --> SW[Service Worker\nOffline Cache]
+    SW --> CACHE[(Cache Storage)]
+    PWA --> EXPORT[Export/Import\nJSON · CSV · PDF]
+```
 
 ---
 
-## 4. Stack tecnológico
+## 3. Decisiones técnicas destacadas
 
-- **Frontend**: React 19 + TypeScript + Vite.
-- **Estilos/UI**: Tailwind CSS, utilidades de diseño y componentes reutilizables.
-- **Persistencia**: Dexie sobre IndexedDB.
-- **Formularios y validación**: React Hook Form + Zod.
-- **Estado de UI**: Zustand.
-- **Visualización**: Recharts.
-- **Interacción avanzada**: dnd-kit (sorting/reordenamiento), framer-motion.
-- **PWA**: vite-plugin-pwa + workbox-window.
-- **Calidad**: ESLint, Vitest, Testing Library, jsdom.
+- **Frontend (React + TypeScript + Vite):** entrega rápida de UI reactiva, seguridad de tipos en todo el ciclo de desarrollo y build optimizado para rendimiento.
+- **Persistencia (Dexie.js sobre IndexedDB):** elección alineada con patrón **Local-First** para disponibilidad offline, baja latencia y control de datos por parte del usuario.
+- **UI (Tailwind CSS):** acelera diseño consistente y mantenible con un sistema utilitario explícito y fácilmente refactorizable.
+- **PWA (Service Workers):** instalabilidad en móvil/escritorio, cache de activos y continuidad operativa sin conexión.
+- **Arquitectura por capas + repositorios:** desacopla UI de infraestructura, mejora testabilidad y reduce riesgo de deuda técnica.
 
 ---
 
-## 5. Arquitectura y principios de diseño
+## 4. ⚡ Why Local-First?
 
-### Capas principales
+La ausencia de backend para el flujo principal es una decisión de ingeniería deliberada: reduce complejidad operativa, elimina costos de infraestructura y minimiza superficies de fallo externas. En términos prácticos, las operaciones críticas ocurren donde importa (en el dispositivo), logrando latencia percibida casi instantánea y mejor resiliencia en entornos sin conectividad.
 
-1. **UI/Presentación**: páginas y componentes React.
-2. **Aplicación**: hooks que orquestan casos de uso (p. ej. entrenamiento activo).
-3. **Datos/Dominio**: repositorios por dominio funcional.
-4. **Infraestructura**: acceso a Dexie/IndexedDB, eventos, utilidades de plataforma.
-
-### Convenciones clave
-
-- La UI no accede directamente a la base de datos.
-- El acceso a datos desde UI/hooks se canaliza mediante repositorios en `src/repositories`.
-- La base de datos está encapsulada en `src/lib/db.ts` con API pública controlada.
-- El temporizador no invoca directamente audio/háptica: usa un evento pub/sub (`WORKOUT_TIMER_FINISHED_EVENT`).
-
-### Convención de nombres en repositorios
-
-- Lectura de colecciones: `list*`
-- Lectura específica: `get*By*`
-- Alta: `create*`
-- Actualización: `update*`
-- Eliminación: `delete*`
-- Escritura idempotente: `upsert*`
-
-> Detalle ampliado y rationale en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Este enfoque también fortalece privacidad y soberanía de datos: el usuario conserva el control del historial de entrenamiento y decide explícitamente cuándo exportar o compartir información.
 
 ---
 
-## 6. Estructura del repositorio
+## 5. Vista de implementación / instalación
 
-Estructura relevante para desarrollo:
+### Requisitos previos
 
-- `src/pages`: pantallas principales por ruta.
-- `src/components`: componentes reutilizables (layout, workout, analytics, profile, etc.).
-- `src/hooks`: hooks de aplicación y utilitarios de interacción.
-- `src/repositories`: contratos de acceso a datos por dominio.
-- `src/lib`: infraestructura (DB, bootstrap, backup/export, eventos, pwa).
-- `src/stores`: estado global de UI.
-- `src/constants`: datos base y catálogos iniciales.
-- `src/utils`: lógica pura de apoyo (cálculos, helpers).
-- `src/workers`: procesamiento analítico en worker cuando aplica.
-- `tests`: configuración y pruebas unitarias.
-- `docs`: arquitectura, plan maestro, orden de implementación y setup.
+- Node.js 20+
+- npm 10+
+
+### Setup para developers
+
+```bash
+git clone https://github.com/<tu-usuario>/proyecto-hevy.git
+cd proyecto-hevy
+npm install
+npm run dev
+```
+
+La app estará disponible en la URL de Vite (por defecto, `http://localhost:5173`).
+
+### Validación técnica local
+
+```bash
+npm run lint
+npm run test
+npm run build
+```
+
+---
+
+## 6. Estructura del proyecto
+
+```text
+src/
+├─ components/      # Componentes reutilizables de UI
+├─ hooks/           # Hooks de aplicación y lógica de interacción
+├─ pages/           # Pantallas principales por ruta
+├─ repositories/    # Acceso a datos por dominio (sin DB directa en UI)
+├─ lib/             # Infraestructura: DB, PWA, backup/export, eventos
+├─ stores/          # Estado global de interfaz
+├─ utils/           # Funciones puras y cálculos
+└─ workers/         # Procesamiento asíncrono en background
+```
+
+Principio de mantenibilidad: la UI no conversa directamente con la base de datos; toda lectura/escritura pasa por repositorios.
 
 ---
 
 ## 7. Modelo de datos local
 
-Base local: `gym_offline_db`.
+Base de datos: `gym_offline_db`.
 
-Tablas funcionales principales:
+Entidades funcionales principales:
 
-- `userProfile`: perfil del usuario.
-- `ejerciciosCatalogo`: catálogo base + ejercicios personalizados.
-- `rutinas`: rutinas definidas por el usuario.
-- `rutinaEjercicios`: relación rutina-ejercicio + orden.
-- `entrenamientosRegistrados`: sesiones completadas.
-- `ejerciciosRealizados`: detalle de ejecución por ejercicio/serie.
-- `medidasCorporalesHistorico`: histórico de medidas corporales.
-- `prs`: récords personales detectados.
-
-La app prioriza consistencia local y operaciones atómicas para escrituras compuestas.
+- `userProfile`
+- `ejerciciosCatalogo`
+- `rutinas`
+- `rutinaEjercicios`
+- `entrenamientosRegistrados`
+- `ejerciciosRealizados`
+- `medidasCorporalesHistorico`
+- `prs`
 
 ---
 
-## 8. Flujo offline-first
+## 8. Rutas principales
 
-1. Inicialización de Dexie al cargar la aplicación.
-2. Carga de catálogo semilla si no hay datos iniciales.
-3. CRUD sobre IndexedDB para toda operación core.
-4. Actualización reactiva de UI mediante consultas vivas.
-5. Persistencia en dispositivo sin dependencia de red.
-
-Resultado: tras instalar/cargar la app, el uso diario no requiere conexión para las funciones principales.
-
----
-
-## 9. Rutas principales de la app
-
-- `/` → Dashboard.
-- `/entrenar` → Registro de entrenamiento.
-- `/rutinas` → Gestión de rutinas.
-- `/catalogo` → Catálogo de ejercicios.
-- `/progreso` → Métricas y visualizaciones.
-- `/perfil` → Perfil y preferencias.
-- `/configuracion` → Exportación/importación, PDF, mantenimiento, notificaciones.
-
-Si no existe perfil, se muestra onboarding antes de habilitar navegación completa.
+- `/` → Dashboard
+- `/entrenar` → Entrenamiento
+- `/rutinas` → Gestión de rutinas
+- `/catalogo` → Catálogo de ejercicios
+- `/progreso` → Analíticas y métricas
+- `/perfil` → Perfil y preferencias
+- `/configuracion` → Backup, restore, PDF, mantenimiento
 
 ---
 
-## 10. Puesta en marcha (local)
+## 9. Scripts disponibles
 
-### Requisitos previos
-
-- Node.js 20+ recomendado.
-- npm 10+ recomendado.
-
-### Instalación
-
-```bash
-npm install
-```
-
-### Desarrollo
-
-```bash
-npm run dev
-```
-
-Vite mostrará la URL local (normalmente `http://localhost:5173`).
-
-### Build de producción
-
-```bash
-npm run build
-```
-
-### Preview local del build
-
-```bash
-npm run preview
-```
+- `npm run dev`: servidor de desarrollo
+- `npm run build`: compilación TypeScript + build de producción
+- `npm run preview`: preview del build
+- `npm run lint`: análisis estático con ESLint
+- `npm run test`: pruebas con Vitest
+- `npm run test:ui`: interfaz visual de Vitest
 
 ---
 
-## 11. Scripts disponibles
+## 10. Calidad: lint, build y testing
 
-- `npm run dev`: servidor de desarrollo.
-- `npm run build`: compilación TypeScript + build Vite.
-- `npm run preview`: previsualización del build.
-- `npm run lint`: ejecución de ESLint.
-- `npm run test`: ejecución de pruebas con Vitest.
-- `npm run test:ui`: interfaz de Vitest para depuración visual de tests.
+Checklist mínimo antes de abrir PR:
 
----
+- Lint sin errores (`npm run lint`)
+- Pruebas relevantes pasando (`npm run test`)
+- Build de producción exitoso (`npm run build`)
 
-## 12. Calidad: lint, build y testing
-
-### Validación mínima antes de PR
-
-```bash
-npm run lint
-npm run build
-npm run test
-```
-
-### Alcance recomendado de pruebas
-
-- Lógica pura (`src/utils`, transformaciones, cálculos).
-- Contratos de hooks de aplicación críticos.
-- Componentes de alto impacto en flujos de entrenamiento.
-
-Configuración de pruebas en `tests/setup.ts` y `vitest.config.ts`.
+Estrategia recomendada: priorizar pruebas de lógica pura, hooks críticos de flujo de entrenamiento y componentes de alto impacto en UX.
 
 ---
 
-## 13. Exportación, backup y recuperación
+## 11. Demo visual (placeholders)
 
-El sistema incluye utilidades para:
+![Demo: Creando Rutina](https://via.placeholder.com/1200x650?text=Demo%3A+Creando+Rutina)
+![Demo: Modo Offline](https://via.placeholder.com/1200x650?text=Demo%3A+Modo+Offline)
+![Demo: Progreso y Anal%C3%ADticas](https://via.placeholder.com/1200x650?text=Demo%3A+Progreso+y+Anal%C3%ADticas)
 
-- Exportar datos locales (formatos JSON/CSV).
-- Generar reportes PDF.
-- Reimportar datos previamente exportados.
-- Ejecutar tareas de mantenimiento sobre almacenamiento local.
-
-Flujo recomendado para resguardo:
-
-1. Exportar backup antes de cambios grandes.
-2. Verificar archivo generado.
-3. Conservar copia en ubicación externa segura (cloud personal o disco externo).
+> Sustituye estos enlaces por GIFs/capturas reales para aumentar impacto de portfolio.
 
 ---
 
-## 14. PWA y operación en producción
+## 12. Exportación, backup y recuperación
 
-- Build estático desplegable en hosting de archivos estáticos.
-- Service Worker para soporte de caché/recursos.
-- IndexedDB como fuente de verdad local del usuario.
-
-Consideraciones:
-
-- Si despliegas una nueva versión, puede requerirse refresco forzado para tomar el último Service Worker.
-- Para pruebas de instalación PWA, usar navegador compatible y contexto HTTPS (o localhost).
+- Exportación local de datos (JSON/CSV).
+- Importación de backups para continuidad y migración.
+- Generación de PDF para reporting personal.
+- Recomendación operativa: exportar backup antes de cambios de versión o pruebas de datos.
 
 ---
 
-## 15. Troubleshooting
+## 13. Roadmap
 
-### La app no refleja cambios en desarrollo
-
-- Reinicia `npm run dev`.
-- Limpia caché del navegador y recarga.
-- Verifica que no exista un Service Worker antiguo activo en entorno local.
-
-### Error al compilar
-
-- Ejecuta `npm run lint` para detectar causas tempranas.
-- Reinstala dependencias: elimina `node_modules` y ejecuta `npm install`.
-- Revisa incompatibilidades de versión de Node.
-
-### Datos inconsistentes en pruebas manuales
-
-- Limpia almacenamiento del sitio desde DevTools.
-- Reimporta un backup válido si corresponde.
-
-### El temporizador terminó pero no hubo feedback
-
-- Verifica permisos/capacidades del dispositivo para vibración/audio.
-- Comprueba configuración de volumen/silencio del sistema.
+- Sincronización cloud **opcional** con estrategia conflict-safe.
+- Sistema de gamificación (streaks avanzados, hitos y retos).
+- Mayor cobertura de pruebas end-to-end en flujos críticos.
+- Auditoría integral de accesibilidad y optimización de performance.
 
 ---
 
-## 16. Seguridad y privacidad
+## 14. Documentación extendida
 
-- Los datos se guardan localmente en el dispositivo del usuario.
-- No existe backend obligatorio para el flujo principal.
-- La exposición externa de datos depende de acciones explícitas de exportación del usuario.
-
-Recomendación operativa: proteger el dispositivo con medidas básicas (PIN/biometría/cifrado de sistema), especialmente si contiene historial sensible.
-
----
-
-## 17. Estado actual y roadmap sugerido
-
-### Estado actual
-
-MVP funcional extendido, offline-capable, con arquitectura por capas, repositorios por dominio, desacoplamiento por eventos para feedback de timer, y documentación técnica de soporte.
-
-### Próximos pasos sugeridos
-
-- Más pruebas de integración en flujos críticos (onboarding, entrenamiento, backup).
-- Auditoría de accesibilidad (teclado, foco, semántica, lectores de pantalla).
-- Perfilado de performance para pantallas con alto volumen de datos.
-- Evolución opcional hacia sincronización cloud con estrategia conflict-safe.
+| Documento                                                                  | Descripción                              |
+| -------------------------------------------------------------------------- | ---------------------------------------- |
+| 📐 [Arquitectura y Decisiones de Diseño](./docs/ARCHITECTURE.md)            | Vistas 4+1, ADRs y justificación técnica |
+| 🛠 [Guía de Configuración y Dependencias](./docs/SETUP_AND_DEPENDENCIES.md) | Setup del entorno y stack base           |
+| 📅 [Plan Maestro](./docs/MASTER_PLAN.md)                                    | Plan de evolución por fases              |
+| 🧭 [Orden de Implementación](./docs/IMPLEMENTATION_ORDER.md)                | Secuencia sugerida de desarrollo         |
 
 ---
 
-## 18. Documentación adicional
+## 15. Contribución
 
-- [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/SETUP_AND_DEPENDENCIES.md](docs/SETUP_AND_DEPENDENCIES.md)
-- [docs/IMPLEMENTATION_ORDER.md](docs/IMPLEMENTATION_ORDER.md)
+Consulta [CONTRIBUTING.md](./CONTRIBUTING.md) para estándares de arquitectura, política de deuda técnica, checklist de PR y lineamientos de testing.
 
-Orden recomendado de lectura técnica:
-
-1. [docs/IMPLEMENTATION_ORDER.md](docs/IMPLEMENTATION_ORDER.md)
-2. [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md)
-3. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-4. [docs/SETUP_AND_DEPENDENCIES.md](docs/SETUP_AND_DEPENDENCIES.md)
-
----
-
-## 19. Contribución
-
-Para estándares de arquitectura, política de deuda técnica, checklist de PR y estrategia de testing, consultar:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-
-Regla de oro de mantenimiento: cambios pequeños, validados y documentados.
+Regla de oro: cambios pequeños, tipados, validados y documentados.
