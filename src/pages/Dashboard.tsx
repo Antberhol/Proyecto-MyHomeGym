@@ -3,14 +3,14 @@ import { StreakBadge } from '../components/StreakBadge'
 import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
 import { useStreaks } from '../hooks/useStreaks'
-import { useWeeklyMuscleVolumes } from '../hooks/useWeeklyMuscleVolumes'
+import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
 import { db } from '../lib/db'
 
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
 
 export function DashboardPage() {
   const streaks = useStreaks()
-  const weeklyMuscleVolumes = useWeeklyMuscleVolumes()
+  const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
   const trainings = useLiveQuery(() => db.entrenamientosRegistrados.toArray(), []) ?? []
   const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
   const prs = useLiveQuery(() => db.prs.toArray(), []) ?? []
@@ -201,7 +201,7 @@ export function DashboardPage() {
 
       <MuscleDistributionChart />
 
-      <MuscleHeatmap muscleVolumes={weeklyMuscleVolumes} />
+      <MuscleHeatmap muscleAnalytics={weeklyMuscleAnalytics} />
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">Logros y medallas</h2>

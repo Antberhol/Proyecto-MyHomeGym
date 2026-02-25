@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { ExerciseSelectorModal } from '../components/exercises/ExerciseSelectorModal'
 import { SortableExerciseList } from '../components/routines/SortableExerciseList'
 import { db } from '../lib/db'
 
@@ -25,7 +26,7 @@ export function MisRutinasPage() {
   const [editRoutineDescripcion, setEditRoutineDescripcion] = useState('')
   const [editRoutineDiasSemana, setEditRoutineDiasSemana] = useState('')
   const [editRoutineColor, setEditRoutineColor] = useState('#E63946')
-  const [exerciseId, setExerciseId] = useState<string>('')
+  const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState(false)
   const [series, setSeries] = useState<number>(4)
   const [repeticiones, setRepeticiones] = useState<string>('8-12')
   const [descansoSegundos, setDescansoSegundos] = useState<number>(90)
@@ -119,28 +120,34 @@ export function MisRutinasPage() {
       }))
   }, [exercises, routineExercises, selectedRoutineId])
 
-  const addExerciseToRoutine = async () => {
-    if (!selectedRoutineId || !exerciseId) return
+  const addExercisesToRoutine = async (exerciseIds: string[]) => {
+    if (!selectedRoutineId || exerciseIds.length === 0) return
 
-    const existing = routineExercises.find(
-      (item) => item.rutinaId === selectedRoutineId && item.ejercicioId === exerciseId,
+    const existingIds = new Set(
+      routineExercises
+        .filter((item) => item.rutinaId === selectedRoutineId)
+        .map((item) => item.ejercicioId),
     )
-    if (existing) return
+
+    const idsToAdd = exerciseIds.filter((id) => !existingIds.has(id))
+    if (idsToAdd.length === 0) return
 
     const currentOrders = routineExercises
       .filter((item) => item.rutinaId === selectedRoutineId)
       .map((item) => item.orden)
-    const nextOrder = (currentOrders.length ? Math.max(...currentOrders) : 0) + 1
+    const nextOrderBase = (currentOrders.length ? Math.max(...currentOrders) : 0) + 1
 
-    await db.rutinaEjercicios.add({
-      id: crypto.randomUUID(),
-      rutinaId: selectedRoutineId,
-      ejercicioId: exerciseId,
-      orden: nextOrder,
-      series: Math.max(1, series),
-      repeticiones: repeticiones || '8-12',
-      descansoSegundos: Math.max(15, descansoSegundos),
-    })
+    await db.rutinaEjercicios.bulkAdd(
+      idsToAdd.map((exerciseId, index) => ({
+        id: crypto.randomUUID(),
+        rutinaId: selectedRoutineId,
+        ejercicioId: exerciseId,
+        orden: nextOrderBase + index,
+        series: Math.max(1, series),
+        repeticiones: repeticiones || '8-12',
+        descansoSegundos: Math.max(15, descansoSegundos),
+      })),
+    )
   }
 
   const removeRoutineExercise = async (routineExerciseId: string) => {
@@ -349,18 +356,13 @@ export function MisRutinasPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-            <select
-              value={exerciseId}
-              onChange={(event) => setExerciseId(event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 md:col-span-2"
+            <button
+              type="button"
+              onClick={() => setIsExerciseSelectorOpen(true)}
+              className="h-11 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium dark:border-slate-600 md:col-span-2"
             >
-              <option value="">Selecciona ejercicio</option>
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>
-                  {exercise.nombre}
-                </option>
-              ))}
-            </select>
+              + Añadir ejercicio
+            </button>
 
             <input
               type="number"
@@ -386,13 +388,20 @@ export function MisRutinasPage() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => void addExerciseToRoutine()}
-            className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
-          >
-            Añadir ejercicio
-          </button>
+          <ExerciseSelectorModal
+            isOpen={isExerciseSelectorOpen}
+            onClose={() => setIsExerciseSelectorOpen(false)}
+            exercises={exercises.map((item) => ({
+              id: item.id,
+              nombre: item.nombre,
+              grupoMuscularPrimario: item.grupoMuscularPrimario,
+              equipoNecesario: item.equipoNecesario,
+            }))}
+            selectedIds={selectedRoutineExercises.map((item) => item.ejercicioId)}
+            onConfirm={(exerciseIds) => {
+              void addExercisesToRoutine(exerciseIds)
+            }}
+          />
 
           {selectedRoutineExercises.length > 0 ? (
             <SortableExerciseList

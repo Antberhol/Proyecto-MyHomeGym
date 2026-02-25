@@ -28,7 +28,18 @@ class GymDatabase extends Dexie {
       rutinas: 'id, nombre, activa, updatedAt',
       rutinaEjercicios: 'id, rutinaId, ejercicioId, orden',
       entrenamientosRegistrados: 'id, rutinaId, fecha, completado',
-      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha',
+      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha, [ejercicioId+fecha]',
+      medidasCorporalesHistorico: 'id, fechaRegistro',
+      prs: 'id, ejercicioId, tipo, fecha',
+    })
+
+    this.version(2).stores({
+      userProfile: 'id, nombre, updatedAt',
+      ejerciciosCatalogo: 'id, nombre, grupoMuscularPrimario, nivelDificultad, equipoNecesario, esPersonalizado, updatedAt',
+      rutinas: 'id, nombre, activa, updatedAt',
+      rutinaEjercicios: 'id, rutinaId, ejercicioId, orden',
+      entrenamientosRegistrados: 'id, rutinaId, fecha, completado',
+      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha, [ejercicioId+fecha]',
       medidasCorporalesHistorico: 'id, fechaRegistro',
       prs: 'id, ejercicioId, tipo, fecha',
     })

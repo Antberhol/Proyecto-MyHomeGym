@@ -1,4 +1,4 @@
-import { seedExercises } from '../constants/exercises'
+import { defaultExercises } from '../constants/defaultExercises'
 import { db } from './db'
 
 export async function bootstrapDatabase(): Promise<void> {
@@ -7,9 +7,16 @@ export async function bootstrapDatabase(): Promise<void> {
 
   const now = new Date().toISOString()
   await db.ejerciciosCatalogo.bulkAdd(
-    seedExercises.map((exercise) => ({
-      ...exercise,
-      id: crypto.randomUUID(),
+    defaultExercises.map((exercise) => ({
+      id: exercise.id,
+      nombre: exercise.nombre,
+      descripcion: `Ejercicio base para ${exercise.grupoMuscularPrimario}.`,
+      grupoMuscularPrimario: exercise.grupoMuscularPrimario,
+      gruposMuscularesSecundarios: [],
+      nivelDificultad: 'intermedio' as const,
+      equipoNecesario: exercise.equipoNecesario,
+      instrucciones: 'Mantén técnica controlada y progresión gradual de carga.',
+      esPersonalizado: false,
       createdAt: now,
       updatedAt: now,
     })),

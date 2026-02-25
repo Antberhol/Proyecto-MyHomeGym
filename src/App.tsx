@@ -2,6 +2,8 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './components/layout/AppShell'
+import { ReloadPrompt } from './components/pwa/ReloadPrompt'
+import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { db } from './lib/db'
 import { useUiStore } from './stores/ui-store'
@@ -15,14 +17,10 @@ const PerfilPage = lazy(() => import('./pages/Perfil').then((module) => ({ defau
 const ProgresoPage = lazy(() => import('./pages/Progreso').then((module) => ({ default: module.ProgresoPage })))
 const ConfiguracionPage = lazy(() => import('./pages/Configuracion').then((module) => ({ default: module.ConfiguracionPage })))
 
-function RouteLoadingFallback() {
-  return <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-slate-300">Cargando vista...</div>
-}
-
 function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<RouteLoadingFallback />}>
+      <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<DashboardPage />} />
@@ -60,18 +58,23 @@ function App() {
 
   // undefined = still loading, null = loaded but no profile
   if (profileQuery === undefined) {
-    return <div className="flex min-h-screen items-center justify-center text-lg">Cargando datos...</div>
+    return <LoadingSpinner />
   }
 
   if (profileQuery === null) {
     return (
-      <Suspense fallback={<RouteLoadingFallback />}>
+      <Suspense fallback={<LoadingSpinner />}>
         <OnboardingWizard />
       </Suspense>
     )
   }
 
-  return <AppRouter />
+  return (
+    <>
+      <AppRouter />
+      <ReloadPrompt />
+    </>
+  )
 }
 
 export default App

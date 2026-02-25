@@ -42,6 +42,10 @@ export function NumberStepper({
 
     const handleInputChange = (raw: string) => {
         const normalizedRaw = raw.replace(',', '.')
+        if (!normalizedRaw.trim()) {
+            onChange(normalizeValue(0))
+            return
+        }
         const parsed = Number(normalizedRaw)
         onChange(normalizeValue(Number.isFinite(parsed) ? parsed : 0))
     }
@@ -65,7 +69,7 @@ export function NumberStepper({
                 <input
                     id={id}
                     type="number"
-                    value={Number.isFinite(value) ? value : 0}
+                    value={Number.isFinite(value) && value !== 0 ? value : ''}
                     onChange={(event) => handleInputChange(event.target.value)}
                     className="w-full border-x border-slate-200 bg-transparent px-2 py-2 text-center text-base font-semibold text-slate-900 focus:outline-none dark:border-slate-700 dark:text-slate-100"
                     inputMode="decimal"

@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
 import { db } from '../lib/db'
 import type { DifficultyLevel } from '../types/models'
@@ -155,101 +156,105 @@ export function CatalogoPage() {
         <p className="self-center text-sm text-slate-500 dark:text-slate-300">Resultados: {filteredExercises.length}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {filteredExercises.map((exercise) => (
-          <article key={exercise.id} className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-semibold">{exercise.nombre}</h2>
-              <div className="flex items-center gap-2">
-                {exercise.esPersonalizado && (
-                  <span className="rounded-full bg-gym-secondary px-2 py-1 text-xs text-white">Personalizado</span>
-                )}
-                {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => startEditExercise(exercise.id)}
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteCustomExercise(exercise.id)}
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
-                    >
-                      Borrar
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {editingExerciseId === exercise.id ? (
-              <div className="space-y-2">
-                <input
-                  value={editNombre}
-                  onChange={(event) => setEditNombre(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Nombre"
-                />
-                <input
-                  value={editGrupoMuscular}
-                  onChange={(event) => setEditGrupoMuscular(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Grupo muscular"
-                />
-                <input
-                  value={editEquipo}
-                  onChange={(event) => setEditEquipo(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Equipo"
-                />
-                <select
-                  value={editNivel}
-                  onChange={(event) => setEditNivel(event.target.value as 'basico' | 'intermedio' | 'avanzado')}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                >
-                  <option value="basico">Básico</option>
-                  <option value="intermedio">Intermedio</option>
-                  <option value="avanzado">Avanzado</option>
-                </select>
-                <textarea
-                  value={editInstrucciones}
-                  onChange={(event) => setEditInstrucciones(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Instrucciones"
-                  rows={2}
-                />
+      <div>
+        <Virtuoso
+          data={filteredExercises}
+          useWindowScroll
+          itemContent={(_, exercise) => (
+            <article key={exercise.id} className="mb-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-semibold">{exercise.nombre}</h2>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void saveExerciseEdits()}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditExercise}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
-                  >
-                    Cancelar
-                  </button>
+                  {exercise.esPersonalizado && (
+                    <span className="rounded-full bg-gym-secondary px-2 py-1 text-xs text-white">Personalizado</span>
+                  )}
+                  {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => startEditExercise(exercise.id)}
+                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteCustomExercise(exercise.id)}
+                        className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
+                      >
+                        Borrar
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
-            ) : (
-              <>
-                <p className="text-sm text-slate-500 dark:text-slate-300">{exercise.descripcion}</p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.grupoMuscularPrimario}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.equipoNecesario}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.nivelDificultad}</span>
+
+              {editingExerciseId === exercise.id ? (
+                <div className="space-y-2">
+                  <input
+                    value={editNombre}
+                    onChange={(event) => setEditNombre(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    placeholder="Nombre"
+                  />
+                  <input
+                    value={editGrupoMuscular}
+                    onChange={(event) => setEditGrupoMuscular(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    placeholder="Grupo muscular"
+                  />
+                  <input
+                    value={editEquipo}
+                    onChange={(event) => setEditEquipo(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    placeholder="Equipo"
+                  />
+                  <select
+                    value={editNivel}
+                    onChange={(event) => setEditNivel(event.target.value as 'basico' | 'intermedio' | 'avanzado')}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                  >
+                    <option value="basico">Básico</option>
+                    <option value="intermedio">Intermedio</option>
+                    <option value="avanzado">Avanzado</option>
+                  </select>
+                  <textarea
+                    value={editInstrucciones}
+                    onChange={(event) => setEditInstrucciones(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    placeholder="Instrucciones"
+                    rows={2}
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveExerciseEdits()}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditExercise}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
-              </>
-            )}
-          </article>
-        ))}
+              ) : (
+                <>
+                  <p className="text-sm text-slate-500 dark:text-slate-300">{exercise.descripcion}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.grupoMuscularPrimario}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.equipoNecesario}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.nivelDificultad}</span>
+                  </div>
+                </>
+              )}
+            </article>
+          )}
+        />
       </div>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">

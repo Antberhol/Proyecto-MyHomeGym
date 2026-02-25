@@ -1,11 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Calculator, Share2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
 import { WorkoutShareCard, type WorkoutShareData } from '../components/share/WorkoutShareCard'
 import { PlateCalculatorModal } from '../components/tools/PlateCalculatorModal'
+import { RoutineSelector } from '../components/workout/RoutineSelector'
 import { ActiveExerciseCard } from '../components/workout/ActiveExerciseCard'
 import { RestTimerOverlay } from '../components/workout/RestTimerOverlay'
 import type {
@@ -32,6 +34,7 @@ const trainingSchema = z.object({
 
 type TrainingFormInput = z.input<typeof trainingSchema>
 type TrainingFormOutput = z.output<typeof trainingSchema>
+type TrainingView = 'selection' | 'active' | 'summary'
 
 interface TrainingSummary {
   durationMinutes: number
@@ -61,18 +64,39 @@ function parseTargetReps(target: string): { min: number; max: number } | null {
   }
 }
 
+function parseInputNumber(raw: string): number {
+  const normalized = raw.replace(',', '.').trim()
+  if (!normalized) return 0
+  const parsed = Number(normalized)
+  if (!Number.isFinite(parsed)) return 0
+  return Number(parsed.toString())
+}
+
 export function EntrenarPage() {
   const persistedSession = getPersistedWorkoutSession()
+  const hasPersistedSession = Boolean(
+    persistedSession
+    && (
+      persistedSession.selectedRoutineId
+      || Object.keys(persistedSession.setData ?? {}).length > 0
+      || (persistedSession.sessionSeconds ?? 0) > 0
+      || (persistedSession.activeExerciseIndex ?? 0) > 0
+    ),
+  )
+
   const routinesData = useLiveQuery(() => db.rutinas.toArray(), [])
   const routineExercisesData = useLiveQuery(() => db.rutinaEjercicios.toArray(), [])
   const exercisesData = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), [])
   const performedExercisesData = useLiveQuery(() => db.ejerciciosRealizados.toArray(), [])
   const prsData = useLiveQuery(() => db.prs.toArray(), [])
+
   const routines = useMemo(() => routinesData ?? [], [routinesData])
   const routineExercises = useMemo(() => routineExercisesData ?? [], [routineExercisesData])
   const exercises = useMemo(() => exercisesData ?? [], [exercisesData])
   const performedExercises = useMemo(() => performedExercisesData ?? [], [performedExercisesData])
   const prs = useMemo(() => prsData ?? [], [prsData])
+
+  const [view, setView] = useState<TrainingView>(hasPersistedSession ? 'active' : 'selection')
   const [setData, setSetData] = useState<Record<string, SetData>>(persistedSession?.setData ?? {})
   const [lastSavedMessage, setLastSavedMessage] = useState<string>('')
   const [activeExerciseIndex, setActiveExerciseIndex] = useState(Math.max(0, persistedSession?.activeExerciseIndex ?? 0))
@@ -81,9 +105,11 @@ export function EntrenarPage() {
   const [freeSeriesCount, setFreeSeriesCount] = useState(3)
   const [freeExercisesDraft, setFreeExercisesDraft] = useState<FreeExerciseDraft[]>([])
   const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
+
   const {
     sessionSeconds,
     sessionRunning,
+    setSessionRunning,
     toggleSessionRunning,
     restSeconds,
     setRestSeconds,
@@ -92,7 +118,7 @@ export function EntrenarPage() {
     formatClock,
   } = useWorkoutTimer({
     initialSessionSeconds: persistedSession?.sessionSeconds ?? 0,
-    initialSessionRunning: true,
+    initialSessionRunning: false,
     initialRestSeconds: 0,
   })
 
@@ -113,6 +139,15 @@ export function EntrenarPage() {
     sessionSeconds,
     activeExerciseIndex,
   })
+
+  useEffect(() => {
+    if (view === 'active') {
+      setSessionRunning(true)
+      return
+    }
+
+    setSessionRunning(false)
+  }, [setSessionRunning, view])
 
   const selectedRoutineExercises = useMemo(() => {
     if (!selectedRoutineId) return []
@@ -263,6 +298,42 @@ export function EntrenarPage() {
     form.setValue('duracionMinutos', minutes)
   }
 
+  const startRoutine = (routineId: string) => {
+    form.setValue('rutinaId', routineId)
+    setTrainingSummary(null)
+    setLastSavedMessage('')
+    setActiveExerciseIndex(0)
+    setView('active')
+  }
+
+  const startFreeTraining = () => {
+    form.setValue('rutinaId', '')
+    setTrainingSummary(null)
+    setLastSavedMessage('')
+    setActiveExerciseIndex(0)
+    setView('active')
+  }
+
+  const exitToSelection = () => {
+    setTrainingSummary(null)
+    setSetData({})
+    setFreeExercisesDraft([])
+    setFreeExerciseId('')
+    setFreeSeriesCount(3)
+    setActiveExerciseIndex(0)
+    setLastSavedMessage('')
+    form.reset({
+      rutinaId: '',
+      duracionMinutos: 45,
+      volumenTotalManual: 0,
+      notas: '',
+    })
+    resetTimers()
+    setSessionRunning(false)
+    clearSession()
+    setView('selection')
+  }
+
   const addFreeExerciseDraft = () => {
     if (!freeExerciseId) return
 
@@ -308,7 +379,8 @@ export function EntrenarPage() {
     )
   }
 
-  const updateFreeSetData = (draftId: string, setIndex: number, field: keyof SetData, value: number) => {
+  const updateFreeSetData = (draftId: string, setIndex: number, field: keyof SetData, rawValue: string) => {
+    const value = parseInputNumber(rawValue)
     setFreeExercisesDraft((current) =>
       current.map((item) => {
         if (item.id !== draftId) return item
@@ -360,6 +432,8 @@ export function EntrenarPage() {
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setSessionRunning(false)
+
     const now = new Date().toISOString()
     const trainingId = crypto.randomUUID()
 
@@ -471,14 +545,14 @@ export function EntrenarPage() {
       `Sesión guardada: ${performed.length} series registradas, volumen ${volumenTotal.toFixed(0)} kg, ${prsCreated} PRs nuevos.`,
     )
 
-    form.reset({ duracionMinutos: 45, volumenTotalManual: 0, rutinaId: values.rutinaId })
     setSetData({})
     setFreeExercisesDraft([])
     setFreeExerciseId('')
     setFreeSeriesCount(3)
-    resetTimers()
+    setRestSeconds(0)
     setActiveExerciseIndex(0)
     clearSession()
+    setView('summary')
   })
 
   const sharePreviewData = useMemo<WorkoutShareData | null>(() => {
@@ -502,6 +576,101 @@ export function EntrenarPage() {
     } catch {
       setLastSavedMessage('No se pudo compartir el resumen. Instala html2canvas o revisa permisos del dispositivo.')
     }
+  }
+
+  if (view === 'selection') {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Entrenar</h1>
+        <RoutineSelector
+          routines={routines}
+          onStartRoutine={startRoutine}
+          onStartFree={startFreeTraining}
+        />
+      </div>
+    )
+  }
+
+  if (view === 'summary' && trainingSummary) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Resumen de entrenamiento</h1>
+
+        {lastSavedMessage && (
+          <p className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow dark:bg-gym-cardDark dark:text-slate-200">{lastSavedMessage}</p>
+        )}
+
+        <div className="w-full space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gym-cardDark">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Resumen de entrenamiento</h2>
+            <button
+              type="button"
+              onClick={() => {
+                void onShareSummary()
+              }}
+              className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs"
+            >
+              <Share2 size={14} /> Compartir
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+              Duración: <span className="font-semibold">{trainingSummary.durationMinutes} min</span>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+              Volumen: <span className="font-semibold">{trainingSummary.totalVolume.toFixed(0)} kg</span>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+              Series: <span className="font-semibold">{trainingSummary.setCount}</span>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+              PRs nuevos: <span className="font-semibold">{trainingSummary.prsCreated}</span>
+            </div>
+          </div>
+
+          {sharePreviewData && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Vista previa para compartir</h3>
+              <div className="mx-auto w-fit rounded-2xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-700 dark:bg-slate-900">
+                <div className="relative h-[320px] w-[180px] overflow-hidden rounded-2xl">
+                  <div className="absolute left-0 top-0 origin-top-left scale-50">
+                    <WorkoutShareCard data={sharePreviewData} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Desglose por ejercicio</h3>
+            {trainingSummary.byExercise.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-300">No hubo series registradas para mostrar desglose.</p>
+            ) : (
+              <div className="h-56">
+                <Virtuoso
+                  data={trainingSummary.byExercise}
+                  itemContent={(_, item) => (
+                    <div className="mb-2 flex items-center justify-between rounded border border-slate-200 p-2 text-sm dark:border-slate-700">
+                      <span>{item.name}</span>
+                      <span>{item.sets} series · {item.volume.toFixed(0)} kg</span>
+                    </div>
+                  )}
+                />
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={exitToSelection}
+            className="h-11 w-full rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
+          >
+            Finalizar y Salir
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -620,7 +789,7 @@ export function EntrenarPage() {
                 type="number"
                 min={1}
                 value={freeSeriesCount}
-                onChange={(event) => setFreeSeriesCount(Math.max(1, Number(event.target.value) || 1))}
+                onChange={(event) => setFreeSeriesCount(Math.max(1, parseInputNumber(event.target.value) || 1))}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
                 placeholder="Series"
               />
@@ -673,20 +842,16 @@ export function EntrenarPage() {
                           <div className="grid grid-cols-2 gap-2">
                             <input
                               type="number"
-                              value={set.reps}
-                              onChange={(event) =>
-                                updateFreeSetData(draft.id, setIndex, 'reps', Number(event.target.value) || 0)
-                              }
+                              value={set.reps === 0 ? '' : set.reps}
+                              onChange={(event) => updateFreeSetData(draft.id, setIndex, 'reps', event.target.value)}
                               className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
                               placeholder="Reps"
                             />
                             <input
                               type="number"
                               step="0.5"
-                              value={set.peso}
-                              onChange={(event) =>
-                                updateFreeSetData(draft.id, setIndex, 'peso', Number(event.target.value) || 0)
-                              }
+                              value={set.peso === 0 ? '' : set.peso}
+                              onChange={(event) => updateFreeSetData(draft.id, setIndex, 'peso', event.target.value)}
                               className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
                               placeholder="Peso"
                             />
@@ -705,85 +870,9 @@ export function EntrenarPage() {
         )}
 
         <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white md:col-span-2">
-          Guardar sesión
+          Guardar entrenamiento
         </button>
       </form>
-
-      {lastSavedMessage && (
-        <p className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow dark:bg-gym-cardDark dark:text-slate-200">{lastSavedMessage}</p>
-      )}
-
-      {trainingSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gym-cardDark">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Resumen de entrenamiento</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void onShareSummary()
-                  }}
-                  className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs"
-                >
-                  <Share2 size={14} /> Compartir
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrainingSummary(null)}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                Duración: <span className="font-semibold">{trainingSummary.durationMinutes} min</span>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                Volumen: <span className="font-semibold">{trainingSummary.totalVolume.toFixed(0)} kg</span>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                Series: <span className="font-semibold">{trainingSummary.setCount}</span>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                PRs nuevos: <span className="font-semibold">{trainingSummary.prsCreated}</span>
-              </div>
-            </div>
-
-            {sharePreviewData && (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Vista previa para compartir</h3>
-                <div className="mx-auto w-fit rounded-2xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-700 dark:bg-slate-900">
-                  <div className="relative h-[320px] w-[180px] overflow-hidden rounded-2xl">
-                    <div className="absolute left-0 top-0 origin-top-left scale-50">
-                      <WorkoutShareCard data={sharePreviewData} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h3 className="mb-2 text-sm font-semibold">Desglose por ejercicio</h3>
-              {trainingSummary.byExercise.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-slate-300">No hubo series registradas para mostrar desglose.</p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {trainingSummary.byExercise.map((item) => (
-                    <li key={item.exerciseId} className="flex items-center justify-between rounded border border-slate-200 p-2 dark:border-slate-700">
-                      <span>{item.name}</span>
-                      <span>{item.sets} series · {item.volume.toFixed(0)} kg</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

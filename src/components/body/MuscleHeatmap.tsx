@@ -1,58 +1,103 @@
 import { useMemo, useState } from 'react'
 import { BodyDiagramSvg } from './BodyDiagramSvg'
-import type { MuscleVolumes } from '../../hooks/useWeeklyMuscleVolumes'
+import type { MuscleAnalytics } from '../../hooks/useWeeklyMuscleAnalytics'
 
 const HEAT_COLORS: [string, string, string, string] = ['#e5e7eb', '#fecaca', '#f87171', '#b91c1c']
 
 type MuscleLevel = 'basico' | 'medio' | 'avanzado' | 'experto'
 
 interface MuscleHeatmapProps {
-    muscleVolumes: MuscleVolumes
+    muscleAnalytics: MuscleAnalytics
 }
 
-function levelFromRatio(ratio: number): MuscleLevel {
-    if (ratio >= 0.75) return 'experto'
-    if (ratio >= 0.5) return 'avanzado'
-    if (ratio >= 0.25) return 'medio'
+function levelFromScore(score: number): MuscleLevel {
+    if (score >= 0.8) return 'experto'
+    if (score >= 0.6) return 'avanzado'
+    if (score >= 0.35) return 'medio'
     return 'basico'
 }
 
-export function MuscleHeatmap({ muscleVolumes }: MuscleHeatmapProps) {
+function normalizeAbsolute(value: number, target: number): number {
+    if (target <= 0) return 0
+    return Math.min(1, value / target)
+}
+
+function mixedScore(volume: number, daysTrained: number): number {
+    const volumeScore = normalizeAbsolute(volume, 4500)
+    const frequencyScore = normalizeAbsolute(daysTrained, 3)
+    return volumeScore * 0.7 + frequencyScore * 0.3
+}
+
+export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
 
     const normalizedVolumes = useMemo(() => {
-        const merged = { ...muscleVolumes }
+        const merged = Object.entries(muscleAnalytics).reduce<Record<string, { volume: number; daysTrained: number }>>((acc, [muscle, data]) => {
+            acc[muscle] = {
+                volume: data.volume,
+                daysTrained: data.daysTrained,
+            }
+            return acc
+        }, {})
 
-        if ((merged.espalda ?? 0) > 0) {
-            merged.trapecio = (merged.trapecio ?? 0) + merged.espalda / 3
-            merged['espalda-alta'] = (merged['espalda-alta'] ?? 0) + merged.espalda / 3
-            merged['espalda-baja'] = (merged['espalda-baja'] ?? 0) + merged.espalda / 3
+        if ((merged.espalda?.volume ?? 0) > 0) {
+            merged.trapecio = {
+                volume: (merged.trapecio?.volume ?? 0) + merged.espalda.volume / 3,
+                daysTrained: Math.max(merged.trapecio?.daysTrained ?? 0, merged.espalda.daysTrained),
+            }
+            merged['espalda-alta'] = {
+                volume: (merged['espalda-alta']?.volume ?? 0) + merged.espalda.volume / 3,
+                daysTrained: Math.max(merged['espalda-alta']?.daysTrained ?? 0, merged.espalda.daysTrained),
+            }
+            merged['espalda-baja'] = {
+                volume: (merged['espalda-baja']?.volume ?? 0) + merged.espalda.volume / 3,
+                daysTrained: Math.max(merged['espalda-baja']?.daysTrained ?? 0, merged.espalda.daysTrained),
+            }
         }
 
-        if ((merged.brazos ?? 0) > 0) {
-            merged.biceps = (merged.biceps ?? 0) + merged.brazos / 3
-            merged.triceps = (merged.triceps ?? 0) + merged.brazos / 3
-            merged.antebrazo = (merged.antebrazo ?? 0) + merged.brazos / 3
+        if ((merged.brazos?.volume ?? 0) > 0) {
+            merged.biceps = {
+                volume: (merged.biceps?.volume ?? 0) + merged.brazos.volume / 3,
+                daysTrained: Math.max(merged.biceps?.daysTrained ?? 0, merged.brazos.daysTrained),
+            }
+            merged.triceps = {
+                volume: (merged.triceps?.volume ?? 0) + merged.brazos.volume / 3,
+                daysTrained: Math.max(merged.triceps?.daysTrained ?? 0, merged.brazos.daysTrained),
+            }
+            merged.antebrazo = {
+                volume: (merged.antebrazo?.volume ?? 0) + merged.brazos.volume / 3,
+                daysTrained: Math.max(merged.antebrazo?.daysTrained ?? 0, merged.brazos.daysTrained),
+            }
         }
 
-        if ((merged.piernas ?? 0) > 0) {
-            merged.cuadriceps = (merged.cuadriceps ?? 0) + merged.piernas / 4
-            merged.isquiotibial = (merged.isquiotibial ?? 0) + merged.piernas / 4
-            merged.gluteo = (merged.gluteo ?? 0) + merged.piernas / 4
-            merged.gemelo = (merged.gemelo ?? 0) + merged.piernas / 4
+        if ((merged.piernas?.volume ?? 0) > 0) {
+            merged.cuadriceps = {
+                volume: (merged.cuadriceps?.volume ?? 0) + merged.piernas.volume / 4,
+                daysTrained: Math.max(merged.cuadriceps?.daysTrained ?? 0, merged.piernas.daysTrained),
+            }
+            merged.isquiotibial = {
+                volume: (merged.isquiotibial?.volume ?? 0) + merged.piernas.volume / 4,
+                daysTrained: Math.max(merged.isquiotibial?.daysTrained ?? 0, merged.piernas.daysTrained),
+            }
+            merged.gluteo = {
+                volume: (merged.gluteo?.volume ?? 0) + merged.piernas.volume / 4,
+                daysTrained: Math.max(merged.gluteo?.daysTrained ?? 0, merged.piernas.daysTrained),
+            }
+            merged.gemelo = {
+                volume: (merged.gemelo?.volume ?? 0) + merged.piernas.volume / 4,
+                daysTrained: Math.max(merged.gemelo?.daysTrained ?? 0, merged.piernas.daysTrained),
+            }
         }
 
         return merged
-    }, [muscleVolumes])
+    }, [muscleAnalytics])
 
     const levelByMuscle = useMemo(() => {
-        const maxVolume = Math.max(1, ...Object.values(normalizedVolumes))
-
-        return Object.entries(normalizedVolumes).reduce<Record<string, { volume: number; level: MuscleLevel }>>((acc, [muscle, volume]) => {
-            const ratio = volume / maxVolume
+        return Object.entries(normalizedVolumes).reduce<Record<string, { volume: number; level: MuscleLevel }>>((acc, [muscle, data]) => {
+            const score = mixedScore(data.volume, data.daysTrained)
             acc[muscle] = {
-                volume,
-                level: levelFromRatio(ratio),
+                volume: data.volume,
+                level: levelFromScore(score),
             }
             return acc
         }, {})
@@ -62,7 +107,7 @@ export function MuscleHeatmap({ muscleVolumes }: MuscleHeatmapProps) {
         <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
             <h2 className="mb-2 text-lg font-semibold">Mapa de calor muscular (7d)</h2>
             <p className="mb-3 text-xs text-slate-500 dark:text-slate-300">
-                Intensidad por volumen reciente, de gris (bajo) a rojo intenso (alto).
+                Intensidad por puntuación mixta absoluta (volumen semanal + frecuencia de días), de gris a rojo intenso.
             </p>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
