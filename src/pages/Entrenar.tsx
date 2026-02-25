@@ -706,6 +706,14 @@ export function EntrenarPage() {
         onFinishWorkout={() => {
           void onSubmit()
         }}
+        onDiscardWorkout={() => {
+          const shouldDiscard = window.confirm(
+            '¿Seguro que quieres descartar este entrenamiento? Se perderán los datos no guardados.',
+          )
+
+          if (!shouldDiscard) return
+          exitToSelection()
+        }}
       />
 
       <RestTimerOverlay restSeconds={restSeconds} formatClock={formatClock} />

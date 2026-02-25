@@ -178,6 +178,7 @@ export function ProgresoPage() {
   const [calWeight, setCalWeight] = useState(75)
   const [calMinutes, setCalMinutes] = useState(60)
   const [calMet, setCalMet] = useState(6)
+  const [volumeRange, setVolumeRange] = useState<'weekly' | 'monthly'>('weekly')
 
   const bodyData = measurements
     .slice()
@@ -188,13 +189,28 @@ export function ProgresoPage() {
       imc: item.imc,
     }))
 
-  const volumeData = trainings
-    .slice()
-    .sort((a, b) => +new Date(a.fecha) - +new Date(b.fecha))
-    .map((item) => ({
-      fecha: new Date(item.fecha).toLocaleDateString(),
-      volumen: item.volumenTotal,
-    }))
+  const volumeData = useMemo(() => {
+    const sorted = trainings
+      .slice()
+      .sort((a, b) => +new Date(a.fecha) - +new Date(b.fecha))
+
+    const now = new Date()
+    const since = new Date(now)
+    since.setDate(now.getDate() - (volumeRange === 'weekly' ? 7 : 30))
+
+    return sorted
+      .filter((item) => new Date(item.fecha) >= since)
+      .map((item) => ({
+        fecha: new Date(item.fecha).toLocaleDateString(),
+        volumen: item.volumenTotal,
+      }))
+  }, [trainings, volumeRange])
+
+  const volumeAxisMax = useMemo(() => {
+    const maxVolume = volumeData.reduce((max, item) => Math.max(max, item.volumen), 0)
+    const roundedMax = Math.ceil(maxVolume / 1000) * 1000
+    return Math.max(10_000, roundedMax)
+  }, [volumeData])
 
   const heatmapData = useMemo(() => buildHeatmapData(trainings.map((item) => item.fecha)), [trainings])
   const oneRm = estimateOneRmEpley(oneRmPeso, oneRmReps)
@@ -360,18 +376,47 @@ export function ProgresoPage() {
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Volumen por sesión</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Volumen por sesión</h2>
+          <div className="inline-flex rounded-lg border border-slate-300 p-1 dark:border-slate-600">
+            <button
+              type="button"
+              onClick={() => setVolumeRange('weekly')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${volumeRange === 'weekly' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              Semanal
+            </button>
+            <button
+              type="button"
+              onClick={() => setVolumeRange('monthly')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${volumeRange === 'monthly' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              Mensual
+            </button>
+          </div>
+        </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={volumeData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="fecha" />
-              <YAxis />
-              <Tooltip />
+              <XAxis
+                dataKey="fecha"
+                tick={{ fontSize: 10 }}
+                minTickGap={10}
+                interval={volumeRange === 'weekly' ? 0 : 2}
+              />
+              <YAxis
+                domain={[0, volumeAxisMax]}
+                tickFormatter={(value) => `${Number(value).toLocaleString('es-ES')}`}
+              />
+              <Tooltip formatter={(value) => [`${Number(value).toLocaleString('es-ES')} kg`, 'Volumen']} />
               <Bar dataKey="volumen" fill="#06D6A0" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+          Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.
+        </p>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">

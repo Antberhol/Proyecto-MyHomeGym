@@ -8,6 +8,7 @@ interface WorkoutControlsProps {
     onStartRest: (seconds: number) => void
     onResetRest: () => void
     onFinishWorkout: () => void
+    onDiscardWorkout: () => void
 }
 
 export function WorkoutControls({
@@ -20,6 +21,7 @@ export function WorkoutControls({
     onStartRest,
     onResetRest,
     onFinishWorkout,
+    onDiscardWorkout,
 }: WorkoutControlsProps) {
     return (
         <section className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-3">
@@ -79,13 +81,20 @@ export function WorkoutControls({
                 </div>
             </div>
 
-            <div className="flex items-end">
+            <div className="grid items-end gap-2">
                 <button
                     type="button"
                     onClick={onFinishWorkout}
                     className="w-full rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
                 >
                     Finalizar entrenamiento
+                </button>
+                <button
+                    type="button"
+                    onClick={onDiscardWorkout}
+                    className="w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300"
+                >
+                    Descartar entrenamiento
                 </button>
             </div>
         </section>
