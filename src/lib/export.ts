@@ -22,17 +22,19 @@ interface ExportData {
 }
 
 export async function exportAllDataJson(): Promise<void> {
+    const snapshot = await db.exportAllData()
+
     const exportData: ExportData = {
         version: '1.0',
         exportedAt: new Date().toISOString(),
-        userProfile: await db.userProfile.toArray(),
-        ejerciciosCatalogo: await db.ejerciciosCatalogo.toArray(),
-        rutinas: await db.rutinas.toArray(),
-        rutinaEjercicios: await db.rutinaEjercicios.toArray(),
-        entrenamientosRegistrados: await db.entrenamientosRegistrados.toArray(),
-        ejerciciosRealizados: await db.ejerciciosRealizados.toArray(),
-        medidasCorporalesHistorico: await db.medidasCorporalesHistorico.toArray(),
-        prs: await db.prs.toArray(),
+        userProfile: snapshot.userProfile,
+        ejerciciosCatalogo: snapshot.ejerciciosCatalogo,
+        rutinas: snapshot.rutinas,
+        rutinaEjercicios: snapshot.rutinaEjercicios,
+        entrenamientosRegistrados: snapshot.entrenamientosRegistrados,
+        ejerciciosRealizados: snapshot.ejerciciosRealizados,
+        medidasCorporalesHistorico: snapshot.medidasCorporalesHistorico,
+        prs: snapshot.prs,
     }
 
     const json = JSON.stringify(exportData, null, 2)
@@ -56,111 +58,88 @@ export async function importAllDataJson(file: File): Promise<{ imported: number;
     let imported = 0
     let skipped = 0
 
-    await db.transaction(
-        'rw',
-        [
-            db.userProfile,
-            db.ejerciciosCatalogo,
-            db.rutinas,
-            db.rutinaEjercicios,
-            db.entrenamientosRegistrados,
-            db.ejerciciosRealizados,
-            db.medidasCorporalesHistorico,
-            db.prs,
-        ],
-        async () => {
-            // Import user profile (replace if exists)
-            if (Array.isArray(data.userProfile) && data.userProfile.length > 0) {
-                await db.userProfile.clear()
-                await db.userProfile.bulkAdd(data.userProfile as unknown as Parameters<typeof db.userProfile.bulkAdd>[0])
-                imported += data.userProfile.length
-            }
+    if (Array.isArray(data.userProfile) && data.userProfile.length > 0) {
+        await db.clearUserProfiles()
+        await db.bulkAddUserProfiles(data.userProfile as never[])
+        imported += data.userProfile.length
+    }
 
-            // Import custom exercises only (skip existing)
-            if (Array.isArray(data.ejerciciosCatalogo)) {
-                const existingIds = new Set((await db.ejerciciosCatalogo.toArray()).map((item) => item.id))
-                const customExercises = (data.ejerciciosCatalogo as { id: string; esPersonalizado?: boolean }[])
-                    .filter((item) => item.esPersonalizado && !existingIds.has(item.id))
-                if (customExercises.length > 0) {
-                    await db.ejerciciosCatalogo.bulkAdd(customExercises as unknown as Parameters<typeof db.ejerciciosCatalogo.bulkAdd>[0])
-                    imported += customExercises.length
-                }
-                skipped += data.ejerciciosCatalogo.length - customExercises.length
-            }
+    if (Array.isArray(data.ejerciciosCatalogo)) {
+        const existingIds = new Set((await db.getAllExercisesCatalog()).map((item) => item.id))
+        const customExercises = (data.ejerciciosCatalogo as { id: string; esPersonalizado?: boolean }[])
+            .filter((item) => item.esPersonalizado && !existingIds.has(item.id))
+        if (customExercises.length > 0) {
+            await db.bulkAddExercises(customExercises as never[])
+            imported += customExercises.length
+        }
+        skipped += data.ejerciciosCatalogo.length - customExercises.length
+    }
 
-            // Import routines (skip existing)
-            if (Array.isArray(data.rutinas)) {
-                const existingIds = new Set((await db.rutinas.toArray()).map((item) => item.id))
-                const newItems = (data.rutinas as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.rutinas.bulkAdd(newItems as unknown as Parameters<typeof db.rutinas.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.rutinas.length - newItems.length
-            }
+    if (Array.isArray(data.rutinas)) {
+        const existingIds = new Set((await db.getAllRoutines()).map((item) => item.id))
+        const newItems = (data.rutinas as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddRoutines(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.rutinas.length - newItems.length
+    }
 
-            // Import routine exercises (skip existing)
-            if (Array.isArray(data.rutinaEjercicios)) {
-                const existingIds = new Set((await db.rutinaEjercicios.toArray()).map((item) => item.id))
-                const newItems = (data.rutinaEjercicios as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.rutinaEjercicios.bulkAdd(newItems as unknown as Parameters<typeof db.rutinaEjercicios.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.rutinaEjercicios.length - newItems.length
-            }
+    if (Array.isArray(data.rutinaEjercicios)) {
+        const existingIds = new Set((await db.getAllRoutineExercises()).map((item) => item.id))
+        const newItems = (data.rutinaEjercicios as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddRoutineExercises(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.rutinaEjercicios.length - newItems.length
+    }
 
-            // Import trainings (skip existing)
-            if (Array.isArray(data.entrenamientosRegistrados)) {
-                const existingIds = new Set((await db.entrenamientosRegistrados.toArray()).map((item) => item.id))
-                const newItems = (data.entrenamientosRegistrados as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.entrenamientosRegistrados.bulkAdd(newItems as unknown as Parameters<typeof db.entrenamientosRegistrados.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.entrenamientosRegistrados.length - newItems.length
-            }
+    if (Array.isArray(data.entrenamientosRegistrados)) {
+        const existingIds = new Set((await db.getAllTrainings()).map((item) => item.id))
+        const newItems = (data.entrenamientosRegistrados as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddTrainings(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.entrenamientosRegistrados.length - newItems.length
+    }
 
-            // Import performed exercises (skip existing)
-            if (Array.isArray(data.ejerciciosRealizados)) {
-                const existingIds = new Set((await db.ejerciciosRealizados.toArray()).map((item) => item.id))
-                const newItems = (data.ejerciciosRealizados as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.ejerciciosRealizados.bulkAdd(newItems as unknown as Parameters<typeof db.ejerciciosRealizados.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.ejerciciosRealizados.length - newItems.length
-            }
+    if (Array.isArray(data.ejerciciosRealizados)) {
+        const existingIds = new Set((await db.getAllPerformedExercises()).map((item) => item.id))
+        const newItems = (data.ejerciciosRealizados as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddPerformedExercises(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.ejerciciosRealizados.length - newItems.length
+    }
 
-            // Import body measurements (skip existing)
-            if (Array.isArray(data.medidasCorporalesHistorico)) {
-                const existingIds = new Set((await db.medidasCorporalesHistorico.toArray()).map((item) => item.id))
-                const newItems = (data.medidasCorporalesHistorico as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.medidasCorporalesHistorico.bulkAdd(newItems as unknown as Parameters<typeof db.medidasCorporalesHistorico.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.medidasCorporalesHistorico.length - newItems.length
-            }
+    if (Array.isArray(data.medidasCorporalesHistorico)) {
+        const existingIds = new Set((await db.getAllBodyMeasurements()).map((item) => item.id))
+        const newItems = (data.medidasCorporalesHistorico as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddBodyMeasurements(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.medidasCorporalesHistorico.length - newItems.length
+    }
 
-            // Import PRs (skip existing)
-            if (Array.isArray(data.prs)) {
-                const existingIds = new Set((await db.prs.toArray()).map((item) => item.id))
-                const newItems = (data.prs as { id: string }[]).filter((item) => !existingIds.has(item.id))
-                if (newItems.length > 0) {
-                    await db.prs.bulkAdd(newItems as unknown as Parameters<typeof db.prs.bulkAdd>[0])
-                    imported += newItems.length
-                }
-                skipped += data.prs.length - newItems.length
-            }
-        },
-    )
+    if (Array.isArray(data.prs)) {
+        const existingIds = new Set((await db.getAllPersonalRecords()).map((item) => item.id))
+        const newItems = (data.prs as { id: string }[]).filter((item) => !existingIds.has(item.id))
+        if (newItems.length > 0) {
+            await db.bulkAddPersonalRecords(newItems as never[])
+            imported += newItems.length
+        }
+        skipped += data.prs.length - newItems.length
+    }
 
     return { imported, skipped }
 }
 
 export async function exportTrainingsCsv(): Promise<void> {
-    const trainings = await db.entrenamientosRegistrados.toArray()
+    const trainings = await db.getAllTrainings()
     const rows = [
         ['id', 'rutinaId', 'fecha', 'duracionMinutos', 'volumenTotal', 'completado', 'notas'],
         ...trainings.map((training) => [
@@ -252,23 +231,23 @@ export async function importTrainingsCsv(file: File): Promise<number> {
         return 0
     }
 
-    const existingIds = new Set((await db.entrenamientosRegistrados.toArray()).map((item) => item.id))
+    const existingIds = new Set((await db.getAllTrainings()).map((item) => item.id))
     const newRows = parsed.filter((item) => !existingIds.has(item.id))
 
     if (newRows.length > 0) {
-        await db.entrenamientosRegistrados.bulkAdd(newRows)
+        await db.bulkAddTrainings(newRows)
     }
 
     return newRows.length
 }
 
 export async function exportSummaryPdf(): Promise<void> {
-    const profile = (await db.userProfile.toArray())[0]
-    const trainings = await db.entrenamientosRegistrados.toArray()
-    const prs = await db.prs.toArray()
-    const measurements = await db.medidasCorporalesHistorico.toArray()
-    const exercises = await db.ejerciciosCatalogo.toArray()
-    const routines = await db.rutinas.toArray()
+    const profile = (await db.getAllUserProfiles())[0]
+    const trainings = await db.getAllTrainings()
+    const prs = await db.getAllPersonalRecords()
+    const measurements = await db.getAllBodyMeasurements()
+    const exercises = await db.getAllExercisesCatalog()
+    const routines = await db.getAllRoutines()
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()

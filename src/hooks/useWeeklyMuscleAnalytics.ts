@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 import type { AnalyticsWorkerResponse } from '../workers/analytics.worker'
 
 export type MuscleData = {
@@ -37,8 +37,8 @@ export function useWeeklyMuscleAnalytics(): MuscleAnalytics {
         since.setDate(since.getDate() - 7)
 
         const [sets, exercises] = await Promise.all([
-            db.ejerciciosRealizados.where('fecha').aboveOrEqual(since.toISOString()).toArray(),
-            db.ejerciciosCatalogo.toArray(),
+            progressRepository.listPerformedExercisesSince(since.toISOString()),
+            progressRepository.listExercises(),
         ])
 
         return {

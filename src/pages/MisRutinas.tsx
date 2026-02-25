@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ExerciseSelectorModal } from '../components/exercises/ExerciseSelectorModal'
 import { SortableExerciseList } from '../components/routines/SortableExerciseList'
-import { db } from '../lib/db'
+import { routineAdminRepository } from '../repositories/routineAdminRepository'
 
 const routineSchema = z.object({
   nombre: z.string().min(2).max(80),
@@ -17,9 +17,9 @@ const routineSchema = z.object({
 type RoutineForm = z.infer<typeof routineSchema>
 
 export function MisRutinasPage() {
-  const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
-  const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
-  const routineExercises = useLiveQuery(() => db.rutinaEjercicios.toArray(), []) ?? []
+  const routines = useLiveQuery(() => routineAdminRepository.listRoutines(), []) ?? []
+  const exercises = useLiveQuery(() => routineAdminRepository.listExercises(), []) ?? []
+  const routineExercises = useLiveQuery(() => routineAdminRepository.listRoutineExercises(), []) ?? []
   const [selectedRoutineId, setSelectedRoutineId] = useState<string>('')
   const [editingRoutineId, setEditingRoutineId] = useState<string>('')
   const [editRoutineNombre, setEditRoutineNombre] = useState('')
@@ -44,7 +44,7 @@ export function MisRutinasPage() {
 
   const onCreate = form.handleSubmit(async (values) => {
     const now = new Date().toISOString()
-    await db.rutinas.add({
+    await routineAdminRepository.createRoutine({
       id: crypto.randomUUID(),
       nombre: values.nombre,
       descripcion: values.descripcion,
@@ -62,18 +62,14 @@ export function MisRutinasPage() {
   })
 
   const toggleRoutineStatus = async (routineId: string, activa: boolean) => {
-    await db.rutinas.update(routineId, {
+    await routineAdminRepository.updateRoutine(routineId, {
       activa: !activa,
       updatedAt: new Date().toISOString(),
     })
   }
 
   const deleteRoutine = async (routineId: string) => {
-    await db.transaction('rw', db.rutinas, db.rutinaEjercicios, async () => {
-      await db.rutinas.delete(routineId)
-      const linkedExercises = await db.rutinaEjercicios.where('rutinaId').equals(routineId).toArray()
-      await Promise.all(linkedExercises.map((item) => db.rutinaEjercicios.delete(item.id)))
-    })
+    await routineAdminRepository.deleteRoutine(routineId)
   }
 
   const startEditRoutine = (routineId: string) => {
@@ -94,7 +90,7 @@ export function MisRutinasPage() {
   const saveRoutineEdits = async () => {
     if (!editingRoutineId) return
 
-    await db.rutinas.update(editingRoutineId, {
+    await routineAdminRepository.updateRoutine(editingRoutineId, {
       nombre: editRoutineNombre.trim() || 'Rutina',
       descripcion: editRoutineDescripcion.trim() || undefined,
       diasSemana: editRoutineDiasSemana
@@ -137,7 +133,7 @@ export function MisRutinasPage() {
       .map((item) => item.orden)
     const nextOrderBase = (currentOrders.length ? Math.max(...currentOrders) : 0) + 1
 
-    await db.rutinaEjercicios.bulkAdd(
+    await routineAdminRepository.createRoutineExercises(
       idsToAdd.map((exerciseId, index) => ({
         id: crypto.randomUUID(),
         rutinaId: selectedRoutineId,
@@ -151,7 +147,7 @@ export function MisRutinasPage() {
   }
 
   const removeRoutineExercise = async (routineExerciseId: string) => {
-    await db.rutinaEjercicios.delete(routineExerciseId)
+    await routineAdminRepository.deleteRoutineExercise(routineExerciseId)
   }
 
   const moveRoutineExercise = async (routineExerciseId: string, direction: 'up' | 'down') => {
@@ -165,10 +161,7 @@ export function MisRutinasPage() {
     const current = sorted[currentIndex]
     const target = sorted[targetIndex]
 
-    await db.transaction('rw', db.rutinaEjercicios, async () => {
-      await db.rutinaEjercicios.update(current.id, { orden: target.orden })
-      await db.rutinaEjercicios.update(target.id, { orden: current.orden })
-    })
+    await routineAdminRepository.swapRoutineExerciseOrder(current.id, current.orden, target.id, target.orden)
   }
 
   const reorderRoutineExercises = async (sourceId: string, targetId: string) => {
@@ -182,15 +175,12 @@ export function MisRutinasPage() {
     const [moved] = ordered.splice(sourceIndex, 1)
     ordered.splice(targetIndex, 0, moved)
 
-    await db.transaction('rw', db.rutinaEjercicios, async () => {
-      await Promise.all(
-        ordered.map((item, index) =>
-          db.rutinaEjercicios.update(item.id, {
-            orden: index + 1,
-          }),
-        ),
-      )
-    })
+    await routineAdminRepository.reorderRoutineExercises(
+      ordered.map((item, index) => ({
+        id: item.id,
+        orden: index + 1,
+      })),
+    )
   }
 
   const startEditRoutineExercise = (routineExerciseId: string) => {
@@ -206,7 +196,7 @@ export function MisRutinasPage() {
   const saveRoutineExerciseEdits = async () => {
     if (!editingRoutineExerciseId) return
 
-    await db.rutinaEjercicios.update(editingRoutineExerciseId, {
+    await routineAdminRepository.updateRoutineExercise(editingRoutineExerciseId, {
       series: Math.max(1, editSeries),
       repeticiones: editRepeticiones || '8-12',
       descansoSegundos: Math.max(15, editDescansoSegundos),

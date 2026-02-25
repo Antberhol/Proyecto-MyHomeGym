@@ -72,3 +72,9 @@ Add `vitest.config.ts` + `tests/setup.ts` when starting utility and hook coverag
 - Keep current core libraries (React 19/Vite 7)
 - Avoid downgrades to match outdated templates
 - Add packages only when the phase actually uses them
+
+## 7) Contribution and maintenance
+
+For coding standards, architecture rules, technical debt management, and testing strategy, see:
+
+- `CONTRIBUTING.md`

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 import { calculateSetVolume } from '../utils/calculations'
 
 export type MuscleVolumes = Record<string, number>
@@ -60,8 +60,8 @@ export function useWeeklyMuscleVolumes(): MuscleVolumes {
         since.setDate(since.getDate() - 7)
 
         const [sets, exercises] = await Promise.all([
-            db.ejerciciosRealizados.where('fecha').aboveOrEqual(since.toISOString()).toArray(),
-            db.ejerciciosCatalogo.toArray(),
+            progressRepository.listPerformedExercisesSince(since.toISOString()),
+            progressRepository.listExercises(),
         ])
 
         const exerciseMuscleMap = new Map(

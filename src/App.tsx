@@ -6,7 +6,7 @@ import { ReloadPrompt } from './components/pwa/ReloadPrompt'
 import { PinPad } from './components/security/PinPad'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { bootstrapDatabase } from './lib/bootstrap'
-import { db } from './lib/db'
+import { profileRepository } from './repositories/profileRepository'
 import { useAuthStore } from './stores/auth-store'
 import { useUiStore } from './stores/ui-store'
 
@@ -42,7 +42,7 @@ function AppRouter() {
 
 function App() {
   const profileQuery = useLiveQuery(async () => {
-    const result = await db.userProfile.toCollection().first()
+    const result = await profileRepository.getProfile()
     return result ?? null
   }, [])
   const theme = useUiStore((state) => state.theme)

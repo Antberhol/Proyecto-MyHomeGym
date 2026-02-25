@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAudioFeedback } from './useAudioFeedback'
+import { emitWorkoutTimerFinished } from '../lib/events'
 
 interface UseWorkoutTimerOptions {
     initialSessionSeconds?: number
@@ -19,7 +19,6 @@ export function useWorkoutTimer(options: UseWorkoutTimerOptions = {}) {
     const [sessionRunning, setSessionRunning] = useState(options.initialSessionRunning ?? true)
     const [restSeconds, setRestSeconds] = useState(options.initialRestSeconds ?? 0)
     const previousRestSecondsRef = useRef(restSeconds)
-    const { playTimerFinished } = useAudioFeedback()
 
     useEffect(() => {
         if (!sessionRunning) return
@@ -43,11 +42,11 @@ export function useWorkoutTimer(options: UseWorkoutTimerOptions = {}) {
 
     useEffect(() => {
         if (previousRestSecondsRef.current > 0 && restSeconds === 0) {
-            playTimerFinished()
+            emitWorkoutTimerFinished()
         }
 
         previousRestSecondsRef.current = restSeconds
-    }, [playTimerFinished, restSeconds])
+    }, [restSeconds])
 
     const toggleSessionRunning = () => {
         setSessionRunning((current) => !current)

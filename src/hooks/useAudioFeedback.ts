@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { subscribeWorkoutTimerFinished } from '../lib/events'
 
 interface AudioFeedbackOptions {
     timerFinishedMessage?: string
+    subscribeToTimerFinished?: boolean
 }
 
 export function useAudioFeedback(options: AudioFeedbackOptions = {}) {
@@ -54,6 +56,14 @@ export function useAudioFeedback(options: AudioFeedbackOptions = {}) {
         oscillator.start()
         oscillator.stop(audioContext.currentTime + 0.09)
     }, [getAudioContext])
+
+    useEffect(() => {
+        if (options.subscribeToTimerFinished === false) return
+
+        return subscribeWorkoutTimerFinished(() => {
+            playTimerFinished()
+        })
+    }, [options.subscribeToTimerFinished, playTimerFinished])
 
     return {
         playTimerFinished,

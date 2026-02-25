@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 import { calculateSetVolume } from '../utils/calculations'
 
 const PIE_COLORS = ['#E63946', '#1D3557', '#06D6A0', '#FFD166', '#118AB2', '#9B5DE5', '#8D99AE']
@@ -28,8 +28,8 @@ function normalizeGroup(group: string): string {
 }
 
 export function MuscleDistributionChart() {
-    const performedExercises = useLiveQuery(() => db.ejerciciosRealizados.toArray(), []) ?? []
-    const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
+    const performedExercises = useLiveQuery(() => progressRepository.listPerformedExercises(), []) ?? []
+    const exercises = useLiveQuery(() => progressRepository.listExercises(), []) ?? []
 
     const exerciseGroupMap = new Map(exercises.map((exercise) => [exercise.id, normalizeGroup(exercise.grupoMuscularPrimario)]))
 

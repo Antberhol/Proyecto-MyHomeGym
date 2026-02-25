@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
-import { db } from '../lib/db'
+import { exerciseRepository } from '../repositories/exerciseRepository'
 import type { DifficultyLevel } from '../types/models'
 
 const customExerciseSchema = z.object({
@@ -29,7 +29,7 @@ export function CatalogoPage() {
   const [editNivel, setEditNivel] = useState<'basico' | 'intermedio' | 'avanzado'>('basico')
   const [editInstrucciones, setEditInstrucciones] = useState('')
 
-  const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
+  const exercises = useLiveQuery(() => exerciseRepository.listExercises(), []) ?? []
 
   const filteredExercises = useMemo(() => {
     return exercises.filter((exercise) => {
@@ -58,7 +58,7 @@ export function CatalogoPage() {
 
   const onCreateCustom = form.handleSubmit(async (values) => {
     const now = new Date().toISOString()
-    await db.ejerciciosCatalogo.add({
+    await exerciseRepository.createExercise({
       id: crypto.randomUUID(),
       nombre: values.nombre,
       descripcion: 'Ejercicio personalizado',
@@ -76,7 +76,7 @@ export function CatalogoPage() {
   })
 
   const deleteCustomExercise = async (exerciseId: string) => {
-    await db.ejerciciosCatalogo.delete(exerciseId)
+    await exerciseRepository.deleteExercise(exerciseId)
   }
 
   const startEditExercise = (exerciseId: string) => {
@@ -98,7 +98,7 @@ export function CatalogoPage() {
   const saveExerciseEdits = async () => {
     if (!editingExerciseId) return
 
-    await db.ejerciciosCatalogo.update(editingExerciseId, {
+    await exerciseRepository.updateExercise(editingExerciseId, {
       nombre: editNombre.trim() || 'Ejercicio',
       grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
       equipoNecesario: editEquipo.trim() || 'Ninguno',

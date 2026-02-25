@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 
 export interface StreaksData {
     currentDayStreak: number
@@ -101,22 +101,19 @@ function computeWeekStreak(weekKeys: Set<string>): number {
 
 export function useStreaks(): StreaksData {
     const data = useLiveQuery(async () => {
-        const trainings = await db.entrenamientosRegistrados
-            .where('fecha')
-            .belowOrEqual(new Date().toISOString())
-            .toArray()
+        const filteredTrainings = await progressRepository.listTrainingsUntil(new Date().toISOString())
 
-        if (trainings.length === 0) return EMPTY_STREAKS
+        if (filteredTrainings.length === 0) return EMPTY_STREAKS
 
-        const dayKeys = new Set(trainings.map((item) => toLocalDateKey(item.fecha)))
-        const weekKeys = new Set(trainings.map((item) => toWeekKey(item.fecha)))
+        const dayKeys = new Set(filteredTrainings.map((item) => toLocalDateKey(item.fecha)))
+        const weekKeys = new Set(filteredTrainings.map((item) => toWeekKey(item.fecha)))
 
-        const latest = trainings.reduce((acc, item) => (item.fecha > acc ? item.fecha : acc), trainings[0].fecha)
+        const latest = filteredTrainings.reduce((acc, item) => (item.fecha > acc ? item.fecha : acc), filteredTrainings[0].fecha)
 
         return {
             currentDayStreak: computeDayStreak(dayKeys),
             currentWeekStreak: computeWeekStreak(weekKeys),
-            totalTrainings: trainings.length,
+            totalTrainings: filteredTrainings.length,
             lastTrainingDate: latest,
         }
     }, [])

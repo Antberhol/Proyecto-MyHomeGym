@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { Button } from '../design-system/Button'
 import { Card } from '../design-system/Card'
 import { Input } from '../design-system/Input'
-import { db } from '../../lib/db'
+import { profileRepository } from '../../repositories/profileRepository'
 import { calculateImc, classifyImc } from '../../utils/calculations'
 
 const optionalNumber = z.preprocess(
@@ -48,7 +48,7 @@ export function OnboardingWizard() {
     const profileId = crypto.randomUUID()
     const calculatedImc = calculateImc(data.pesoCorporal, data.altura)
 
-    await db.userProfile.put({
+    await profileRepository.upsertProfile({
       id: profileId,
       nombre: data.nombre || undefined,
       pesoCorporal: data.pesoCorporal,
@@ -61,7 +61,7 @@ export function OnboardingWizard() {
       updatedAt: now,
     })
 
-    await db.medidasCorporalesHistorico.add({
+    await profileRepository.createBodyMeasurement({
       id: crypto.randomUUID(),
       pesoCorporal: data.pesoCorporal,
       cintura: data.cintura,

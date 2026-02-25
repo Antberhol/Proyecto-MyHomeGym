@@ -32,38 +32,20 @@ interface BackupPayload {
 }
 
 export async function buildBackupPayload(): Promise<BackupPayload> {
-    const [
-        userProfile,
-        ejerciciosCatalogo,
-        rutinas,
-        rutinaEjercicios,
-        entrenamientosRegistrados,
-        ejerciciosRealizados,
-        medidasCorporalesHistorico,
-        prs,
-    ] = await Promise.all([
-        db.userProfile.toArray(),
-        db.ejerciciosCatalogo.toArray(),
-        db.rutinas.toArray(),
-        db.rutinaEjercicios.toArray(),
-        db.entrenamientosRegistrados.toArray(),
-        db.ejerciciosRealizados.toArray(),
-        db.medidasCorporalesHistorico.toArray(),
-        db.prs.toArray(),
-    ])
+    const data = await db.exportAllData()
 
     return {
         version: 1,
         exportedAt: new Date().toISOString(),
         data: {
-            userProfile,
-            ejerciciosCatalogo,
-            rutinas,
-            rutinaEjercicios,
-            entrenamientosRegistrados,
-            ejerciciosRealizados,
-            medidasCorporalesHistorico,
-            prs,
+            userProfile: data.userProfile,
+            ejerciciosCatalogo: data.ejerciciosCatalogo,
+            rutinas: data.rutinas,
+            rutinaEjercicios: data.rutinaEjercicios,
+            entrenamientosRegistrados: data.entrenamientosRegistrados,
+            ejerciciosRealizados: data.ejerciciosRealizados,
+            medidasCorporalesHistorico: data.medidasCorporalesHistorico,
+            prs: data.prs,
         },
     }
 }
@@ -90,44 +72,14 @@ export async function importBackupFile(file: File): Promise<void> {
 
     const payload: BackupPayload = parsedPayload.data
 
-    await db.transaction(
-        'rw',
-        [
-            db.userProfile,
-            db.ejerciciosCatalogo,
-            db.rutinas,
-            db.rutinaEjercicios,
-            db.entrenamientosRegistrados,
-            db.ejerciciosRealizados,
-            db.medidasCorporalesHistorico,
-            db.prs,
-        ],
-        async () => {
-            await Promise.all([
-                db.userProfile.clear(),
-                db.ejerciciosCatalogo.clear(),
-                db.rutinas.clear(),
-                db.rutinaEjercicios.clear(),
-                db.entrenamientosRegistrados.clear(),
-                db.ejerciciosRealizados.clear(),
-                db.medidasCorporalesHistorico.clear(),
-                db.prs.clear(),
-            ])
-
-            if (payload.data.userProfile.length > 0) await db.userProfile.bulkAdd(payload.data.userProfile as never[])
-            if (payload.data.ejerciciosCatalogo.length > 0) await db.ejerciciosCatalogo.bulkAdd(payload.data.ejerciciosCatalogo as never[])
-            if (payload.data.rutinas.length > 0) await db.rutinas.bulkAdd(payload.data.rutinas as never[])
-            if (payload.data.rutinaEjercicios.length > 0) await db.rutinaEjercicios.bulkAdd(payload.data.rutinaEjercicios as never[])
-            if (payload.data.entrenamientosRegistrados.length > 0) {
-                await db.entrenamientosRegistrados.bulkAdd(payload.data.entrenamientosRegistrados as never[])
-            }
-            if (payload.data.ejerciciosRealizados.length > 0) {
-                await db.ejerciciosRealizados.bulkAdd(payload.data.ejerciciosRealizados as never[])
-            }
-            if (payload.data.medidasCorporalesHistorico.length > 0) {
-                await db.medidasCorporalesHistorico.bulkAdd(payload.data.medidasCorporalesHistorico as never[])
-            }
-            if (payload.data.prs.length > 0) await db.prs.bulkAdd(payload.data.prs as never[])
-        },
-    )
+    await db.replaceAllData({
+        userProfile: payload.data.userProfile as never[],
+        ejerciciosCatalogo: payload.data.ejerciciosCatalogo as never[],
+        rutinas: payload.data.rutinas as never[],
+        rutinaEjercicios: payload.data.rutinaEjercicios as never[],
+        entrenamientosRegistrados: payload.data.entrenamientosRegistrados as never[],
+        ejerciciosRealizados: payload.data.ejerciciosRealizados as never[],
+        medidasCorporalesHistorico: payload.data.medidasCorporalesHistorico as never[],
+        prs: payload.data.prs as never[],
+    })
 }

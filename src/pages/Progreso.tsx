@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BodyDiagramSvg } from '../components/body/BodyDiagramSvg'
 import type { MuscleLevel } from '../components/body/types'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 import { calculateWorkoutVolume, estimateCaloriesBurned, estimateOneRmEpley } from '../utils/calculations'
 
 const TRACKED_GROUPS = [
@@ -162,13 +162,13 @@ function heatmapColor(count: number): string {
 }
 
 export function ProgresoPage() {
-  const measurements = useLiveQuery(() => db.medidasCorporalesHistorico.toArray(), []) ?? []
-  const trainings = useLiveQuery(() => db.entrenamientosRegistrados.toArray(), []) ?? []
-  const performedExercises = useLiveQuery(() => db.ejerciciosRealizados.toArray(), []) ?? []
-  const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
-  const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
-  const routineExercises = useLiveQuery(() => db.rutinaEjercicios.toArray(), []) ?? []
-  const prs = useLiveQuery(() => db.prs.toArray(), []) ?? []
+  const measurements = useLiveQuery(() => progressRepository.listBodyMeasurements(), []) ?? []
+  const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
+  const performedExercises = useLiveQuery(() => progressRepository.listPerformedExercises(), []) ?? []
+  const exercises = useLiveQuery(() => progressRepository.listExercises(), []) ?? []
+  const routines = useLiveQuery(() => progressRepository.listRoutines(), []) ?? []
+  const routineExercises = useLiveQuery(() => progressRepository.listRoutineExercises(), []) ?? []
+  const prs = useLiveQuery(() => progressRepository.listPersonalRecords(), []) ?? []
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [oneRmPeso, setOneRmPeso] = useState(60)
   const [oneRmReps, setOneRmReps] = useState(8)

@@ -2,11 +2,11 @@ import { defaultExercises } from '../constants/defaultExercises'
 import { db } from './db'
 
 export async function bootstrapDatabase(): Promise<void> {
-  const exerciseCount = await db.ejerciciosCatalogo.count()
+  const exerciseCount = await db.getExercisesCount()
   if (exerciseCount > 0) return
 
   const now = new Date().toISOString()
-  await db.ejerciciosCatalogo.bulkAdd(
+  await db.bulkAddExercises(
     defaultExercises.map((exercise) => ({
       id: exercise.id,
       nombre: exercise.nombre,

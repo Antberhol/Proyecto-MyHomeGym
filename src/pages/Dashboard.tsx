@@ -4,7 +4,7 @@ import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
 import { useStreaks } from '../hooks/useStreaks'
 import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
-import { db } from '../lib/db'
+import { progressRepository } from '../repositories/progressRepository'
 import { formatWorkoutToCSV, formatWorkoutToText, type TrainingData } from '../utils/clipboard'
 
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
@@ -12,12 +12,12 @@ const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'vierne
 export function DashboardPage() {
   const streaks = useStreaks()
   const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
-  const trainings = useLiveQuery(() => db.entrenamientosRegistrados.toArray(), []) ?? []
-  const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
-  const prs = useLiveQuery(() => db.prs.toArray(), []) ?? []
-  const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
-  const routineExercises = useLiveQuery(() => db.rutinaEjercicios.toArray(), []) ?? []
-  const performedExercises = useLiveQuery(() => db.ejerciciosRealizados.toArray(), []) ?? []
+  const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
+  const routines = useLiveQuery(() => progressRepository.listRoutines(), []) ?? []
+  const prs = useLiveQuery(() => progressRepository.listPersonalRecords(), []) ?? []
+  const exercises = useLiveQuery(() => progressRepository.listExercises(), []) ?? []
+  const routineExercises = useLiveQuery(() => progressRepository.listRoutineExercises(), []) ?? []
+  const performedExercises = useLiveQuery(() => progressRepository.listPerformedExercises(), []) ?? []
 
   const weekTrainings = trainings.filter((training) => {
     const trainingDate = new Date(training.fecha)

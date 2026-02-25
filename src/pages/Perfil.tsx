@@ -3,12 +3,12 @@ import type { ChangeEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Moon, Sun } from 'lucide-react'
 import { buildBackupPayload, downloadBackup, importBackupFile } from '../lib/backup'
-import { db } from '../lib/db'
+import { profileRepository } from '../repositories/profileRepository'
 import { useUiStore } from '../stores/ui-store'
 import { classifyImc } from '../utils/calculations'
 
 export function PerfilPage() {
-    const profile = useLiveQuery(() => db.userProfile.toCollection().first(), [])
+    const profile = useLiveQuery(() => profileRepository.getProfile(), [])
     const theme = useUiStore((state) => state.theme)
     const setTheme = useUiStore((state) => state.setTheme)
     const fileInputRef = useRef<HTMLInputElement>(null)

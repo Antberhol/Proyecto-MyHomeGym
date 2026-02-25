@@ -1,35 +1,11 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { db } from '../lib/db'
 import { exportAllDataJson, exportSummaryPdf, exportTrainingsCsv, importAllDataJson, importTrainingsCsv } from '../lib/export'
+import { settingsRepository } from '../repositories/settingsRepository'
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications'
 
 async function clearAllData() {
-    await db.transaction(
-        'rw',
-        [
-            db.userProfile,
-            db.ejerciciosCatalogo,
-            db.rutinas,
-            db.rutinaEjercicios,
-            db.entrenamientosRegistrados,
-            db.ejerciciosRealizados,
-            db.medidasCorporalesHistorico,
-            db.prs,
-        ],
-        async () => {
-            await Promise.all([
-                db.userProfile.clear(),
-                db.ejerciciosCatalogo.clear(),
-                db.rutinas.clear(),
-                db.rutinaEjercicios.clear(),
-                db.entrenamientosRegistrados.clear(),
-                db.ejerciciosRealizados.clear(),
-                db.medidasCorporalesHistorico.clear(),
-                db.prs.clear(),
-            ])
-        },
-    )
+    await settingsRepository.clearAllData()
 }
 
 export function ConfiguracionPage() {
