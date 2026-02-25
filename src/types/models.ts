@@ -50,6 +50,7 @@ export interface RoutineExercise {
   repeticiones: string
   pesoSugerido?: number
   descansoSegundos: number
+  rpe?: number
   notas?: string
 }
 
@@ -70,6 +71,7 @@ export interface PerformedExercise {
   serieNumero: number
   repeticionesRealizadas: number
   pesoUtilizado: number
+  rpe?: number
   fecha: string
 }
 

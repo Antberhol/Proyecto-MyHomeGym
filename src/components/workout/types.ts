@@ -3,6 +3,7 @@ import type { Exercise, PerformedExercise, PersonalRecord, RoutineExercise } fro
 export interface SetData {
     reps: number
     peso: number
+    rpe?: number
 }
 
 export interface PreviousExerciseSession {

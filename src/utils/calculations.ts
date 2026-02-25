@@ -15,8 +15,13 @@ export function calculateSetVolume(peso: number, reps: number): number {
   return Number((peso * reps).toFixed(2))
 }
 
+export function calculate1RM(weight: number, reps: number): number {
+  if (weight <= 0 || reps <= 0) return 0
+  return Number((weight * (1 + reps / 30)).toFixed(2))
+}
+
 export function estimateOneRmEpley(peso: number, reps: number): number {
-  return Number((peso * (1 + reps / 30)).toFixed(2))
+  return calculate1RM(peso, reps)
 }
 
 export function calculateWorkoutVolume(series: number, reps: number, peso: number): number {

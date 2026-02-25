@@ -286,6 +286,7 @@ export function EntrenarPage() {
         acc[key] = {
           reps: previous?.repeticionesRealizadas ?? 0,
           peso: previous?.pesoUtilizado ?? 0,
+          rpe: previous?.rpe,
         }
       }
 
@@ -411,6 +412,9 @@ export function EntrenarPage() {
       [key]: {
         reps: field === 'reps' ? value : (current[key]?.reps ?? prefilledSetData[key]?.reps ?? 0),
         peso: field === 'peso' ? value : (current[key]?.peso ?? prefilledSetData[key]?.peso ?? 0),
+        rpe: field === 'rpe'
+          ? (value > 0 ? value : undefined)
+          : (current[key]?.rpe ?? prefilledSetData[key]?.rpe),
       },
     }))
   }
@@ -425,6 +429,7 @@ export function EntrenarPage() {
         updated[key] = {
           reps: current[key]?.reps ?? prefilledSetData[key]?.reps ?? 0,
           peso: activeExerciseSuggestedWeight,
+          rpe: current[key]?.rpe ?? prefilledSetData[key]?.rpe,
         }
       }
       return updated
@@ -455,6 +460,7 @@ export function EntrenarPage() {
           serieNumero,
           repeticionesRealizadas: reps,
           pesoUtilizado: peso,
+          rpe: serie?.rpe && serie.rpe > 0 ? serie.rpe : undefined,
           fecha: now,
         }
       })
@@ -479,6 +485,7 @@ export function EntrenarPage() {
             serieNumero: index + 1,
             repeticionesRealizadas: reps,
             pesoUtilizado: peso,
+            rpe: set.rpe && set.rpe > 0 ? set.rpe : undefined,
             fecha: now,
           }
         })
