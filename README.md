@@ -1,5 +1,7 @@
 # MyHomeGym
 
+🌐 Language: **English** | [Español](./README.es.md)
+
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen?style=flat-square)
 ![Coverage](https://img.shields.io/badge/Coverage-80%25%2B-yellowgreen?style=flat-square)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
@@ -10,70 +12,70 @@
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=flat-square)
 
-Una PWA **Local-First** de alto rendimiento diseñada para seguimiento de entrenamiento orientado a hipertrofia, con registro rápido de series/repeticiones/carga y analítica accionable del progreso físico. Su arquitectura está pensada para minimizar fricción durante la sesión: la interfaz responde en tiempo real y el flujo de trabajo prioriza velocidad de captura y claridad de métricas.
+A high-performance **Local-First** PWA designed for hypertrophy-oriented training tracking, with fast logging of sets/reps/load and actionable progress analytics. The architecture is built to minimize in-session friction: the interface responds instantly and the workflow prioritizes capture speed and metric clarity.
 
-El diferencial es su enfoque **privacy-first** y **offline-ready**: no depende de nube para operar, mantiene los datos en el dispositivo y garantiza continuidad de uso incluso sin conexión. MyHomeGym materializa requisitos no funcionales críticos (disponibilidad, baja latencia, mantenibilidad) mediante Service Workers + IndexedDB y una arquitectura por capas con repositorios desacoplados.
+Its key differentiator is a **privacy-first**, **offline-ready** approach: it does not depend on cloud services for core operation, keeps data on-device, and ensures continuity even without internet access. MyHomeGym operationalizes critical non-functional requirements (availability, low latency, maintainability) through Service Workers + IndexedDB and a layered architecture with decoupled repositories.
 
 ---
 
-## Tabla de contenidos
+## Table of contents
 
 - [MyHomeGym](#myhomegym)
-  - [Tabla de contenidos](#tabla-de-contenidos)
-  - [1. Características principales](#1-características-principales)
-    - [🏋️‍♂️ Gestión de entrenamientos](#️️-gestión-de-entrenamientos)
-    - [📊 Analíticas y progreso](#-analíticas-y-progreso)
-    - [⚙️ Arquitectura local](#️-arquitectura-local)
-  - [2. Mapa de contexto (arquitectura de alto nivel)](#2-mapa-de-contexto-arquitectura-de-alto-nivel)
-  - [3. Decisiones técnicas destacadas](#3-decisiones-técnicas-destacadas)
+  - [Table of contents](#table-of-contents)
+  - [1. Key features](#1-key-features)
+    - [🏋️‍♂️ Training management](#️️-training-management)
+    - [📊 Analytics and progress](#-analytics-and-progress)
+    - [⚙️ Local architecture](#️-local-architecture)
+  - [2. Context map (high-level architecture)](#2-context-map-high-level-architecture)
+  - [3. Key technical decisions](#3-key-technical-decisions)
   - [4. ⚡ Why Local-First?](#4--why-local-first)
-  - [5. Vista de implementación / instalación](#5-vista-de-implementación--instalación)
-    - [Requisitos previos](#requisitos-previos)
-    - [Setup para developers](#setup-para-developers)
-    - [Validación técnica local](#validación-técnica-local)
-  - [6. Estructura del proyecto](#6-estructura-del-proyecto)
-  - [7. Modelo de datos local](#7-modelo-de-datos-local)
-  - [8. Rutas principales](#8-rutas-principales)
-  - [9. Scripts disponibles](#9-scripts-disponibles)
-  - [10. Calidad: lint, build y testing](#10-calidad-lint-build-y-testing)
-  - [11. Demo visual (placeholders)](#11-demo-visual-placeholders)
-  - [12. Exportación, backup y recuperación](#12-exportación-backup-y-recuperación)
+  - [5. Setup / installation view](#5-setup--installation-view)
+    - [Prerequisites](#prerequisites)
+    - [Developer setup](#developer-setup)
+    - [Local technical validation](#local-technical-validation)
+  - [6. Project structure](#6-project-structure)
+  - [7. Local data model](#7-local-data-model)
+  - [8. Main routes](#8-main-routes)
+  - [9. Available scripts](#9-available-scripts)
+  - [10. Quality: lint, build, and testing](#10-quality-lint-build-and-testing)
+  - [11. Visual demo placeholders](#11-visual-demo-placeholders)
+  - [12. Export, backup, and restore](#12-export-backup-and-restore)
   - [13. Roadmap](#13-roadmap)
-  - [14. Documentación extendida](#14-documentación-extendida)
-  - [15. Contribución](#15-contribución)
+  - [14. Extended documentation](#14-extended-documentation)
+  - [15. Contributing](#15-contributing)
 
 ---
 
-## 1. Características principales
+## 1. Key features
 
-### 🏋️‍♂️ Gestión de entrenamientos
+### 🏋️‍♂️ Training management
 
-- Registro de entrenamientos por rutina y en modo libre.
-- Control detallado por ejercicio, series, repeticiones, carga y observaciones.
-- Temporizador de descanso con feedback (audio/háptica) desacoplado por eventos.
-- Flujo preparado para variables de intensidad percibida (RPE) y progresión semanal.
+- Routine-based and free-mode workout logging.
+- Detailed control per exercise, set, reps, load, and notes.
+- Rest timer with event-driven feedback (audio/haptics), decoupled through pub/sub.
+- Flow prepared for perceived exertion variables (RPE) and weekly progression.
 
-### 📊 Analíticas y progreso
+### 📊 Analytics and progress
 
-- Dashboard con resumen de actividad reciente y consistencia.
-- Gráficos de evolución (peso corporal, volumen, tendencias históricas).
-- Mapa de calor y diagrama muscular interactivo para distribución de carga.
-- Detección y seguimiento de PRs + métricas de RM estimada/indicadores de rendimiento.
+- Dashboard with recent activity and consistency insights.
+- Evolution charts (body weight, volume, historical trends).
+- Muscle heatmap and interactive body diagram for load distribution.
+- PR detection and tracking + estimated 1RM/performance indicators.
 
-### ⚙️ Arquitectura local
+### ⚙️ Local architecture
 
-- Operación sin login en nube para flujo core.
-- Persistencia local robusta con IndexedDB (Dexie).
-- Exportación e importación de datos en formatos portables (JSON/CSV).
-- Generación de PDF para resumen y trazabilidad personal.
+- No cloud login required for core workflows.
+- Robust local persistence with IndexedDB (Dexie).
+- Portable data export/import (JSON/CSV).
+- PDF generation for personal summaries and reporting.
 
 ---
 
-## 2. Mapa de contexto (arquitectura de alto nivel)
+## 2. Context map (high-level architecture)
 
 ```mermaid
 flowchart LR
-    U((Usuario)) --> PWA[MyHomeGym PWA\nReact + TypeScript + Vite]
+    U((User)) --> PWA[MyHomeGym PWA\nReact + TypeScript + Vite]
     PWA --> DB[(IndexedDB\nDexie.js)]
     PWA --> SW[Service Worker\nOffline Cache]
     SW --> CACHE[(Cache Storage)]
@@ -82,43 +84,43 @@ flowchart LR
 
 ---
 
-## 3. Decisiones técnicas destacadas
+## 3. Key technical decisions
 
-- **Frontend (React + TypeScript + Vite):** entrega rápida de UI reactiva, seguridad de tipos en todo el ciclo de desarrollo y build optimizado para rendimiento.
-- **Persistencia (Dexie.js sobre IndexedDB):** elección alineada con patrón **Local-First** para disponibilidad offline, baja latencia y control de datos por parte del usuario.
-- **UI (Tailwind CSS):** acelera diseño consistente y mantenible con un sistema utilitario explícito y fácilmente refactorizable.
-- **PWA (Service Workers):** instalabilidad en móvil/escritorio, cache de activos y continuidad operativa sin conexión.
-- **Arquitectura por capas + repositorios:** desacopla UI de infraestructura, mejora testabilidad y reduce riesgo de deuda técnica.
+- **Frontend (React + TypeScript + Vite):** fast, reactive UI delivery, end-to-end type safety, and optimized production builds.
+- **Persistence (Dexie.js on IndexedDB):** aligned with the **Local-First** pattern to guarantee offline availability, low latency, and user data ownership.
+- **UI (Tailwind CSS):** maintainable, consistent styling with utility-driven composition and low refactor friction.
+- **PWA (Service Workers):** installability on mobile/desktop, asset caching, and offline continuity.
+- **Layered architecture + repositories:** decouples UI from infrastructure, improves testability, and reduces technical debt risk.
 
 ---
 
 ## 4. ⚡ Why Local-First?
 
-La ausencia de backend para el flujo principal es una decisión de ingeniería deliberada: reduce complejidad operativa, elimina costos de infraestructura y minimiza superficies de fallo externas. En términos prácticos, las operaciones críticas ocurren donde importa (en el dispositivo), logrando latencia percibida casi instantánea y mejor resiliencia en entornos sin conectividad.
+Not having a mandatory backend for the main workflow is an intentional engineering decision: it lowers operational complexity, removes infrastructure costs, and reduces external failure surfaces. In practical terms, critical operations run where they matter most (on-device), which enables near-instant perceived latency and better resilience under unreliable connectivity.
 
-Este enfoque también fortalece privacidad y soberanía de datos: el usuario conserva el control del historial de entrenamiento y decide explícitamente cuándo exportar o compartir información.
+This approach also strengthens privacy and data sovereignty: users keep control of their training history and explicitly decide when to export or share data.
 
 ---
 
-## 5. Vista de implementación / instalación
+## 5. Setup / installation view
 
-### Requisitos previos
+### Prerequisites
 
 - Node.js 20+
 - npm 10+
 
-### Setup para developers
+### Developer setup
 
 ```bash
-git clone https://github.com/<tu-usuario>/proyecto-hevy.git
+git clone https://github.com/<your-username>/proyecto-hevy.git
 cd proyecto-hevy
 npm install
 npm run dev
 ```
 
-La app estará disponible en la URL de Vite (por defecto, `http://localhost:5173`).
+The app will be available at the Vite URL (default: `http://localhost:5173`).
 
-### Validación técnica local
+### Local technical validation
 
 ```bash
 npm run lint
@@ -128,29 +130,29 @@ npm run build
 
 ---
 
-## 6. Estructura del proyecto
+## 6. Project structure
 
 ```text
 src/
-├─ components/      # Componentes reutilizables de UI
-├─ hooks/           # Hooks de aplicación y lógica de interacción
-├─ pages/           # Pantallas principales por ruta
-├─ repositories/    # Acceso a datos por dominio (sin DB directa en UI)
-├─ lib/             # Infraestructura: DB, PWA, backup/export, eventos
-├─ stores/          # Estado global de interfaz
-├─ utils/           # Funciones puras y cálculos
-└─ workers/         # Procesamiento asíncrono en background
+├─ components/      # Reusable UI components
+├─ hooks/           # Application hooks and interaction logic
+├─ pages/           # Route-based screens
+├─ repositories/    # Domain data access (no direct DB calls from UI)
+├─ lib/             # Infrastructure: DB, PWA, backup/export, events
+├─ stores/          # Global UI state
+├─ utils/           # Pure functions and calculations
+└─ workers/         # Background processing
 ```
 
-Principio de mantenibilidad: la UI no conversa directamente con la base de datos; toda lectura/escritura pasa por repositorios.
+Maintainability principle: UI does not talk to the database directly; all reads/writes flow through repositories.
 
 ---
 
-## 7. Modelo de datos local
+## 7. Local data model
 
-Base de datos: `gym_offline_db`.
+Database name: `gym_offline_db`.
 
-Entidades funcionales principales:
+Core entities:
 
 - `userProfile`
 - `ejerciciosCatalogo`
@@ -163,82 +165,82 @@ Entidades funcionales principales:
 
 ---
 
-## 8. Rutas principales
+## 8. Main routes
 
 - `/` → Dashboard
-- `/entrenar` → Entrenamiento
-- `/rutinas` → Gestión de rutinas
-- `/catalogo` → Catálogo de ejercicios
-- `/progreso` → Analíticas y métricas
-- `/perfil` → Perfil y preferencias
-- `/configuracion` → Backup, restore, PDF, mantenimiento
+- `/entrenar` → Training
+- `/rutinas` → Routine management
+- `/catalogo` → Exercise catalog
+- `/progreso` → Analytics and metrics
+- `/perfil` → Profile and preferences
+- `/configuracion` → Backup, restore, PDF, maintenance
 
 ---
 
-## 9. Scripts disponibles
+## 9. Available scripts
 
-- `npm run dev`: servidor de desarrollo
-- `npm run build`: compilación TypeScript + build de producción
-- `npm run preview`: preview del build
-- `npm run lint`: análisis estático con ESLint
-- `npm run test`: pruebas con Vitest
-- `npm run test:ui`: interfaz visual de Vitest
-
----
-
-## 10. Calidad: lint, build y testing
-
-Checklist mínimo antes de abrir PR:
-
-- Lint sin errores (`npm run lint`)
-- Pruebas relevantes pasando (`npm run test`)
-- Build de producción exitoso (`npm run build`)
-
-Estrategia recomendada: priorizar pruebas de lógica pura, hooks críticos de flujo de entrenamiento y componentes de alto impacto en UX.
+- `npm run dev`: development server
+- `npm run build`: TypeScript compilation + production build
+- `npm run preview`: production build preview
+- `npm run lint`: static analysis with ESLint
+- `npm run test`: test run with Vitest
+- `npm run test:ui`: Vitest UI for visual test debugging
 
 ---
 
-## 11. Demo visual (placeholders)
+## 10. Quality: lint, build, and testing
 
-![Demo: Creando Rutina](https://via.placeholder.com/1200x650?text=Demo%3A+Creando+Rutina)
-![Demo: Modo Offline](https://via.placeholder.com/1200x650?text=Demo%3A+Modo+Offline)
-![Demo: Progreso y Anal%C3%ADticas](https://via.placeholder.com/1200x650?text=Demo%3A+Progreso+y+Anal%C3%ADticas)
+Minimum PR checklist:
 
-> Sustituye estos enlaces por GIFs/capturas reales para aumentar impacto de portfolio.
+- Lint passes (`npm run lint`)
+- Relevant tests pass (`npm run test`)
+- Production build succeeds (`npm run build`)
+
+Recommended strategy: prioritize pure logic tests, critical training-flow hooks, and high-impact UX components.
 
 ---
 
-## 12. Exportación, backup y recuperación
+## 11. Visual demo placeholders
 
-- Exportación local de datos (JSON/CSV).
-- Importación de backups para continuidad y migración.
-- Generación de PDF para reporting personal.
-- Recomendación operativa: exportar backup antes de cambios de versión o pruebas de datos.
+![Demo: Routine Creation](https://via.placeholder.com/1200x650?text=Demo%3A+Routine+Creation)
+![Demo: Offline Mode](https://via.placeholder.com/1200x650?text=Demo%3A+Offline+Mode)
+![Demo: Analytics and Progress](https://via.placeholder.com/1200x650?text=Demo%3A+Analytics+and+Progress)
+
+> Replace these placeholders with real GIFs/screenshots to maximize portfolio impact.
+
+---
+
+## 12. Export, backup, and restore
+
+- Local data export (JSON/CSV)
+- Backup import for continuity and migration
+- PDF generation for personal reporting
+- Recommended practice: export a backup before version changes or data experiments
 
 ---
 
 ## 13. Roadmap
 
-- Sincronización cloud **opcional** con estrategia conflict-safe.
-- Sistema de gamificación (streaks avanzados, hitos y retos).
-- Mayor cobertura de pruebas end-to-end en flujos críticos.
-- Auditoría integral de accesibilidad y optimización de performance.
+- Optional cloud sync with conflict-safe strategy
+- Gamification system (advanced streaks, milestones, challenges)
+- Higher end-to-end test coverage for critical workflows
+- Full accessibility audit and performance optimization pass
 
 ---
 
-## 14. Documentación extendida
+## 14. Extended documentation
 
-| Documento                                                                  | Descripción                              |
-| -------------------------------------------------------------------------- | ---------------------------------------- |
-| 📐 [Arquitectura y Decisiones de Diseño](./docs/ARCHITECTURE.md)            | Vistas 4+1, ADRs y justificación técnica |
-| 🛠 [Guía de Configuración y Dependencias](./docs/SETUP_AND_DEPENDENCIES.md) | Setup del entorno y stack base           |
-| 📅 [Plan Maestro](./docs/MASTER_PLAN.md)                                    | Plan de evolución por fases              |
-| 🧭 [Orden de Implementación](./docs/IMPLEMENTATION_ORDER.md)                | Secuencia sugerida de desarrollo         |
+| Document                                                           | Description                              |
+| ------------------------------------------------------------------ | ---------------------------------------- |
+| 📐 [Architecture and Design Decisions](./docs/ARCHITECTURE.md)      | 4+1 views, ADRs, and technical rationale |
+| 🛠 [Setup and Dependencies Guide](./docs/SETUP_AND_DEPENDENCIES.md) | Environment setup and base stack         |
+| 📅 [Master Plan](./docs/MASTER_PLAN.md)                             | Phased evolution plan                    |
+| 🧭 [Implementation Order](./docs/IMPLEMENTATION_ORDER.md)           | Suggested development sequence           |
 
 ---
 
-## 15. Contribución
+## 15. Contributing
 
-Consulta [CONTRIBUTING.md](./CONTRIBUTING.md) para estándares de arquitectura, política de deuda técnica, checklist de PR y lineamientos de testing.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture standards, technical debt policy, PR checklist, and testing guidelines.
 
-Regla de oro: cambios pequeños, tipados, validados y documentados.
+Golden rule: keep changes small, typed, validated, and documented.
