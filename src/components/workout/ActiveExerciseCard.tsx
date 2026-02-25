@@ -5,6 +5,7 @@ import type {
     PreviousExerciseSession,
     SetData,
 } from './types'
+import { NumberStepper } from '../ui/NumberStepper'
 
 interface ActiveExerciseCardProps {
     activeRoutineExercise: ActiveRoutineExercise | undefined
@@ -129,35 +130,27 @@ export function ActiveExerciseCard({
                                     Anterior: {previousSet.repeticionesRealizadas} reps · {previousSet.pesoUtilizado} kg
                                 </p>
                             )}
-                            <div className="grid grid-cols-2 gap-2">
-                                <input
-                                    type="number"
+                            <div className="grid grid-cols-1 gap-2">
+                                <NumberStepper
+                                    id={`${key}-reps`}
+                                    label="Reps"
                                     value={current.reps}
-                                    onChange={(event) =>
-                                        updateSetData(
-                                            activeRoutineExercise.id,
-                                            serieNumero,
-                                            'reps',
-                                            Number(event.target.value) || 0,
-                                        )
+                                    step={1}
+                                    min={0}
+                                    onChange={(value) =>
+                                        updateSetData(activeRoutineExercise.id, serieNumero, 'reps', value)
                                     }
-                                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                                    placeholder="Reps"
                                 />
-                                <input
-                                    type="number"
-                                    step="0.5"
+                                <NumberStepper
+                                    id={`${key}-peso`}
+                                    label="Peso (kg)"
                                     value={current.peso}
-                                    onChange={(event) =>
-                                        updateSetData(
-                                            activeRoutineExercise.id,
-                                            serieNumero,
-                                            'peso',
-                                            Number(event.target.value) || 0,
-                                        )
+                                    step={0.5}
+                                    min={0}
+                                    decimals={1}
+                                    onChange={(value) =>
+                                        updateSetData(activeRoutineExercise.id, serieNumero, 'peso', value)
                                     }
-                                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                                    placeholder="Peso"
                                 />
                             </div>
                             <button

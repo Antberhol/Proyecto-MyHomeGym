@@ -1,8 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Calculator, Share2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
+import { WorkoutShareCard, type WorkoutShareData } from '../components/share/WorkoutShareCard'
+import { PlateCalculatorModal } from '../components/tools/PlateCalculatorModal'
 import { ActiveExerciseCard } from '../components/workout/ActiveExerciseCard'
 import { RestTimerOverlay } from '../components/workout/RestTimerOverlay'
 import type {
@@ -16,6 +19,7 @@ import { getPersistedWorkoutSession, usePersistedWorkoutSession } from '../hooks
 import { useWorkoutTimer } from '../hooks/useWorkoutTimer'
 import { db } from '../lib/db'
 import { registerSetPrs, registerTrainingVolumePr } from '../lib/prs'
+import { shareWorkoutResult } from '../lib/shareWorkoutResult'
 import type { PerformedExercise } from '../types/models'
 import { calculateSetVolume } from '../utils/calculations'
 
@@ -76,6 +80,7 @@ export function EntrenarPage() {
   const [freeExerciseId, setFreeExerciseId] = useState('')
   const [freeSeriesCount, setFreeSeriesCount] = useState(3)
   const [freeExercisesDraft, setFreeExercisesDraft] = useState<FreeExerciseDraft[]>([])
+  const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
   const {
     sessionSeconds,
     sessionRunning,
@@ -476,9 +481,42 @@ export function EntrenarPage() {
     clearSession()
   })
 
+  const sharePreviewData = useMemo<WorkoutShareData | null>(() => {
+    if (!trainingSummary) return null
+
+    return {
+      totalVolume: trainingSummary.totalVolume,
+      durationMinutes: trainingSummary.durationMinutes,
+      prsCreated: trainingSummary.prsCreated,
+      setCount: trainingSummary.setCount,
+      dateLabel: new Date().toLocaleDateString(),
+    }
+  }, [trainingSummary])
+
+  const onShareSummary = async () => {
+    if (!sharePreviewData) return
+
+    try {
+      const status = await shareWorkoutResult(sharePreviewData)
+      setLastSavedMessage(status === 'shared' ? 'Resumen compartido con éxito.' : 'Imagen del resumen descargada.')
+    } catch {
+      setLastSavedMessage('No se pudo compartir el resumen. Instala html2canvas o revisa permisos del dispositivo.')
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
+        <button
+          type="button"
+          onClick={() => setIsPlateCalculatorOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium dark:border-slate-600"
+        >
+          <Calculator size={16} />
+          Calculadora de discos
+        </button>
+      </div>
 
       <WorkoutControls
         sessionSeconds={sessionSeconds}
@@ -495,6 +533,12 @@ export function EntrenarPage() {
       />
 
       <RestTimerOverlay restSeconds={restSeconds} formatClock={formatClock} />
+
+      <PlateCalculatorModal
+        isOpen={isPlateCalculatorOpen}
+        onClose={() => setIsPlateCalculatorOpen(false)}
+        initialTargetWeight={activeExerciseSuggestedWeight ?? 100}
+      />
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-2">
         <select {...form.register('rutinaId')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900">
@@ -674,13 +718,24 @@ export function EntrenarPage() {
           <div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gym-cardDark">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Resumen de entrenamiento</h2>
-              <button
-                type="button"
-                onClick={() => setTrainingSummary(null)}
-                className="rounded border border-slate-300 px-2 py-1 text-xs"
-              >
-                Cerrar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onShareSummary()
+                  }}
+                  className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs"
+                >
+                  <Share2 size={14} /> Compartir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrainingSummary(null)}
+                  className="rounded border border-slate-300 px-2 py-1 text-xs"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -697,6 +752,19 @@ export function EntrenarPage() {
                 PRs nuevos: <span className="font-semibold">{trainingSummary.prsCreated}</span>
               </div>
             </div>
+
+            {sharePreviewData && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">Vista previa para compartir</h3>
+                <div className="mx-auto w-fit rounded-2xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="relative h-[320px] w-[180px] overflow-hidden rounded-2xl">
+                    <div className="absolute left-0 top-0 origin-top-left scale-50">
+                      <WorkoutShareCard data={sharePreviewData} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <h3 className="mb-2 text-sm font-semibold">Desglose por ejercicio</h3>

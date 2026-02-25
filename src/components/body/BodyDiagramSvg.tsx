@@ -13,6 +13,7 @@ interface BodyDiagramSvgProps {
     levelByMuscle: Record<string, { volume: number; level: MuscleLevel }>
     selectedGroup: string | null
     onSelectGroup: (group: string) => void
+    highlightedColors?: [string, string, string, string]
 }
 
 function levelToFrequency(level: MuscleLevel): number {
@@ -134,7 +135,13 @@ function buildExerciseData(view: 'frontal' | 'posterior', levelByMuscle: Record<
     return commonData
 }
 
-export function BodyDiagramSvg({ view, levelByMuscle, selectedGroup: _selectedGroup, onSelectGroup }: BodyDiagramSvgProps) {
+export function BodyDiagramSvg({
+    view,
+    levelByMuscle,
+    selectedGroup: _selectedGroup,
+    onSelectGroup,
+    highlightedColors,
+}: BodyDiagramSvgProps) {
     const containerRef = useRef<HTMLDivElement | null>(null)
     const instanceRef = useRef<BodyHighlighterInstance | null>(null)
 
@@ -150,7 +157,7 @@ export function BodyDiagramSvg({ view, levelByMuscle, selectedGroup: _selectedGr
             type: modelType,
             bodyColor: '#f3f4f6',
             data: exerciseData,
-            highlightedColors: ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
+            highlightedColors: highlightedColors ?? ['#dbeafe', '#93c5fd', '#3b82f6', '#1d4ed8'],
             style: {
                 width: '100%',
                 maxWidth: '420px',

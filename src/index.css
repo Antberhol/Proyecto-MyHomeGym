@@ -4,6 +4,9 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 html,
@@ -18,9 +21,26 @@ body {
     sans-serif;
   background-color: #f8f9fa;
   color: #2b2d42;
+  overscroll-behavior-y: none;
 }
 
 .dark body {
   background-color: #0a0e27;
   color: #f8f9fa;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+input,
+textarea,
+select,
+a {
+  touch-action: manipulation;
 }

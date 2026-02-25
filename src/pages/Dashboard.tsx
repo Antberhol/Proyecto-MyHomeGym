@@ -1,10 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { StreakBadge } from '../components/StreakBadge'
+import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
+import { useStreaks } from '../hooks/useStreaks'
+import { useWeeklyMuscleVolumes } from '../hooks/useWeeklyMuscleVolumes'
 import { db } from '../lib/db'
 
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
 
 export function DashboardPage() {
+  const streaks = useStreaks()
+  const weeklyMuscleVolumes = useWeeklyMuscleVolumes()
   const trainings = useLiveQuery(() => db.entrenamientosRegistrados.toArray(), []) ?? []
   const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
   const prs = useLiveQuery(() => db.prs.toArray(), []) ?? []
@@ -99,7 +105,14 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <StreakBadge
+          dayStreak={streaks.currentDayStreak}
+          weekStreak={streaks.currentWeekStreak}
+          totalTrainings={streaks.totalTrainings}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -187,6 +200,8 @@ export function DashboardPage() {
       </section>
 
       <MuscleDistributionChart />
+
+      <MuscleHeatmap muscleVolumes={weeklyMuscleVolumes} />
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">Logros y medallas</h2>

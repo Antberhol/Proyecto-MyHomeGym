@@ -2,9 +2,12 @@ import {
   Activity,
   BookOpen,
   Dumbbell,
+  Home,
   LayoutDashboard,
+  List,
   Menu,
   Settings,
+  User,
   UserCircle,
   Workflow,
 } from 'lucide-react'
@@ -19,6 +22,13 @@ const navItems = [
   { to: '/progreso', label: 'Progreso', icon: Activity },
   { to: '/perfil', label: 'Perfil', icon: UserCircle },
   { to: '/configuracion', label: 'Config', icon: Settings },
+]
+
+const mobileNavItems = [
+  { to: '/', label: 'Inicio', icon: Home },
+  { to: '/entrenar', label: 'Entrenar', icon: Dumbbell },
+  { to: '/rutinas', label: 'Rutinas', icon: List },
+  { to: '/perfil', label: 'Perfil', icon: User },
 ]
 
 function NavItem({ to, label, icon: Icon }: (typeof navItems)[number]) {
@@ -47,7 +57,7 @@ export function AppShell() {
     <div className="min-h-screen bg-gym-bgLight dark:bg-gym-bgDark dark:text-white">
       <div className="mx-auto flex min-h-screen max-w-[1400px]">
         <aside
-          className={`hidden border-r border-slate-200 bg-white p-3 transition-all dark:border-slate-700 dark:bg-gym-cardDark lg:block ${sidebarCollapsed ? 'w-[78px]' : 'w-[250px]'
+          className={`hidden border-r border-slate-200 bg-white p-3 transition-all dark:border-slate-700 dark:bg-gym-cardDark md:block ${sidebarCollapsed ? 'w-[78px]' : 'w-[250px]'
             }`}
         >
           <button
@@ -66,27 +76,30 @@ export function AppShell() {
           </nav>
         </aside>
 
-        <main className="flex-1 p-4 pb-24 sm:p-6">
+        <main className="flex-1 p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
           <Outlet />
         </main>
       </div>
 
       <nav
         aria-label="Navegación móvil"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-2 py-2 dark:border-slate-700 dark:bg-gym-cardDark lg:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/80 px-2 pt-2 backdrop-blur-md dark:border-slate-700 dark:bg-gym-cardDark/80 md:hidden"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-7 gap-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+          {mobileNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               aria-label={`Ir a ${label}`}
               className={({ isActive }) =>
-                `flex flex-col items-center rounded-md px-1 py-2 text-[11px] ${isActive ? 'text-gym-primary' : 'text-slate-600 dark:text-slate-300'
+                `flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-medium transition ${isActive
+                  ? 'text-gym-primary'
+                  : 'text-slate-600 dark:text-slate-300'
                 }`
               }
             >
-              <Icon size={18} />
+              <Icon size={24} strokeWidth={2.2} />
               <span>{label}</span>
             </NavLink>
           ))}
