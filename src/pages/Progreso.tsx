@@ -168,6 +168,7 @@ export function ProgresoPage() {
   const exercises = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), []) ?? []
   const routines = useLiveQuery(() => db.rutinas.toArray(), []) ?? []
   const routineExercises = useLiveQuery(() => db.rutinaEjercicios.toArray(), []) ?? []
+  const prs = useLiveQuery(() => db.prs.toArray(), []) ?? []
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [oneRmPeso, setOneRmPeso] = useState(60)
   const [oneRmReps, setOneRmReps] = useState(8)
@@ -302,6 +303,33 @@ export function ProgresoPage() {
   }, [performedExercises])
 
   const diagramMuscleVolume = hasRecentTrainingData ? recentMuscleVolume : estimatedMuscleVolume
+
+  const exerciseNameById = useMemo(() => {
+    return new Map(exercises.map((exercise) => [exercise.id, exercise.nombre]))
+  }, [exercises])
+
+  const prByType = useMemo(() => {
+    const exercisePrs = prs.filter((pr) => pr.ejercicioId !== 'GLOBAL')
+    const byType = {
+      peso_maximo: exercisePrs.filter((pr) => pr.tipo === 'peso_maximo').sort((a, b) => b.valor - a.valor).slice(0, 5),
+      volumen_serie: exercisePrs.filter((pr) => pr.tipo === 'volumen_serie').sort((a, b) => b.valor - a.valor).slice(0, 5),
+      reps_mismo_peso: exercisePrs.filter((pr) => pr.tipo === 'reps_mismo_peso').sort((a, b) => b.valor - a.valor).slice(0, 5),
+      volumen_total: prs.filter((pr) => pr.tipo === 'volumen_total').sort((a, b) => b.valor - a.valor).slice(0, 5),
+    }
+    return byType
+  }, [prs])
+
+  const recentPrs = useMemo(() => {
+    return prs
+      .slice()
+      .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
+      .slice(0, 12)
+  }, [prs])
+
+  const resolvePrExerciseName = (exerciseId: string) => {
+    if (exerciseId === 'GLOBAL') return 'Sesión global'
+    return exerciseNameById.get(exerciseId) ?? 'Ejercicio'
+  }
 
   const levelByMuscle = useMemo(() => {
     return TRACKED_GROUPS.reduce<Record<string, { volume: number; level: MuscleLevel }>>((acc, muscle) => {
@@ -541,6 +569,97 @@ export function ProgresoPage() {
               <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#1d4ed8' }} /> Experto</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+        <h2 className="mb-3 text-lg font-semibold">Panel de PRs</h2>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <p className="mb-2 text-sm font-semibold">Top peso máximo</p>
+            {prByType.peso_maximo.length === 0 ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de peso máximo.</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {prByType.peso_maximo.map((pr) => (
+                  <li key={pr.id} className="flex items-center justify-between">
+                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span>{pr.valor.toFixed(1)} kg</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <p className="mb-2 text-sm font-semibold">Top volumen por serie</p>
+            {prByType.volumen_serie.length === 0 ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de volumen por serie.</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {prByType.volumen_serie.map((pr) => (
+                  <li key={pr.id} className="flex items-center justify-between">
+                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span>{pr.valor.toFixed(1)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <p className="mb-2 text-sm font-semibold">Top reps al mismo peso</p>
+            {prByType.reps_mismo_peso.length === 0 ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de repeticiones.</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {prByType.reps_mismo_peso.map((pr) => (
+                  <li key={pr.id} className="flex items-center justify-between">
+                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span>{pr.valor.toFixed(0)} reps</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <p className="mb-2 text-sm font-semibold">Top volumen total sesión</p>
+            {prByType.volumen_total.length === 0 ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de volumen total.</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {prByType.volumen_total.map((pr) => (
+                  <li key={pr.id} className="flex items-center justify-between">
+                    <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                    <span>{pr.valor.toFixed(0)} kg</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+          <p className="mb-2 text-sm font-semibold">Historial reciente de PRs</p>
+          {recentPrs.length === 0 ? (
+            <p className="text-xs text-slate-500 dark:text-slate-300">Aún no hay PRs registrados.</p>
+          ) : (
+            <ul className="space-y-2 text-xs">
+              {recentPrs.map((pr) => (
+                <li key={pr.id} className="rounded border border-slate-200 p-2 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    {pr.tipo}: {pr.valor.toFixed(1)} {pr.detalle ? `· ${pr.detalle}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { SortableExerciseList } from '../components/routines/SortableExerciseList'
 import { db } from '../lib/db'
 
 const routineSchema = z.object({
@@ -28,7 +29,6 @@ export function MisRutinasPage() {
   const [series, setSeries] = useState<number>(4)
   const [repeticiones, setRepeticiones] = useState<string>('8-12')
   const [descansoSegundos, setDescansoSegundos] = useState<number>(90)
-  const [draggedRoutineExerciseId, setDraggedRoutineExerciseId] = useState<string | null>(null)
   const [editingRoutineExerciseId, setEditingRoutineExerciseId] = useState<string>('')
   const [editSeries, setEditSeries] = useState(4)
   const [editRepeticiones, setEditRepeticiones] = useState('8-12')
@@ -394,112 +394,36 @@ export function MisRutinasPage() {
             Añadir ejercicio
           </button>
 
-          <ul className="space-y-2">
-            {selectedRoutineExercises.map((item, index) => (
-              <li
-                key={item.id}
-                draggable
-                onDragStart={() => setDraggedRoutineExerciseId(item.id)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => {
-                  if (draggedRoutineExerciseId) {
-                    void reorderRoutineExercises(draggedRoutineExerciseId, item.id)
-                  }
-                  setDraggedRoutineExerciseId(null)
-                }}
-                onDragEnd={() => setDraggedRoutineExerciseId(null)}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
-              >
-                <div>
-                  <p className="font-medium">
-                    {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
-                  </p>
-                  {editingRoutineExerciseId === item.id ? (
-                    <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
-                      <input
-                        type="number"
-                        value={editSeries}
-                        onChange={(event) => setEditSeries(Number(event.target.value) || 1)}
-                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                        placeholder="Series"
-                      />
-                      <input
-                        value={editRepeticiones}
-                        onChange={(event) => setEditRepeticiones(event.target.value)}
-                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                        placeholder="Reps"
-                      />
-                      <input
-                        type="number"
-                        value={editDescansoSegundos}
-                        onChange={(event) => setEditDescansoSegundos(Number(event.target.value) || 15)}
-                        className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                        placeholder="Descanso"
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-600 dark:text-slate-300">
-                      {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {editingRoutineExerciseId === item.id ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => void saveRoutineExerciseEdits()}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                      >
-                        Guardar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingRoutineExerciseId('')}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                      >
-                        Cancelar
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => startEditRoutineExercise(item.id)}
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                    >
-                      Editar
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void moveRoutineExercise(item.id, 'up')}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void moveRoutineExercise(item.id, 'down')}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removeRoutineExercise(item.id)}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-red-600"
-                  >
-                    Borrar
-                  </button>
-                </div>
-              </li>
-            ))}
-            {selectedRoutineExercises.length === 0 && (
-              <li className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:text-slate-300">
-                Esta rutina todavía no tiene ejercicios asignados.
-              </li>
-            )}
-          </ul>
+          {selectedRoutineExercises.length > 0 ? (
+            <SortableExerciseList
+              items={selectedRoutineExercises}
+              editingRoutineExerciseId={editingRoutineExerciseId}
+              editSeries={editSeries}
+              editRepeticiones={editRepeticiones}
+              editDescansoSegundos={editDescansoSegundos}
+              onEditSeriesChange={setEditSeries}
+              onEditRepeticionesChange={setEditRepeticiones}
+              onEditDescansoChange={setEditDescansoSegundos}
+              onStartEdit={startEditRoutineExercise}
+              onSaveEdit={() => {
+                void saveRoutineExerciseEdits()
+              }}
+              onCancelEdit={() => setEditingRoutineExerciseId('')}
+              onMove={(routineExerciseId, direction) => {
+                void moveRoutineExercise(routineExerciseId, direction)
+              }}
+              onRemove={(routineExerciseId) => {
+                void removeRoutineExercise(routineExerciseId)
+              }}
+              onReorder={(sourceId, targetId) => {
+                void reorderRoutineExercises(sourceId, targetId)
+              }}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:text-slate-300">
+              Esta rutina todavía no tiene ejercicios asignados.
+            </div>
+          )}
         </section>
       )}
     </div>

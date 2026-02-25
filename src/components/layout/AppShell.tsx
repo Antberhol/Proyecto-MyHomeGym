@@ -25,6 +25,7 @@ function NavItem({ to, label, icon: Icon }: (typeof navItems)[number]) {
   return (
     <NavLink
       to={to}
+      aria-label={`Ir a ${label}`}
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
           ? 'bg-gym-primary text-white'
@@ -52,16 +53,17 @@ export function AppShell() {
           <button
             type="button"
             onClick={toggleSidebar}
+            aria-label="Alternar menú lateral"
             className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600"
           >
             <Menu size={16} />
             {!sidebarCollapsed && <span>Menú</span>}
           </button>
-          <div className="space-y-2">
+          <nav aria-label="Navegación principal" className="space-y-2">
             {navItems.map((item) => (
               <NavItem key={item.to} {...item} />
             ))}
-          </div>
+          </nav>
         </aside>
 
         <main className="flex-1 p-4 pb-24 sm:p-6">
@@ -69,12 +71,16 @@ export function AppShell() {
         </main>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-2 py-2 dark:border-slate-700 dark:bg-gym-cardDark lg:hidden">
+      <nav
+        aria-label="Navegación móvil"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-2 py-2 dark:border-slate-700 dark:bg-gym-cardDark lg:hidden"
+      >
         <div className="grid grid-cols-7 gap-1">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
+              aria-label={`Ir a ${label}`}
               className={({ isActive }) =>
                 `flex flex-col items-center rounded-md px-1 py-2 text-[11px] ${isActive ? 'text-gym-primary' : 'text-slate-600 dark:text-slate-300'
                 }`

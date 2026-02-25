@@ -24,13 +24,17 @@ Construir una app de entrenamiento que funcione localmente en navegador (sin bac
 
 - Onboarding inicial con creación de perfil y cálculo de IMC
 - Dashboard con métricas de entrenamientos recientes
-- Registro rápido de sesiones de entrenamiento
-- Gestión de rutinas (crear, activar/desactivar, borrar)
+- Registro de entrenamientos guiado por rutina y entreno libre
+- Registro detallado por ejercicio/serie/repeticiones/peso
+- Gestión de rutinas (crear, editar, activar/desactivar, borrar)
+- Asignación de ejercicios a rutinas y reordenamiento
 - Catálogo de ejercicios con filtros
-- Creación y borrado de ejercicios personalizados
-- Progreso con gráficas de peso/IMC y volumen
+- Creación, edición y borrado de ejercicios personalizados
+- Progreso con gráficas de peso/IMC, volumen, heatmap y diagrama corporal interactivo
+- PRs automáticos y panel específico de PRs
+- Exportación/importación local (JSON/CSV) y resumen PDF
 - Perfil con resumen de datos y preferencia de tema
-- Diagrama corporal con últimas medidas registradas
+- PWA con soporte offline
 
 ## Navegación
 
@@ -41,8 +45,8 @@ Rutas principales de la app:
 - `/rutinas` → Gestión de rutinas
 - `/catalogo` → Catálogo de ejercicios
 - `/progreso` → Métricas y gráficos
-- `/diagrama` → Resumen de medidas corporales
 - `/perfil` → Perfil y tema
+- `/configuracion` → Backup/restore, PDF, mantenimiento y notificaciones
 
 Si no existe perfil, la app muestra el onboarding antes de habilitar la navegación.
 
@@ -109,15 +113,13 @@ No se requiere conexión a internet para operar una vez descargada la app.
 
 ## Estado actual y próximos pasos sugeridos
 
-Estado actual: MVP funcional local con onboarding, registro, progreso y CRUD básico.
+Estado actual: MVP funcional extendido, operativo offline, con rutinas, progreso, PRs y backup local.
 
 Siguientes mejoras recomendadas:
 
-- Edición de rutinas existentes (nombre/días/color)
-- Asignación de ejercicios a rutinas (`rutinaEjercicios`)
-- Registro detallado por series/repeticiones/peso (`ejerciciosRealizados`)
-- Cálculo automático de PRs y panel específico
-- Exportar/importar respaldo local de datos
+- Tests de integración de flujos críticos (onboarding, rutina, entreno, backup)
+- Optimización adicional de performance (más code-splitting y profiling)
+- Mejoras de accesibilidad (auditoría completa y navegación por teclado en todos los flujos)
 
 ## Documentación extendida
 

@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
 import { db } from '../lib/db'
 
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
@@ -184,6 +185,8 @@ export function DashboardPage() {
           </ul>
         )}
       </section>
+
+      <MuscleDistributionChart />
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">Logros y medallas</h2>

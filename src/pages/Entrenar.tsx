@@ -1,8 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
+import { ActiveExerciseCard } from '../components/workout/ActiveExerciseCard'
+import { RestTimerOverlay } from '../components/workout/RestTimerOverlay'
+import type {
+  ActiveExercisePrTarget,
+  ExerciseHistoryEntry,
+  PreviousExerciseSession,
+  SetData,
+} from '../components/workout/types'
+import { WorkoutControls } from '../components/workout/WorkoutControls'
+import { getPersistedWorkoutSession, usePersistedWorkoutSession } from '../hooks/usePersistedWorkoutSession'
+import { useWorkoutTimer } from '../hooks/useWorkoutTimer'
 import { db } from '../lib/db'
 import { registerSetPrs, registerTrainingVolumePr } from '../lib/prs'
 import type { PerformedExercise } from '../types/models'
@@ -18,22 +29,6 @@ const trainingSchema = z.object({
 type TrainingFormInput = z.input<typeof trainingSchema>
 type TrainingFormOutput = z.output<typeof trainingSchema>
 
-interface SetData {
-  reps: number
-  peso: number
-}
-
-interface PreviousExerciseSession {
-  fecha: string
-  sets: PerformedExercise[]
-}
-
-interface ExerciseHistoryEntry {
-  fecha: string
-  volume: number
-  sets: PerformedExercise[]
-}
-
 interface TrainingSummary {
   durationMinutes: number
   totalVolume: number
@@ -47,11 +42,10 @@ interface TrainingSummary {
   }>
 }
 
-function formatClock(totalSeconds: number): string {
-  const safe = Math.max(0, totalSeconds)
-  const minutes = Math.floor(safe / 60)
-  const seconds = safe % 60
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+interface FreeExerciseDraft {
+  id: string
+  ejercicioId: string
+  sets: SetData[]
 }
 
 function parseTargetReps(target: string): { min: number; max: number } | null {
@@ -64,6 +58,7 @@ function parseTargetReps(target: string): { min: number; max: number } | null {
 }
 
 export function EntrenarPage() {
+  const persistedSession = getPersistedWorkoutSession()
   const routinesData = useLiveQuery(() => db.rutinas.toArray(), [])
   const routineExercisesData = useLiveQuery(() => db.rutinaEjercicios.toArray(), [])
   const exercisesData = useLiveQuery(() => db.ejerciciosCatalogo.toArray(), [])
@@ -74,23 +69,45 @@ export function EntrenarPage() {
   const exercises = useMemo(() => exercisesData ?? [], [exercisesData])
   const performedExercises = useMemo(() => performedExercisesData ?? [], [performedExercisesData])
   const prs = useMemo(() => prsData ?? [], [prsData])
-  const [setData, setSetData] = useState<Record<string, SetData>>({})
+  const [setData, setSetData] = useState<Record<string, SetData>>(persistedSession?.setData ?? {})
   const [lastSavedMessage, setLastSavedMessage] = useState<string>('')
-  const [sessionSeconds, setSessionSeconds] = useState(0)
-  const [sessionRunning, setSessionRunning] = useState(true)
-  const [restSeconds, setRestSeconds] = useState(0)
-  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0)
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState(Math.max(0, persistedSession?.activeExerciseIndex ?? 0))
   const [trainingSummary, setTrainingSummary] = useState<TrainingSummary | null>(null)
+  const [freeExerciseId, setFreeExerciseId] = useState('')
+  const [freeSeriesCount, setFreeSeriesCount] = useState(3)
+  const [freeExercisesDraft, setFreeExercisesDraft] = useState<FreeExerciseDraft[]>([])
+  const {
+    sessionSeconds,
+    sessionRunning,
+    toggleSessionRunning,
+    restSeconds,
+    setRestSeconds,
+    startRestTimer,
+    resetTimers,
+    formatClock,
+  } = useWorkoutTimer({
+    initialSessionSeconds: persistedSession?.sessionSeconds ?? 0,
+    initialSessionRunning: true,
+    initialRestSeconds: 0,
+  })
 
   const form = useForm<TrainingFormInput, undefined, TrainingFormOutput>({
     resolver: zodResolver(trainingSchema),
     defaultValues: {
+      rutinaId: persistedSession?.selectedRoutineId ?? '',
       duracionMinutos: 45,
       volumenTotalManual: 0,
     },
   })
 
   const selectedRoutineId = useWatch({ control: form.control, name: 'rutinaId' }) || ''
+
+  const { clearSession } = usePersistedWorkoutSession({
+    selectedRoutineId,
+    setData,
+    sessionSeconds,
+    activeExerciseIndex,
+  })
 
   const selectedRoutineExercises = useMemo(() => {
     if (!selectedRoutineId) return []
@@ -188,7 +205,7 @@ export function EntrenarPage() {
     return Number(suggestedWeight.toFixed(1))
   }, [activeRoutineExercise, previousSessionByExercise])
 
-  const activeExercisePrTarget = useMemo(() => {
+  const activeExercisePrTarget = useMemo<ActiveExercisePrTarget | null>(() => {
     if (!activeRoutineExercise) return null
 
     const exercisePrs = prs.filter((pr) => pr.ejercicioId === activeRoutineExercise.ejercicioId)
@@ -236,33 +253,73 @@ export function EntrenarPage() {
     }, {})
   }, [previousSessionByExercise, selectedRoutineExercises, selectedRoutineId])
 
-  useEffect(() => {
-    if (!sessionRunning) return
-
-    const intervalId = window.setInterval(() => {
-      setSessionSeconds((current) => current + 1)
-    }, 1000)
-
-    return () => window.clearInterval(intervalId)
-  }, [sessionRunning])
-
-  useEffect(() => {
-    if (restSeconds <= 0) return
-
-    const intervalId = window.setInterval(() => {
-      setRestSeconds((current) => Math.max(0, current - 1))
-    }, 1000)
-
-    return () => window.clearInterval(intervalId)
-  }, [restSeconds])
-
-  const startRestTimer = (seconds: number) => {
-    setRestSeconds(Math.max(0, seconds))
-  }
-
   const applySessionTimeToDuration = () => {
     const minutes = Math.max(1, Math.ceil(sessionSeconds / 60))
     form.setValue('duracionMinutos', minutes)
+  }
+
+  const addFreeExerciseDraft = () => {
+    if (!freeExerciseId) return
+
+    const initialSets = Array.from({ length: Math.max(1, freeSeriesCount) }, () => ({ reps: 0, peso: 0 }))
+    setFreeExercisesDraft((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        ejercicioId: freeExerciseId,
+        sets: initialSets,
+      },
+    ])
+    setFreeExerciseId('')
+  }
+
+  const removeFreeExerciseDraft = (draftId: string) => {
+    setFreeExercisesDraft((current) => current.filter((item) => item.id !== draftId))
+  }
+
+  const addFreeSet = (draftId: string) => {
+    setFreeExercisesDraft((current) =>
+      current.map((item) =>
+        item.id === draftId
+          ? {
+            ...item,
+            sets: [...item.sets, { reps: 0, peso: 0 }],
+          }
+          : item,
+      ),
+    )
+  }
+
+  const removeFreeSet = (draftId: string, setIndex: number) => {
+    setFreeExercisesDraft((current) =>
+      current.map((item) => {
+        if (item.id !== draftId) return item
+        const nextSets = item.sets.filter((_, index) => index !== setIndex)
+        return {
+          ...item,
+          sets: nextSets.length > 0 ? nextSets : [{ reps: 0, peso: 0 }],
+        }
+      }),
+    )
+  }
+
+  const updateFreeSetData = (draftId: string, setIndex: number, field: keyof SetData, value: number) => {
+    setFreeExercisesDraft((current) =>
+      current.map((item) => {
+        if (item.id !== draftId) return item
+
+        return {
+          ...item,
+          sets: item.sets.map((set, index) => {
+            if (index !== setIndex) return set
+            return {
+              reps: field === 'reps' ? value : set.reps,
+              peso: field === 'peso' ? value : set.peso,
+            }
+          }),
+        }
+      }),
+    )
   }
 
   const getSetValue = (routineExerciseId: string, serieNumero: number): SetData => {
@@ -301,7 +358,7 @@ export function EntrenarPage() {
     const now = new Date().toISOString()
     const trainingId = crypto.randomUUID()
 
-    const performed = selectedRoutineExercises.flatMap((routineExercise) => {
+    const performedFromRoutine = selectedRoutineExercises.flatMap((routineExercise) => {
       const sets = Array.from({ length: routineExercise.series }, (_, index) => {
         const serieNumero = index + 1
         const serie = getSetValue(routineExercise.id, serieNumero)
@@ -326,11 +383,38 @@ export function EntrenarPage() {
       return sets.filter((item): item is NonNullable<typeof item> => item !== null)
     })
 
+    const performedFromFree = freeExercisesDraft.flatMap((draft) =>
+      draft.sets
+        .map((set, index) => {
+          const reps = Number(set.reps ?? 0)
+          const peso = Number(set.peso ?? 0)
+
+          if (!draft.ejercicioId || reps <= 0 || peso < 0) {
+            return null
+          }
+
+          return {
+            id: crypto.randomUUID(),
+            entrenamientoId: trainingId,
+            ejercicioId: draft.ejercicioId,
+            serieNumero: index + 1,
+            repeticionesRealizadas: reps,
+            pesoUtilizado: peso,
+            fecha: now,
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    )
+
+    const performed = selectedRoutineExercises.length > 0 ? performedFromRoutine : performedFromFree
+
     const volumenCalculado = performed.reduce((total, item) => {
       return total + calculateSetVolume(item.pesoUtilizado, item.repeticionesRealizadas)
     }, 0)
 
-    const volumenTotal = selectedRoutineExercises.length > 0 ? volumenCalculado : Number(values.volumenTotalManual ?? 0)
+    const volumenTotal = performed.length > 0
+      ? volumenCalculado
+      : Number(values.volumenTotalManual ?? 0)
 
     await db.entrenamientosRegistrados.add({
       id: trainingId,
@@ -384,72 +468,33 @@ export function EntrenarPage() {
 
     form.reset({ duracionMinutos: 45, volumenTotalManual: 0, rutinaId: values.rutinaId })
     setSetData({})
-    setSessionSeconds(0)
-    setSessionRunning(true)
-    setRestSeconds(0)
+    setFreeExercisesDraft([])
+    setFreeExerciseId('')
+    setFreeSeriesCount(3)
+    resetTimers()
     setActiveExerciseIndex(0)
+    clearSession()
   })
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
 
-      <section className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-2">
-        <div>
-          <p className="text-sm text-slate-500 dark:text-slate-300">Cronómetro de sesión</p>
-          <p className="text-3xl font-bold">{formatClock(sessionSeconds)}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSessionRunning((current) => !current)}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              {sessionRunning ? 'Pausar' : 'Reanudar'}
-            </button>
-            <button
-              type="button"
-              onClick={applySessionTimeToDuration}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              Usar en duración
-            </button>
-          </div>
-        </div>
-        <div>
-          <p className="text-sm text-slate-500 dark:text-slate-300">Timer de descanso</p>
-          <p className="text-3xl font-bold">{formatClock(restSeconds)}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => startRestTimer(60)}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              60s
-            </button>
-            <button
-              type="button"
-              onClick={() => startRestTimer(90)}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              90s
-            </button>
-            <button
-              type="button"
-              onClick={() => startRestTimer(120)}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              120s
-            </button>
-            <button
-              type="button"
-              onClick={() => setRestSeconds(0)}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-      </section>
+      <WorkoutControls
+        sessionSeconds={sessionSeconds}
+        sessionRunning={sessionRunning}
+        restSeconds={restSeconds}
+        formatClock={formatClock}
+        onToggleSession={toggleSessionRunning}
+        onApplySessionDuration={applySessionTimeToDuration}
+        onStartRest={startRestTimer}
+        onResetRest={() => setRestSeconds(0)}
+        onFinishWorkout={() => {
+          void onSubmit()
+        }}
+      />
+
+      <RestTimerOverlay restSeconds={restSeconds} formatClock={formatClock} />
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-2">
         <select {...form.register('rutinaId')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900">
@@ -468,7 +513,7 @@ export function EntrenarPage() {
           placeholder="Duración (min)"
         />
 
-        {selectedRoutineExercises.length === 0 && (
+        {selectedRoutineExercises.length === 0 && freeExercisesDraft.length === 0 && (
           <input
             type="number"
             {...form.register('volumenTotalManual')}
@@ -489,165 +534,129 @@ export function EntrenarPage() {
             <p className="text-xs text-slate-600 dark:text-slate-300">
               Campos autocompletados con el último registro de cada ejercicio. Puedes editarlos libremente.
             </p>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+            <ActiveExerciseCard
+              activeRoutineExercise={activeRoutineExercise}
+              activeExerciseIndex={activeExerciseIndex}
+              totalExercises={selectedRoutineExercises.length}
+              previousSessionByExercise={previousSessionByExercise}
+              activeExerciseHistory={activeExerciseHistory}
+              activeExerciseSuggestedWeight={activeExerciseSuggestedWeight}
+              activeExercisePrTarget={activeExercisePrTarget}
+              onPrevious={() => setActiveExerciseIndex((current) => Math.max(0, current - 1))}
+              onNext={() => setActiveExerciseIndex((current) => Math.min(selectedRoutineExercises.length - 1, current + 1))}
+              onApplySuggestedWeight={applySuggestedWeight}
+              onStartRestTimer={startRestTimer}
+              getSetValue={getSetValue}
+              updateSetData={updateSetData}
+            />
+          </div>
+        )}
+
+        {selectedRoutineExercises.length === 0 && (
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3 md:col-span-2 dark:border-slate-700">
+            <h2 className="text-base font-semibold">Registro detallado (entreno libre)</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Añade ejercicios y registra cada serie con repeticiones y peso. Si no registras series, puedes usar el volumen manual.
+            </p>
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+              <select
+                value={freeExerciseId}
+                onChange={(event) => setFreeExerciseId(event.target.value)}
+                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900 md:col-span-2"
+              >
+                <option value="">Selecciona ejercicio</option>
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.nombre}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                value={freeSeriesCount}
+                onChange={(event) => setFreeSeriesCount(Math.max(1, Number(event.target.value) || 1))}
+                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                placeholder="Series"
+              />
               <button
                 type="button"
-                onClick={() => setActiveExerciseIndex((current) => Math.max(0, current - 1))}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
+                onClick={addFreeExerciseDraft}
+                className="rounded border border-slate-300 px-2 py-1 text-xs"
               >
-                Anterior
-              </button>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Ejercicio {activeExerciseIndex + 1} de {selectedRoutineExercises.length}
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveExerciseIndex((current) => Math.min(selectedRoutineExercises.length - 1, current + 1))}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-              >
-                Siguiente
+                Añadir ejercicio
               </button>
             </div>
 
-            {activeRoutineExercise && (
-              <div key={activeRoutineExercise.id} className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                {(() => {
-                  const previousSession = previousSessionByExercise[activeRoutineExercise.ejercicioId]
-
-                  return (
-                    <>
-                      <p className="text-sm font-medium">
-                        {activeExerciseIndex + 1}. {activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'} · {activeRoutineExercise.series}{' '}
-                        series · objetivo {activeRoutineExercise.repeticiones}
-                      </p>
-                      {previousSession && (
-                        <p className="text-xs text-slate-600 dark:text-slate-300">
-                          Último registro ({new Date(previousSession.fecha).toLocaleDateString()}):{' '}
-                          {previousSession.sets.map((set) => `S${set.serieNumero} ${set.repeticionesRealizadas}x${set.pesoUtilizado}kg`).join(' · ')}
-                        </p>
-                      )}
-                    </>
-                  )
-                })()}
-
-                {activeExerciseSuggestedWeight !== null && (
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/20">
-                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                      Carga sugerida: <span className="font-semibold">{activeExerciseSuggestedWeight} kg</span>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={applySuggestedWeight}
-                      className="mt-2 rounded border border-emerald-400 px-2 py-1 text-[11px] text-emerald-700 dark:text-emerald-300"
-                    >
-                      Aplicar sugerencia a todas las series
-                    </button>
-                  </div>
-                )}
-
-                {activeExercisePrTarget && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-900 dark:bg-amber-950/20">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Siguiente objetivo PR</p>
-                    {activeExercisePrTarget.targetPeso && (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">Peso máximo: superar <span className="font-semibold">{activeExercisePrTarget.targetPeso} kg</span></p>
-                    )}
-                    {activeExercisePrTarget.targetVolumenSerie && (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">Volumen por serie: superar <span className="font-semibold">{activeExercisePrTarget.targetVolumenSerie}</span></p>
-                    )}
-                    {activeExercisePrTarget.repsMismoPeso && (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        Repeticiones mismo peso: superar <span className="font-semibold">{activeExercisePrTarget.repsMismoPeso.valor}</span> ({activeExercisePrTarget.repsMismoPeso.detalle})
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                  {Array.from({ length: activeRoutineExercise.series }, (_, setIndex) => {
-                    const serieNumero = setIndex + 1
-                    const key = `${activeRoutineExercise.id}-${serieNumero}`
-                    const current = getSetValue(activeRoutineExercise.id, serieNumero)
-                    const previousSet = previousSessionByExercise[activeRoutineExercise.ejercicioId]?.sets.find(
-                      (set) => set.serieNumero === serieNumero,
-                    )
-
-                    return (
-                      <div key={key} className="rounded-md bg-slate-50 p-2 dark:bg-slate-800">
-                        <p className="mb-2 text-xs font-medium">Serie {serieNumero}</p>
-                        {previousSet && (
-                          <p className="mb-2 text-[11px] text-slate-600 dark:text-slate-300">
-                            Anterior: {previousSet.repeticionesRealizadas} reps · {previousSet.pesoUtilizado} kg
-                          </p>
-                        )}
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="number"
-                            value={current.reps}
-                            onChange={(event) =>
-                              updateSetData(
-                                activeRoutineExercise.id,
-                                serieNumero,
-                                'reps',
-                                Number(event.target.value) || 0,
-                              )
-                            }
-                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                            placeholder="Reps"
-                          />
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={current.peso}
-                            onChange={(event) =>
-                              updateSetData(
-                                activeRoutineExercise.id,
-                                serieNumero,
-                                'peso',
-                                Number(event.target.value) || 0,
-                              )
-                            }
-                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                            placeholder="Peso"
-                          />
-                        </div>
+            <div className="space-y-3">
+              {freeExercisesDraft.map((draft) => {
+                const exerciseName = exercises.find((exercise) => exercise.id === draft.ejercicioId)?.nombre || 'Ejercicio'
+                return (
+                  <div key={draft.id} className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">{exerciseName}</p>
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => startRestTimer(activeRoutineExercise.descansoSegundos)}
-                          className="mt-2 w-full rounded border border-slate-300 px-2 py-1 text-[11px]"
+                          onClick={() => addFreeSet(draft.id)}
+                          className="rounded border border-slate-300 px-2 py-1 text-[11px]"
                         >
-                          Iniciar descanso ({activeRoutineExercise.descansoSegundos}s)
+                          + Serie
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFreeExerciseDraft(draft.id)}
+                          className="rounded border border-slate-300 px-2 py-1 text-[11px] text-red-600"
+                        >
+                          Quitar
                         </button>
                       </div>
-                    )
-                  })}
-                </div>
-
-                <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                  <p className="mb-2 text-xs font-semibold">Historial reciente del ejercicio</p>
-                  {activeExerciseHistory.length === 0 ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-300">Aún no hay sesiones previas de este ejercicio.</p>
-                  ) : (
-                    <ul className="space-y-1 text-xs">
-                      {activeExerciseHistory.map((session) => (
-                        <li
-                          key={`${activeRoutineExercise.ejercicioId}-${session.fecha}`}
-                          className="rounded border border-slate-200 p-2 dark:border-slate-700"
-                        >
-                          <p className="font-medium">
-                            {new Date(session.fecha).toLocaleDateString()} · {session.volume.toFixed(0)} kg
-                          </p>
-                          <p className="text-slate-600 dark:text-slate-300">
-                            {session.sets
-                              .map((set) => `S${set.serieNumero} ${set.repeticionesRealizadas}x${set.pesoUtilizado}kg`)
-                              .join(' · ')}
-                          </p>
-                        </li>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                      {draft.sets.map((set, setIndex) => (
+                        <div key={`${draft.id}-${setIndex + 1}`} className="rounded bg-slate-50 p-2 dark:bg-slate-800">
+                          <div className="mb-1 flex items-center justify-between">
+                            <p className="text-xs font-medium">Serie {setIndex + 1}</p>
+                            <button
+                              type="button"
+                              onClick={() => removeFreeSet(draft.id, setIndex)}
+                              className="text-[11px] text-red-600"
+                            >
+                              borrar
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              value={set.reps}
+                              onChange={(event) =>
+                                updateFreeSetData(draft.id, setIndex, 'reps', Number(event.target.value) || 0)
+                              }
+                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                              placeholder="Reps"
+                            />
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={set.peso}
+                              onChange={(event) =>
+                                updateFreeSetData(draft.id, setIndex, 'peso', Number(event.target.value) || 0)
+                              }
+                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                              placeholder="Peso"
+                            />
+                          </div>
+                        </div>
                       ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            )}
+                    </div>
+                  </div>
+                )
+              })}
+              {freeExercisesDraft.length === 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-300">No has añadido ejercicios al registro libre.</p>
+              )}
+            </div>
           </div>
         )}
 

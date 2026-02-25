@@ -24,21 +24,17 @@ Aplicación web offline-first para gestión completa de entrenamiento de gimnasi
 Implementado:
 - Onboarding de perfil + IMC
 - Dashboard básico
-- Registro simple de entrenamiento
-- Rutinas: crear, activar/desactivar, borrar
-- Catálogo: búsqueda/filtro + crear/borrar personalizados
-- Progreso con gráficas
+- Registro guiado y detallado por series/reps/peso
+- Rutinas: crear/editar, activar/desactivar, borrar, asignar ejercicios y reordenar
+- Catálogo: búsqueda/filtro + crear/editar/borrar personalizados
+- Progreso con gráficas, heatmap, PRs y diagrama corporal interactivo
 - Perfil con tema
-- Diagrama corporal básico de medidas
+- Exportación/importación local (JSON/CSV) y exportación PDF
+- PWA activa
 
 Pendiente principal:
-- Asignación de ejercicios a rutina
-- Entrenamiento activo por series
-- PRs automáticos reales
-- Recomendador muscular
-- Exportación/importación
-- PWA completa
-- Testing automatizado
+- Tests de integración end-to-end de flujos críticos
+- Optimización final de performance/accesibilidad
 
 ## 4) Stack actual (fuente: package.json)
 

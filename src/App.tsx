@@ -1,34 +1,41 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './components/layout/AppShell'
-import { OnboardingWizard } from './components/profile/OnboardingWizard'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { db } from './lib/db'
 import { useUiStore } from './stores/ui-store'
-import { CatalogoPage } from './pages/Catalogo'
-import { DashboardPage } from './pages/Dashboard'
-import { EntrenarPage } from './pages/Entrenar'
-import { MisRutinasPage } from './pages/MisRutinas'
-import { PerfilPage } from './pages/Perfil'
-import { ProgresoPage } from './pages/Progreso'
-import { ConfiguracionPage } from './pages/Configuracion'
+
+const OnboardingWizard = lazy(() => import('./components/profile/OnboardingWizard').then((module) => ({ default: module.OnboardingWizard })))
+const CatalogoPage = lazy(() => import('./pages/Catalogo').then((module) => ({ default: module.CatalogoPage })))
+const DashboardPage = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.DashboardPage })))
+const EntrenarPage = lazy(() => import('./pages/Entrenar').then((module) => ({ default: module.EntrenarPage })))
+const MisRutinasPage = lazy(() => import('./pages/MisRutinas').then((module) => ({ default: module.MisRutinasPage })))
+const PerfilPage = lazy(() => import('./pages/Perfil').then((module) => ({ default: module.PerfilPage })))
+const ProgresoPage = lazy(() => import('./pages/Progreso').then((module) => ({ default: module.ProgresoPage })))
+const ConfiguracionPage = lazy(() => import('./pages/Configuracion').then((module) => ({ default: module.ConfiguracionPage })))
+
+function RouteLoadingFallback() {
+  return <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-slate-300">Cargando vista...</div>
+}
 
 function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/entrenar" element={<EntrenarPage />} />
-          <Route path="/rutinas" element={<MisRutinasPage />} />
-          <Route path="/catalogo" element={<CatalogoPage />} />
-          <Route path="/progreso" element={<ProgresoPage />} />
-          <Route path="/perfil" element={<PerfilPage />} />
-          <Route path="/configuracion" element={<ConfiguracionPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/entrenar" element={<EntrenarPage />} />
+            <Route path="/rutinas" element={<MisRutinasPage />} />
+            <Route path="/catalogo" element={<CatalogoPage />} />
+            <Route path="/progreso" element={<ProgresoPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
+            <Route path="/configuracion" element={<ConfiguracionPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
@@ -57,7 +64,11 @@ function App() {
   }
 
   if (profileQuery === null) {
-    return <OnboardingWizard />
+    return (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <OnboardingWizard />
+      </Suspense>
+    )
   }
 
   return <AppRouter />
