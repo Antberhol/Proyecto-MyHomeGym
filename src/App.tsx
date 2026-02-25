@@ -1,11 +1,13 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AppShell } from './components/layout/AppShell'
 import { ReloadPrompt } from './components/pwa/ReloadPrompt'
+import { PinPad } from './components/security/PinPad'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { db } from './lib/db'
+import { useAuthStore } from './stores/auth-store'
 import { useUiStore } from './stores/ui-store'
 
 const OnboardingWizard = lazy(() => import('./components/profile/OnboardingWizard').then((module) => ({ default: module.OnboardingWizard })))
@@ -44,6 +46,8 @@ function App() {
     return result ?? null
   }, [])
   const theme = useUiStore((state) => state.theme)
+  const isLocked = useAuthStore((state) => state.isLocked)
+  const lock = useAuthStore((state) => state.lock)
 
   useEffect(() => {
     void bootstrapDatabase()
@@ -56,24 +60,58 @@ function App() {
     root.classList.toggle('dark', shouldUseDark)
   }, [theme])
 
+  useEffect(() => {
+    let lockTimerId: number | undefined
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        lockTimerId = window.setTimeout(() => {
+          lock()
+        }, 60_000)
+        return
+      }
+
+      if (lockTimerId) {
+        window.clearTimeout(lockTimerId)
+        lockTimerId = undefined
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      if (lockTimerId) {
+        window.clearTimeout(lockTimerId)
+      }
+    }
+  }, [lock])
+
+  const renderWithSecurity = (content: ReactNode) => (
+    <>
+      {content}
+      {isLocked && <PinPad />}
+    </>
+  )
+
   // undefined = still loading, null = loaded but no profile
   if (profileQuery === undefined) {
-    return <LoadingSpinner />
+    return renderWithSecurity(<LoadingSpinner />)
   }
 
   if (profileQuery === null) {
-    return (
+    return renderWithSecurity(
       <Suspense fallback={<LoadingSpinner />}>
         <OnboardingWizard />
-      </Suspense>
+      </Suspense>,
     )
   }
 
-  return (
+  return renderWithSecurity(
     <>
       <AppRouter />
       <ReloadPrompt />
-    </>
+    </>,
   )
 }
 

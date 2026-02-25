@@ -5,6 +5,7 @@ import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
 import { useStreaks } from '../hooks/useStreaks'
 import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
 import { db } from '../lib/db'
+import { formatWorkoutToCSV, formatWorkoutToText, type TrainingData } from '../utils/clipboard'
 
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
 
@@ -42,6 +43,47 @@ export function DashboardPage() {
     .slice()
     .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
     .slice(0, 5)
+
+  const buildTrainingData = (trainingId: string): TrainingData | null => {
+    const training = trainings.find((item) => item.id === trainingId)
+    if (!training) return null
+
+    const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise.nombre]))
+    const sets = performedExercises
+      .filter((entry) => entry.entrenamientoId === trainingId)
+      .sort((a, b) => a.serieNumero - b.serieNumero)
+
+    const grouped = new Map<string, { name: string; sets: Array<{ reps: number; weight: number }> }>()
+
+    for (const entry of sets) {
+      const name = exerciseById.get(entry.ejercicioId) ?? 'Ejercicio'
+      const current = grouped.get(entry.ejercicioId)
+      const setData = { reps: entry.repeticionesRealizadas, weight: entry.pesoUtilizado }
+
+      if (current) {
+        current.sets.push(setData)
+      } else {
+        grouped.set(entry.ejercicioId, { name, sets: [setData] })
+      }
+    }
+
+    return {
+      id: training.id,
+      date: training.fecha,
+      routineName: routines.find((routine) => routine.id === training.rutinaId)?.nombre,
+      durationMinutes: training.duracionMinutos,
+      totalVolumeKg: training.volumenTotal,
+      exercises: Array.from(grouped.values()),
+    }
+  }
+
+  const copyWorkout = async (trainingId: string, format: 'text' | 'csv') => {
+    const training = buildTrainingData(trainingId)
+    if (!training || !navigator.clipboard) return
+
+    const payload = format === 'text' ? formatWorkoutToText(training) : formatWorkoutToCSV(training)
+    await navigator.clipboard.writeText(payload)
+  }
 
   const resolvePrExerciseName = (exerciseId: string) => {
     if (exerciseId === 'GLOBAL') return 'Sesión global'
@@ -150,6 +192,22 @@ export function DashboardPage() {
                     <span>{training.duracionMinutos} min</span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-300">Volumen: {training.volumenTotal} kg</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      onClick={() => void copyWorkout(training.id, 'text')}
+                    >
+                      Copiar para WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      onClick={() => void copyWorkout(training.id, 'csv')}
+                    >
+                      Copiar para Excel
+                    </button>
+                  </div>
                 </li>
               ))}
           </ul>

@@ -2,6 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { Button } from '../design-system/Button'
+import { Card } from '../design-system/Card'
+import { Input } from '../design-system/Input'
 import { db } from '../../lib/db'
 import { calculateImc, classifyImc } from '../../utils/calculations'
 
@@ -38,6 +41,7 @@ export function OnboardingWizard() {
   const altura = Number(values.altura ?? 0)
   const imc = calculateImc(pesoCorporal, altura)
   const imcStatus = classifyImc(imc)
+  const errors = form.formState.errors
 
   const onSubmit = form.handleSubmit(async (data) => {
     const now = new Date().toISOString()
@@ -70,95 +74,88 @@ export function OnboardingWizard() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gym-bgLight p-4 dark:bg-gym-bgDark">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-lg dark:bg-gym-cardDark"
-      >
-        <h1 className="text-2xl font-bold">Bienvenido a Proyecto Hevy</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-300">Configuración inicial offline</p>
+      <form onSubmit={onSubmit} className="w-full max-w-xl">
+        <Card className="space-y-4">
+          <h1 className="text-2xl font-bold">Bienvenido a Proyecto Hevy</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-300">Configuración inicial offline</p>
 
-        {step === 1 && (
-          <>
-            <label className="block text-sm font-medium">Nombre (opcional)</label>
-            <input
-              {...form.register('nombre')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-              placeholder="¿Cómo quieres que te llamemos?"
-            />
+          {step === 1 && (
+            <>
+              <Input
+                {...form.register('nombre')}
+                label="Nombre (opcional)"
+                placeholder="¿Cómo quieres que te llamemos?"
+                error={errors.nombre?.message}
+              />
 
-            <label className="block text-sm font-medium">Peso corporal (kg)</label>
-            <input
-              type="number"
-              step="0.1"
-              {...form.register('pesoCorporal')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            />
+              <Input
+                type="number"
+                step="0.1"
+                {...form.register('pesoCorporal')}
+                label="Peso corporal (kg)"
+                error={errors.pesoCorporal?.message}
+              />
 
-            <label className="block text-sm font-medium">Altura (cm)</label>
-            <input
-              type="number"
-              {...form.register('altura')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            />
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <label className="block text-sm font-medium">Cintura (cm, opcional)</label>
-            <input
-              type="number"
-              {...form.register('cintura')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            />
-
-            <label className="block text-sm font-medium">Pecho (cm, opcional)</label>
-            <input
-              type="number"
-              {...form.register('pecho')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            />
-
-            <label className="block text-sm font-medium">Pierna (cm, opcional)</label>
-            <input
-              type="number"
-              {...form.register('diametroPierna')}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            />
-          </>
-        )}
-
-        {step === 3 && (
-          <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-            <h2 className="text-lg font-semibold">Tu IMC estimado</h2>
-            <p className="text-3xl font-bold">{imc}</p>
-            <p className={`text-sm font-medium ${imcStatus.color}`}>{imcStatus.label}</p>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setStep((current) => Math.max(1, current - 1))}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium"
-          >
-            Atrás
-          </button>
-
-          {step < 3 ? (
-            <button
-              type="button"
-              onClick={() => setStep((current) => Math.min(3, current + 1))}
-              className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
-            >
-              Siguiente
-            </button>
-          ) : (
-            <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white">
-              Empezar
-            </button>
+              <Input
+                type="number"
+                {...form.register('altura')}
+                label="Altura (cm)"
+                error={errors.altura?.message}
+              />
+            </>
           )}
-        </div>
+
+          {step === 2 && (
+            <>
+              <Input
+                type="number"
+                {...form.register('cintura')}
+                label="Cintura (cm, opcional)"
+                error={errors.cintura?.message}
+              />
+
+              <Input
+                type="number"
+                {...form.register('pecho')}
+                label="Pecho (cm, opcional)"
+                error={errors.pecho?.message}
+              />
+
+              <Input
+                type="number"
+                {...form.register('diametroPierna')}
+                label="Pierna (cm, opcional)"
+                error={errors.diametroPierna?.message}
+              />
+            </>
+          )}
+
+          {step === 3 && (
+            <Card className="rounded-lg p-4">
+              <h2 className="text-lg font-semibold">Tu IMC estimado</h2>
+              <p className="text-3xl font-bold">{imc}</p>
+              <p className={`text-sm font-medium ${imcStatus.color}`}>{imcStatus.label}</p>
+            </Card>
+          )}
+
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setStep((current) => Math.max(1, current - 1))}
+            >
+              Atrás
+            </Button>
+
+            {step < 3 ? (
+              <Button type="button" onClick={() => setStep((current) => Math.min(3, current + 1))}>
+                Siguiente
+              </Button>
+            ) : (
+              <Button type="submit">Empezar</Button>
+            )}
+          </div>
+        </Card>
       </form>
     </div>
   )
