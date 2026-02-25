@@ -1,42 +1,42 @@
-# PROYECTO HEVY - PLAN MAESTRO DE DESARROLLO
+# PROJECT HEVY - MASTER DEVELOPMENT PLAN
 
-Última actualización: 2026-02-23
+Last updated: 2026-02-23
 
-## 1) Visión general
+## 1) Overview
 
-Aplicación web offline-first para gestión completa de entrenamiento de gimnasio, con persistencia local (IndexedDB), sin autenticación obligatoria y foco en uso diario rápido.
+Offline-first web app for complete gym training management, with local persistence (IndexedDB), no mandatory authentication, and a focus on fast daily use.
 
-## 2) Alcance funcional objetivo
+## 2) Target functional scope
 
-- Catálogo de ejercicios (base + personalizados)
-- Constructor de rutinas
-- Registro de entrenamientos
-- Progreso y estadísticas
-- Diagrama corporal interactivo
-- PRs automáticos
-- Recomendaciones por equilibrio muscular
-- Exportación/importación local
-- Modo oscuro
-- Experiencia responsive/PWA
+- Exercise catalog (base + custom)
+- Routine builder
+- Workout logging
+- Progress and statistics
+- Interactive body diagram
+- Automatic PRs
+- Muscle balance recommendations
+- Local export/import
+- Dark mode
+- Responsive/PWA experience
 
-## 3) Estado real actual (repo)
+## 3) Current real status (repo)
 
-Implementado:
-- Onboarding de perfil + IMC
-- Dashboard básico
-- Registro guiado y detallado por series/reps/peso
-- Rutinas: crear/editar, activar/desactivar, borrar, asignar ejercicios y reordenar
-- Catálogo: búsqueda/filtro + crear/editar/borrar personalizados
-- Progreso con gráficas, heatmap, PRs y diagrama corporal interactivo
-- Perfil con tema
-- Exportación/importación local (JSON/CSV) y exportación PDF
-- PWA activa
+Implemented:
+- Profile onboarding + BMI
+- Basic dashboard
+- Guided and detailed logging by sets/reps/weight
+- Routines: create/edit, enable/disable, delete, assign exercises, and reorder
+- Catalog: search/filter + create/edit/delete custom exercises
+- Progress with charts, heatmap, PRs, and interactive body diagram
+- Profile with theme preference
+- Local export/import (JSON/CSV) and PDF export
+- Active PWA
 
-Pendiente principal:
-- Tests de integración end-to-end de flujos críticos
-- Optimización final de performance/accesibilidad
+Main pending items:
+- End-to-end integration tests for critical flows
+- Final performance/accessibility optimization
 
-## 4) Stack actual (fuente: package.json)
+## 4) Current stack (source: package.json)
 
 - React 19 + TypeScript 5.9 + Vite 7
 - React Router 7
@@ -46,52 +46,52 @@ Pendiente principal:
 - Recharts
 - Tailwind CSS
 
-## 5) Stack objetivo para funcionalidades avanzadas
+## 5) Target stack for advanced features
 
-Dependencias sugeridas para próximas fases:
+Suggested dependencies for next phases:
 
 - Drag and drop: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
-- Fechas/racha: `date-fns`
-- Exportación PDF: `jspdf`, `jspdf-autotable`
+- Dates/streaks: `date-fns`
+- PDF export: `jspdf`, `jspdf-autotable`
 - PWA: `vite-plugin-pwa`, `workbox-window`
 - Testing: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`
 
-## 6) Principios de arquitectura
+## 6) Architecture principles
 
-- Offline-first: toda operación principal persiste en Dexie
-- Reactividad local: lecturas con `useLiveQuery`
-- Formularios tipados con RHF + Zod
-- Estado UI en Zustand (tema/layout)
-- Componentes de página delgados + lógica movida a hooks/servicios
+- Offline-first: every core operation persists in Dexie
+- Local reactivity: reads via `useLiveQuery`
+- Typed forms with RHF + Zod
+- UI state in Zustand (theme/layout)
+- Lean page components + logic moved to hooks/services
 
-## 7) Convenciones de dominio
+## 7) Domain conventions
 
-- Persistir fechas en ISO string
-- IDs con `crypto.randomUUID()`
-- Mantener nombres de propiedades en camelCase (alineado al repo)
-- Evitar lógica de negocio compleja dentro de componentes de UI
+- Persist dates as ISO strings
+- IDs generated with `crypto.randomUUID()`
+- Keep property names in camelCase (aligned with repo)
+- Avoid complex business logic inside UI components
 
-## 8) Riesgos técnicos y mitigación
+## 8) Technical risks and mitigation
 
-- Riesgo: crecimiento de lógica en páginas
-  - Mitigación: crear hooks (`useEntrenamientos`, `useRutinas`, etc.)
-- Riesgo: inconsistencias de datos entre tablas
-  - Mitigación: transacciones Dexie para operaciones compuestas
-- Riesgo: deuda de testing
-  - Mitigación: introducir tests desde utilidades críticas hacia features
+- Risk: page-level logic growth
+  - Mitigation: create domain hooks (`useWorkouts`, `useRoutines`, etc.)
+- Risk: data inconsistencies across tables
+  - Mitigation: Dexie transactions for composite operations
+- Risk: testing debt
+  - Mitigation: add tests from critical utilities outward to features
 
-## 9) Definición de “MVP completo”
+## 9) Definition of a “complete MVP”
 
-Se considera MVP completo cuando estén listos:
-- CRUD de rutinas con asignación de ejercicios
-- Registro de entrenamiento por series/reps/peso
-- Dashboard + Progreso con métricas consistentes
-- PRs automáticos visibles en UI
-- Exportación/importación JSON
+The MVP is considered complete when these are ready:
+- Routine CRUD with exercise assignment
+- Workout logging by sets/reps/weight
+- Dashboard + Progress with consistent metrics
+- Automatic PRs visible in UI
+- JSON export/import
 
-## 10) Entregables de documentación
+## 10) Documentation deliverables
 
 - `docs/ARCHITECTURE.md`
 - `docs/SETUP_AND_DEPENDENCIES.md`
 - `docs/IMPLEMENTATION_ORDER.md`
-- `README.md` como índice de arranque
+- `README.md` as the startup index

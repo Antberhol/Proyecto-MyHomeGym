@@ -1,74 +1,74 @@
-# Setup y Dependencias
+# Setup and Dependencies
 
-## 1) Requisitos
+## 1) Requirements
 
 - Node.js 20+
 - npm 10+
-- Navegador moderno con IndexedDB
+- Modern browser with IndexedDB support
 
-## 2) Instalación
+## 2) Installation
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 3) Scripts actuales
+## 3) Current scripts
 
 - `npm run dev`
 - `npm run build`
 - `npm run preview`
 - `npm run lint`
 
-## 4) Dependencias opcionales por fase
+## 4) Optional dependencies by phase
 
-### Fase Rutina Builder (drag and drop)
+### Routine Builder phase (drag and drop)
 
 ```bash
 npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
 ```
 
-### Fase analítica de fechas
+### Date analytics phase
 
 ```bash
 npm install date-fns
 ```
 
-### Fase exportación PDF
+### PDF export phase
 
 ```bash
 npm install jspdf jspdf-autotable
 ```
 
-### Fase PWA
+### PWA phase
 
 ```bash
 npm install -D vite-plugin-pwa
 npm install workbox-window
 ```
 
-### Fase testing
+### Testing phase
 
 ```bash
 npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 ```
 
-## 5) Configuraciones sugeridas (incrementales)
+## 5) Suggested configurations (incremental)
 
-### Alias de import (`@/`)
+### Import alias (`@/`)
 
-Agregar alias en `vite.config.ts` y `tsconfig.app.json` antes de refactors de paths masivos.
+Add aliases in `vite.config.ts` and `tsconfig.app.json` before large path refactors.
 
 ### PWA
 
-Integrar `VitePWA` en `vite.config.ts` cuando se cierre MVP funcional, para evitar ruido de debugging durante desarrollo temprano.
+Integrate `VitePWA` in `vite.config.ts` once the functional MVP is stable, to avoid debugging noise during early development.
 
 ### Testing
 
-Añadir `vitest.config.ts` + `tests/setup.ts` al iniciar cobertura de utilidades y hooks.
+Add `vitest.config.ts` + `tests/setup.ts` when starting utility and hook coverage.
 
-## 6) Política de upgrades
+## 6) Upgrade policy
 
-- Mantener librerías actuales (React 19/Vite 7)
-- Evitar downgrade para encajar plantillas antiguas
-- Agregar paquetes solo cuando la fase los use
+- Keep current core libraries (React 19/Vite 7)
+- Avoid downgrades to match outdated templates
+- Add packages only when the phase actually uses them

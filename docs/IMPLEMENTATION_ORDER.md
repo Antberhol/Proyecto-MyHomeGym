@@ -1,89 +1,89 @@
-# Orden de Implementación (Ejecutable)
+# Implementation Order (Executable)
 
-## Convención de estado
+## Status convention
 
-- `[x]` completado
-- `[~]` en curso/parcial
-- `[ ]` pendiente
+- `[x]` completed
+- `[~]` in progress/partial
+- `[ ]` pending
 
-## Fase 1 - Fundamentos
+## Phase 1 - Foundations
 
-- [x] Proyecto base React + TS + Vite
-- [x] Tailwind inicial
-- [x] Dexie configurado
-- [x] Tipos de dominio base
-- [x] Seed de ejercicios inicial
+- [x] React + TS + Vite base project
+- [x] Initial Tailwind setup
+- [x] Dexie configured
+- [x] Base domain types
+- [x] Initial exercise seed
 
-## Fase 2 - Navegación y shell
+## Phase 2 - Navigation and shell
 
-- [x] Layout con sidebar/bottom-nav
-- [x] Rutas principales
-- [x] Tema dark/system con Zustand
+- [x] Layout with sidebar/bottom-nav
+- [x] Main routes
+- [x] Dark/system theme with Zustand
 
-## Fase 3 - Perfil y onboarding
+## Phase 3 - Profile and onboarding
 
-- [x] Wizard inicial
-- [x] Persistencia de perfil
-- [x] Registro de medidas inicial
+- [x] Initial wizard
+- [x] Profile persistence
+- [x] Initial measurements registration
 
-## Fase 4 - Catálogo de ejercicios
+## Phase 4 - Exercise catalog
 
-- [x] Listado de ejercicios
-- [x] Búsqueda + filtro por grupo muscular
-- [x] Alta de personalizados
-- [x] Borrado de personalizados
-- [x] Edición de personalizados
+- [x] Exercise listing
+- [x] Search + filter by muscle group
+- [x] Create custom exercises
+- [x] Delete custom exercises
+- [x] Edit custom exercises
 
-## Fase 5 - Rutinas
+## Phase 5 - Routines
 
-- [x] Crear rutina
-- [x] Listar rutinas
-- [x] Activar/desactivar rutina
-- [x] Borrar rutina
-- [x] Editar rutina
-- [x] Asignar ejercicios a rutina
-- [x] Reordenar ejercicios (drag & drop)
+- [x] Create routine
+- [x] List routines
+- [x] Enable/disable routine
+- [x] Delete routine
+- [x] Edit routine
+- [x] Assign exercises to routine
+- [x] Reorder exercises (drag & drop)
 
-## Fase 6 - Entrenamiento
+## Phase 6 - Training
 
-- [x] Registro rápido de sesión
-- [x] Entrenamiento activo guiado por rutina
-- [x] Registro por serie/reps/peso
-- [x] Timer de descanso
-- [x] Resumen de sesión
+- [x] Quick session logging
+- [x] Active routine-guided training
+- [x] Logging by set/reps/weight
+- [x] Rest timer
+- [x] Session summary
 
-## Fase 7 - Métricas y progreso
+## Phase 7 - Metrics and progress
 
-- [x] Dashboard de métricas básicas
-- [x] Gráficas de peso/IMC y volumen
-- [x] Cálculo de racha
-- [x] PRs automáticos (detección + visualización)
-- [x] Heatmap de actividad
+- [x] Basic metrics dashboard
+- [x] Weight/BMI and volume charts
+- [x] Streak calculation
+- [x] Automatic PRs (detection + visualization)
+- [x] Activity heatmap
 
-## Fase 8 - Diagrama corporal
+## Phase 8 - Body diagram
 
-- [x] Vista básica de medidas
-- [x] SVG interactivo frontal/posterior
-- [x] Color por nivel de desarrollo
-- [x] Panel de detalle por grupo muscular
+- [x] Basic measurement view
+- [x] Interactive front/back SVG
+- [x] Color by development level
+- [x] Detail panel by muscle group
 
-## Fase 9 - Datos y portabilidad
+## Phase 9 - Data and portability
 
-- [x] Exportar CSV (entrenamientos)
-- [x] Importar CSV (entrenamientos)
-- [x] Exportar JSON completo
-- [x] Importar JSON completo
-- [x] Exportar PDF de resumen
+- [x] Export CSV (workouts)
+- [x] Import CSV (workouts)
+- [x] Export full JSON
+- [x] Import full JSON
+- [x] Export summary PDF
 
-## Fase 10 - Calidad y plataforma
+## Phase 10 - Quality and platform
 
 - [x] PWA (manifest + service worker)
-- [x] Tests unitarios (20 tests)
-- [ ] Tests integración
-- [ ] Optimización final de performance/accesibilidad
+- [x] Unit tests (20 tests)
+- [ ] Integration tests
+- [ ] Final performance/accessibility optimization
 
-## Próxima iteración recomendada
+## Recommended next iteration
 
-1. Tests de integración
-2. Optimización de chunks (code-splitting)
-3. Mejoras de accesibilidad
+1. Integration tests
+2. Chunk optimization (code-splitting)
+3. Accessibility improvements

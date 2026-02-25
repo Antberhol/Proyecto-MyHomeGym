@@ -1,133 +1,137 @@
-# Proyecto Hevy
+# MyHomeGym
 
-Aplicación web **offline-first** para seguimiento de entrenamiento de gimnasio.
+An **offline-first** web app for gym training tracking.
 
-## Objetivo del proyecto
+Take your training to the next level with a digital experience that adapts to you. This application eliminates unnecessary distractions, allowing you to log your activity intuitively and quickly. With dynamic visual tools and immediate feedback, it transforms your data into motivation, helping you visualize progress and maintain consistency no matter where you train.
 
-Construir una app de entrenamiento que funcione localmente en navegador (sin backend obligatorio), priorizando:
+This is also a hobby project built to challenge paid fitness apps that limit user experience behind paywalls and restrictions.
 
-- Registro rápido de sesiones
-- Progreso visible en métricas clave
-- Gestión simple de rutinas y ejercicios
-- Persistencia local robusta
+## Project Goal
+
+Build a training app that works locally in the browser (no mandatory backend), prioritizing:
+
+- Fast workout logging
+- Clear progress across key metrics
+- Simple routine and exercise management
+- Robust local persistence
 
 ## Stack
 
 - React 19 + TypeScript + Vite
 - Tailwind CSS
-- Dexie (IndexedDB) para almacenamiento local
-- React Hook Form + Zod para formularios y validación
-- Zustand para estado de UI
-- Recharts para visualización de progreso
+- Dexie (IndexedDB) for local storage
+- React Hook Form + Zod for forms and validation
+- Zustand for UI state
+- Recharts for progress visualization
 
-## Funcionalidades actuales
+## Current Features
 
-- Onboarding inicial con creación de perfil y cálculo de IMC
-- Dashboard con métricas de entrenamientos recientes
-- Registro de entrenamientos guiado por rutina y entreno libre
-- Registro detallado por ejercicio/serie/repeticiones/peso
-- Gestión de rutinas (crear, editar, activar/desactivar, borrar)
-- Asignación de ejercicios a rutinas y reordenamiento
-- Catálogo de ejercicios con filtros
-- Creación, edición y borrado de ejercicios personalizados
-- Progreso con gráficas de peso/IMC, volumen, heatmap y diagrama corporal interactivo
-- PRs automáticos y panel específico de PRs
-- Exportación/importación local (JSON/CSV) y resumen PDF
-- Perfil con resumen de datos y preferencia de tema
-- PWA con soporte offline
+- Initial onboarding with profile creation and BMI calculation
+- Dashboard with recent training metrics
+- Guided routine workouts and free training mode
+- Detailed logging by exercise/set/reps/weight
+- Routine management (create, edit, enable/disable, delete)
+- Exercise assignment to routines with reordering
+- Exercise catalog with filters
+- Create, edit, and delete custom exercises
+- Progress views with weight/BMI charts, volume, heatmap, and interactive body diagram
+- Automatic PR detection and dedicated PR panel
+- Local export/import (JSON/CSV) and PDF summary
+- Profile page with data summary and theme preference
+- PWA with offline support
 
-## Navegación
+## Navigation
 
-Rutas principales de la app:
+Main app routes:
 
 - `/` → Dashboard
-- `/entrenar` → Registro de entrenamiento
-- `/rutinas` → Gestión de rutinas
-- `/catalogo` → Catálogo de ejercicios
-- `/progreso` → Métricas y gráficos
-- `/perfil` → Perfil y tema
-- `/configuracion` → Backup/restore, PDF, mantenimiento y notificaciones
+- `/entrenar` → Training logging
+- `/rutinas` → Routine management
+- `/catalogo` → Exercise catalog
+- `/progreso` → Metrics and charts
+- `/perfil` → Profile and theme
+- `/configuracion` → Backup/restore, PDF, maintenance, and notifications
 
-Si no existe perfil, la app muestra el onboarding antes de habilitar la navegación.
+If no profile exists, onboarding is shown before enabling full navigation.
 
 ## Scripts
 
-- `npm run dev`: inicia servidor de desarrollo
-- `npm run build`: compila TypeScript y genera build de producción
-- `npm run preview`: previsualiza el build generado
-- `npm run lint`: ejecuta ESLint
+- `npm run dev`: starts the development server
+- `npm run build`: compiles TypeScript and generates a production build
+- `npm run preview`: previews the generated build
+- `npm run lint`: runs ESLint
 
-## Estructura principal
+## Main Structure
 
-- `src/pages`: vistas principales de la app
-- `src/components`: componentes reutilizables de layout y perfil
-- `src/lib/db.ts`: esquema de base de datos local (Dexie)
-- `src/lib/bootstrap.ts`: carga de ejercicios semilla en primer arranque
-- `src/stores`: estado global de interfaz (tema/sidebar)
-- `src/constants/exercises.ts`: catálogo inicial de ejercicios
+- `src/pages`: main app screens
+- `src/components`: reusable components (layout, profile, workout, analytics, etc.)
+- `src/lib/db.ts`: local database schema (Dexie)
+- `src/lib/bootstrap.ts`: initial exercise seed loading on first run
+- `src/stores`: global UI state (theme/sidebar)
+- `src/constants/defaultExercises.ts`: default exercise seed list
 
-## Modelo de datos (IndexedDB + Dexie)
+## Data Model (IndexedDB + Dexie)
 
-Tablas definidas actualmente:
+Current tables:
 
-- `userProfile`: perfil del usuario
-- `ejerciciosCatalogo`: catálogo base + ejercicios personalizados
-- `rutinas`: rutinas del usuario
-- `rutinaEjercicios`: relación rutina-ejercicio
-- `entrenamientosRegistrados`: sesiones registradas
-- `ejerciciosRealizados`: detalle por ejercicio realizado
-- `medidasCorporalesHistorico`: histórico corporal
-- `prs`: récords personales
+- `userProfile`: user profile
+- `ejerciciosCatalogo`: base catalog + custom exercises
+- `rutinas`: user routines
+- `rutinaEjercicios`: routine-exercise relation
+- `entrenamientosRegistrados`: logged workout sessions
+- `ejerciciosRealizados`: performed exercise details
+- `medidasCorporalesHistorico`: body measurements history
+- `prs`: personal records
 
-Base de datos local: `gym_offline_db`.
+Local database name: `gym_offline_db`.
 
-## Flujo offline-first
+## Offline-First Flow
 
-1. La app inicializa Dexie al cargar.
-2. Si el catálogo está vacío, se insertan ejercicios semilla.
-3. Toda operación CRUD se realiza sobre IndexedDB local.
-4. La UI se reactualiza usando `useLiveQuery`.
+1. The app initializes Dexie on load.
+2. If the catalog is empty, default exercises are seeded.
+3. All CRUD operations run on local IndexedDB.
+4. The UI updates reactively via `useLiveQuery`.
 
-No se requiere conexión a internet para operar una vez descargada la app.
+No internet connection is required after the app is installed.
 
-## Ejecutar en local
+## Run Locally
 
-1. Instala dependencias:
+1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Levanta el entorno de desarrollo:
+2. Start development mode:
 
    ```bash
    npm run dev
    ```
 
-3. Abre la URL mostrada por Vite (por defecto `http://localhost:5173`).
+3. Open the URL shown by Vite (default: `http://localhost:5173`).
 
-## Notas
+## Notes
 
-- La app funciona sobre IndexedDB en el navegador; los datos quedan en el dispositivo.
-- Si necesitas reiniciar datos de prueba, borra almacenamiento local del sitio desde las DevTools.
+- The app runs on browser IndexedDB; data stays on-device.
+- To reset test data, clear site storage from browser DevTools.
 
-## Estado actual y próximos pasos sugeridos
+## Current Status & Suggested Next Steps
 
-Estado actual: MVP funcional extendido, operativo offline, con rutinas, progreso, PRs y backup local.
+Current status: extended functional MVP, fully offline-capable, with routines, progress analytics, PRs, and local backup.
 
-Siguientes mejoras recomendadas:
+Recommended next improvements:
 
-- Tests de integración de flujos críticos (onboarding, rutina, entreno, backup)
-- Optimización adicional de performance (más code-splitting y profiling)
-- Mejoras de accesibilidad (auditoría completa y navegación por teclado en todos los flujos)
+- Integration tests for critical flows (onboarding, routines, workout logging, backup)
+- Additional performance optimization (more code-splitting and profiling)
+- Accessibility upgrades (full audit and keyboard navigation across all flows)
 
-## Documentación extendida
+## Extended Documentation
 
-Para ejecutar el proyecto completo por fases (plan maestro), usa:
+To execute the full project by phases (master plan), use:
 
 - [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/SETUP_AND_DEPENDENCIES.md](docs/SETUP_AND_DEPENDENCIES.md)
 - [docs/IMPLEMENTATION_ORDER.md](docs/IMPLEMENTATION_ORDER.md)
 
-Orden recomendado de trabajo: seguir [docs/IMPLEMENTATION_ORDER.md](docs/IMPLEMENTATION_ORDER.md) de arriba hacia abajo.
+Recommended workflow order: follow [docs/IMPLEMENTATION_ORDER.md](docs/IMPLEMENTATION_ORDER.md) top to bottom.

@@ -1,30 +1,30 @@
-# Arquitectura Técnica
+# Technical Architecture
 
-## 1) Módulos principales
+## 1) Main modules
 
-- `src/pages`: composición de vistas por ruta
-- `src/components`: UI reutilizable (layout/perfil)
-- `src/lib/db.ts`: esquema Dexie + tablas
-- `src/lib/bootstrap.ts`: seed de ejercicios iniciales
-- `src/stores/ui-store.ts`: estado UI persistido
-- `src/types/models.ts`: contratos de dominio
-- `src/utils/calculations.ts`: cálculos (IMC, etc.)
+- `src/pages`: route-based view composition
+- `src/components`: reusable UI (layout/profile)
+- `src/lib/db.ts`: Dexie schema + tables
+- `src/lib/bootstrap.ts`: initial exercise seed
+- `src/stores/ui-store.ts`: persisted UI state
+- `src/types/models.ts`: domain contracts
+- `src/utils/calculations.ts`: calculations (BMI, etc.)
 
-## 2) Rutas activas
+## 2) Active routes
 
 - `/` Dashboard
-- `/entrenar` Registro rápido
-- `/rutinas` Gestión de rutinas
-- `/catalogo` Catálogo
-- `/progreso` Gráficas
-- `/diagrama` Medidas corporales
-- `/perfil` Perfil/tema
+- `/entrenar` Quick logging
+- `/rutinas` Routine management
+- `/catalogo` Catalog
+- `/progreso` Charts
+- `/diagrama` Body measurements
+- `/perfil` Profile/theme
 
-## 3) Modelo de datos (Dexie)
+## 3) Data model (Dexie)
 
-Base: `gym_offline_db`
+Database: `gym_offline_db`
 
-Tablas:
+Tables:
 - `userProfile`
 - `ejerciciosCatalogo`
 - `rutinas`
@@ -34,40 +34,40 @@ Tablas:
 - `medidasCorporalesHistorico`
 - `prs`
 
-Índices actuales (resumen):
-- Búsqueda por nombre/grupo/dificultad en ejercicios
-- Filtros por rutina/fecha en entrenamientos
-- Relación `rutinaId` en `rutinaEjercicios`
+Current indexes (summary):
+- Search by name/group/difficulty in exercises
+- Filters by routine/date in workouts
+- `rutinaId` relation in `rutinaEjercicios`
 
-## 4) Flujo de arranque
+## 4) Startup flow
 
-1. Arranca app
-2. `bootstrapDatabase()` valida seed de ejercicios
-3. Se consulta `userProfile`
-4. Sin perfil: onboarding
-5. Con perfil: router principal
+1. App starts
+2. `bootstrapDatabase()` validates exercise seed
+3. `userProfile` is queried
+4. No profile: onboarding
+5. Profile exists: main router
 
-## 5) Flujo de datos recomendado (target)
+## 5) Recommended data flow (target)
 
-Para funcionalidades avanzadas:
+For advanced features:
 
-- Páginas
-  -> Hooks de dominio (`useRutinas`, `useEntrenamientos`, `useProgreso`)
-  -> Servicios de datos (`lib/services/*`)
+- Pages
+  -> Domain hooks (`useRoutines`, `useWorkouts`, `useProgress`)
+  -> Data services (`lib/services/*`)
   -> Dexie (`db`)
 
-Esto separa UI de lógica y facilita test.
+This separates UI from logic and improves testability.
 
-## 6) Reglas de consistencia
+## 6) Consistency rules
 
-- Operaciones multi-tabla en `db.transaction('rw', ...)`
-- `updatedAt` siempre actualizado en mutaciones
-- Borrado de rutina debe limpiar `rutinaEjercicios`
-- Validaciones en frontera de entrada (Zod)
+- Multi-table operations in `db.transaction('rw', ...)`
+- `updatedAt` must always be updated on mutations
+- Routine deletion must also clean `rutinaEjercicios`
+- Input boundary validations (Zod)
 
-## 7) Arquitectura objetivo por capas
+## 7) Layered target architecture
 
-- Presentación: `components`, `pages`
-- Aplicación: `hooks`, casos de uso
-- Infraestructura: `lib/db`, export/import, PWA
-- Dominio: `types/models`, reglas de cálculo
+- Presentation: `components`, `pages`
+- Application: `hooks`, use cases
+- Infrastructure: `lib/db`, export/import, PWA
+- Domain: `types/models`, calculation rules
