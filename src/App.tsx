@@ -21,7 +21,7 @@ const ConfiguracionPage = lazy(() => import('./pages/Configuracion').then((modul
 
 function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route element={<AppShell />}>
