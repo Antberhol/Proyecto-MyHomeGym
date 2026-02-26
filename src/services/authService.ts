@@ -30,7 +30,7 @@ function toAuthUser(user: User | null): AuthUser | null {
 
 function getFirebaseAuthOrThrow(): Auth {
     if (!isFirebaseConfigured || !firebaseAuth) {
-        throw new Error('Firebase no está configurado. Revisa variables VITE_FIREBASE_* en .env.local')
+        throw new Error('Firebase no está configurado. Define variables VITE_FIREBASE_* en .env.local (local) y en Secrets del pipeline (deploy).')
     }
 
     return firebaseAuth

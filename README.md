@@ -118,7 +118,26 @@ npm install
 npm run dev
 ```
 
+Before running the app, configure Firebase variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill all `VITE_FIREBASE_*` values in `.env.local`.
+
 The app will be available at the Vite URL (default: `http://localhost:5173`).
+
+### GitHub Pages deployment (Firebase)
+
+Add the same variables as **Repository Secrets** in GitHub:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
 
 ### Local technical validation
 
