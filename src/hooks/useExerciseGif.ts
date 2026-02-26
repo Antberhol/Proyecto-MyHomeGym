@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
 
 interface ExerciseDbItem {
+    id?: string
     name?: string
     gifUrl?: string
     target?: string
@@ -10,10 +11,18 @@ interface ExerciseDbItem {
 interface ExerciseGifData {
     gifUrl: string
     targetMuscle: string
+    resolvedExerciseDbId?: string
+    resolvedExerciseDbName?: string
 }
 
 interface UseExerciseGifResult extends ExerciseGifData {
     isLoading: boolean
+}
+
+interface UseExerciseGifOptions {
+    exerciseDbId?: string
+    exerciseDbName?: string
+    exerciseDbAliases?: string[]
 }
 
 const exerciseGifCache = new Map<string, ExerciseGifData>()
@@ -80,15 +89,69 @@ async function searchExerciseDbByCandidates(
     return null
 }
 
-export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
+async function searchExerciseDbById(
+    exerciseDbId: string,
+    apiKey: string,
+    signal: AbortSignal,
+): Promise<ExerciseDbItem | null> {
+    const response = await fetch(
+        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}`,
+        {
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+            },
+            signal,
+        },
+    )
+
+    if (!response.ok) {
+        return null
+    }
+
+    const payload = (await response.json()) as ExerciseDbItem
+    if (!payload?.gifUrl) {
+        return null
+    }
+
+    return payload
+}
+
+function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOptions) {
+    const candidates = new Set<string>()
+
+    if (options?.exerciseDbName?.trim()) {
+        candidates.add(normalizeExerciseName(options.exerciseDbName))
+    }
+
+    for (const alias of options?.exerciseDbAliases ?? []) {
+        if (alias.trim()) {
+            candidates.add(normalizeExerciseName(alias))
+        }
+    }
+
+    for (const candidate of getExerciseDbQueryCandidates(exerciseName)) {
+        candidates.add(candidate)
+    }
+
+    return Array.from(candidates)
+}
+
+export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
     const cached = normalizedName ? exerciseGifCache.get(normalizedName) : undefined
     const shouldFetch = Boolean(normalizedName && apiKey && !cached)
+    const exerciseDbId = options?.exerciseDbId
+    const exerciseDbName = options?.exerciseDbName
+    const exerciseDbAliases = options?.exerciseDbAliases
+    const aliasSignature = (exerciseDbAliases ?? []).join('|')
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: EXERCISE_GIF_PLACEHOLDER,
         targetMuscle: '',
+        resolvedExerciseDbId: undefined,
+        resolvedExerciseDbName: undefined,
         isLoading: false,
     })
 
@@ -103,16 +166,28 @@ export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
             setState({
                 gifUrl: EXERCISE_GIF_PLACEHOLDER,
                 targetMuscle: '',
+                resolvedExerciseDbId: undefined,
+                resolvedExerciseDbName: undefined,
                 isLoading: true,
             })
 
             try {
-                const candidates = getExerciseDbQueryCandidates(exerciseName)
-                const firstResult = await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
+                const byId = exerciseDbId?.trim()
+                    ? await searchExerciseDbById(exerciseDbId, apiKey, controller.signal)
+                    : null
+
+                const candidates = buildQueryCandidates(exerciseName, {
+                    exerciseDbId,
+                    exerciseDbName,
+                    exerciseDbAliases,
+                })
+                const firstResult = byId ?? (await searchExerciseDbByCandidates(candidates, apiKey, controller.signal))
 
                 const resolved: ExerciseGifData = {
                     gifUrl: firstResult?.gifUrl || EXERCISE_GIF_PLACEHOLDER,
                     targetMuscle: firstResult?.target || '',
+                    resolvedExerciseDbId: firstResult?.id,
+                    resolvedExerciseDbName: firstResult?.name,
                 }
 
                 exerciseGifCache.set(normalizedName, resolved)
@@ -122,6 +197,8 @@ export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
                     const fallback = {
                         gifUrl: EXERCISE_GIF_PLACEHOLDER,
                         targetMuscle: '',
+                        resolvedExerciseDbId: undefined,
+                        resolvedExerciseDbName: undefined,
                     }
                     exerciseGifCache.set(normalizedName, fallback)
                     setState({ ...fallback, isLoading: false })
@@ -134,12 +211,14 @@ export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
         return () => {
             controller.abort()
         }
-    }, [apiKey, exerciseName, normalizedName, shouldFetch])
+    }, [aliasSignature, apiKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
     if (!normalizedName || !apiKey) {
         return {
             gifUrl: EXERCISE_GIF_PLACEHOLDER,
             targetMuscle: '',
+            resolvedExerciseDbId: undefined,
+            resolvedExerciseDbName: undefined,
             isLoading: false,
         }
     }

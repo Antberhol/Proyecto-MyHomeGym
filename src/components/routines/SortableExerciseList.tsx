@@ -22,6 +22,9 @@ interface SortableRoutineExercise {
         grupoMuscularPrimario?: string
         equipoNecesario?: string
         imagenUrl?: string
+        exerciseDbId?: string
+        exerciseDbName?: string
+        exerciseDbAliases?: string[]
     }
     series: number
     repeticiones: string
@@ -97,6 +100,9 @@ function SortableItem({
                     grupoMuscularPrimario={item.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={item.ejercicio?.equipoNecesario}
                     imagenUrl={item.ejercicio?.imagenUrl}
+                    exerciseDbId={item.ejercicio?.exerciseDbId}
+                    exerciseDbName={item.ejercicio?.exerciseDbName}
+                    exerciseDbAliases={item.ejercicio?.exerciseDbAliases}
                     className="h-12 w-16"
                 />
                 <div>

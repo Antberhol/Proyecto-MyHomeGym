@@ -387,6 +387,9 @@ export function MisRutinasPage() {
               grupoMuscularPrimario: item.grupoMuscularPrimario,
               equipoNecesario: item.equipoNecesario,
               imagenUrl: item.imagenUrl,
+              exerciseDbId: item.exerciseDbId,
+              exerciseDbName: item.exerciseDbName,
+              exerciseDbAliases: item.exerciseDbAliases,
             }))}
             selectedIds={selectedRoutineExercises.map((item) => item.ejercicioId)}
             onConfirm={(exerciseIds) => {

@@ -74,6 +74,9 @@ export function ActiveExerciseCard({
                     grupoMuscularPrimario={activeRoutineExercise.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={activeRoutineExercise.ejercicio?.equipoNecesario}
                     imagenUrl={activeRoutineExercise.ejercicio?.imagenUrl}
+                    exerciseDbId={activeRoutineExercise.ejercicio?.exerciseDbId}
+                    exerciseDbName={activeRoutineExercise.ejercicio?.exerciseDbName}
+                    exerciseDbAliases={activeRoutineExercise.ejercicio?.exerciseDbAliases}
                     className="h-16 w-24"
                 />
                 <p className="text-sm font-medium">

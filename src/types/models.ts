@@ -45,6 +45,9 @@ export interface Exercise extends SyncMetadata {
   nivelDificultad: DifficultyLevel
   equipoNecesario: string
   imagenUrl?: string
+  exerciseDbId?: string
+  exerciseDbName?: string
+  exerciseDbAliases?: string[]
   instrucciones: string
   esPersonalizado: boolean
   createdAt: string

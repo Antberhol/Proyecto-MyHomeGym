@@ -3,11 +3,15 @@ import type { Exercise } from '../../types/models'
 import { useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseCardProps {
-    exercise: Pick<Exercise, 'nombre' | 'grupoMuscularPrimario'>
+    exercise: Pick<Exercise, 'nombre' | 'grupoMuscularPrimario' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
-    const { gifUrl, targetMuscle, isLoading } = useExerciseGif(exercise.nombre)
+    const { gifUrl, targetMuscle, isLoading } = useExerciseGif(exercise.nombre, {
+        exerciseDbId: exercise.exerciseDbId,
+        exerciseDbName: exercise.exerciseDbName,
+        exerciseDbAliases: exercise.exerciseDbAliases,
+    })
     const [gifLoaded, setGifLoaded] = useState(false)
 
     useEffect(() => {

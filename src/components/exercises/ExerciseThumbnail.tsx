@@ -6,6 +6,9 @@ interface ExerciseThumbnailProps {
     grupoMuscularPrimario?: string
     equipoNecesario?: string
     imagenUrl?: string
+    exerciseDbId?: string
+    exerciseDbName?: string
+    exerciseDbAliases?: string[]
     className?: string
 }
 
@@ -14,9 +17,16 @@ export function ExerciseThumbnail({
     grupoMuscularPrimario: _grupoMuscularPrimario,
     equipoNecesario: _equipoNecesario,
     imagenUrl: _imagenUrl,
+    exerciseDbId,
+    exerciseDbName,
+    exerciseDbAliases,
     className = 'h-16 w-24',
 }: ExerciseThumbnailProps) {
-    const { gifUrl, isLoading } = useExerciseGif(nombre)
+    const { gifUrl, isLoading } = useExerciseGif(nombre, {
+        exerciseDbId,
+        exerciseDbName,
+        exerciseDbAliases,
+    })
     const [gifLoaded, setGifLoaded] = useState(false)
 
     useEffect(() => {

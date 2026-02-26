@@ -5,6 +5,11 @@ import { useForm } from 'react-hook-form'
 import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
 import { ExerciseCard } from '../components/exercises/ExerciseCard'
+import {
+  getExerciseDbAliasesForName,
+  getExerciseDbQueryCandidates,
+  getPreferredExerciseDbName,
+} from '../constants/exerciseDbAliases'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import type { DifficultyLevel } from '../types/models'
 
@@ -59,6 +64,10 @@ export function CatalogoPage() {
 
   const onCreateCustom = form.handleSubmit(async (values) => {
     const now = new Date().toISOString()
+    const preferredDbName =
+      getPreferredExerciseDbName(values.nombre) ?? getExerciseDbQueryCandidates(values.nombre)[0]
+    const aliases = getExerciseDbAliasesForName(values.nombre)
+
     await exerciseRepository.createExercise({
       id: crypto.randomUUID(),
       nombre: values.nombre,
@@ -67,6 +76,8 @@ export function CatalogoPage() {
       gruposMuscularesSecundarios: [],
       nivelDificultad: values.nivelDificultad as DifficultyLevel,
       equipoNecesario: values.equipoNecesario,
+      exerciseDbName: preferredDbName,
+      exerciseDbAliases: aliases.length > 0 ? aliases : undefined,
       instrucciones: values.instrucciones,
       esPersonalizado: true,
       createdAt: now,
@@ -99,10 +110,20 @@ export function CatalogoPage() {
   const saveExerciseEdits = async () => {
     if (!editingExerciseId) return
 
+    const nextNombre = editNombre.trim() || 'Ejercicio'
+    const nextGrupo = editGrupoMuscular.trim() || 'General'
+    const nextEquipo = editEquipo.trim() || 'Ninguno'
+    const preferredDbName =
+      getPreferredExerciseDbName(nextNombre) ?? getExerciseDbQueryCandidates(nextNombre)[0]
+    const aliases = getExerciseDbAliasesForName(nextNombre)
+
     await exerciseRepository.updateExercise(editingExerciseId, {
-      nombre: editNombre.trim() || 'Ejercicio',
-      grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
-      equipoNecesario: editEquipo.trim() || 'Ninguno',
+      nombre: nextNombre,
+      grupoMuscularPrimario: nextGrupo,
+      equipoNecesario: nextEquipo,
+      exerciseDbId: undefined,
+      exerciseDbName: preferredDbName,
+      exerciseDbAliases: aliases.length > 0 ? aliases : undefined,
       nivelDificultad: editNivel,
       instrucciones: editInstrucciones.trim() || 'Sin instrucciones',
       updatedAt: new Date().toISOString(),

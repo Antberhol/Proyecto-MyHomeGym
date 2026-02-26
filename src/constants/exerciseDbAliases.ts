@@ -83,3 +83,19 @@ export function getExerciseDbQueryCandidates(exerciseName: string) {
 
     return Array.from(candidates).filter((value) => value.length > 0)
 }
+
+export function getPreferredExerciseDbName(exerciseName: string) {
+    const normalized = normalizeExerciseName(exerciseName)
+    const aliasCandidates = exerciseDbAliases[normalized] ?? []
+
+    if (aliasCandidates.length > 0) {
+        return aliasCandidates[0]
+    }
+
+    return undefined
+}
+
+export function getExerciseDbAliasesForName(exerciseName: string) {
+    const normalized = normalizeExerciseName(exerciseName)
+    return exerciseDbAliases[normalized] ?? []
+}

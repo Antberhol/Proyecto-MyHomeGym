@@ -9,6 +9,9 @@ interface ExerciseOption {
     grupoMuscularPrimario: string
     equipoNecesario: string
     imagenUrl?: string
+    exerciseDbId?: string
+    exerciseDbName?: string
+    exerciseDbAliases?: string[]
 }
 
 interface ExerciseSelectorModalProps {
@@ -109,6 +112,9 @@ export function ExerciseSelectorModal({
                                         grupoMuscularPrimario={exercise.grupoMuscularPrimario}
                                         equipoNecesario={exercise.equipoNecesario}
                                         imagenUrl={exercise.imagenUrl}
+                                        exerciseDbId={exercise.exerciseDbId}
+                                        exerciseDbName={exercise.exerciseDbName}
+                                        exerciseDbAliases={exercise.exerciseDbAliases}
                                         className="h-14 w-20"
                                     />
                                     <div>
