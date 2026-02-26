@@ -281,6 +281,7 @@ Recommended strategy: prioritize pure logic tests, critical training-flow hooks,
 | 🛠 [Setup and Dependencies Guide](./docs/SETUP_AND_DEPENDENCIES.md) | Environment setup and base stack         |
 | 📅 [Master Plan](./docs/MASTER_PLAN.md)                             | Phased evolution plan                    |
 | 🧭 [Implementation Order](./docs/IMPLEMENTATION_ORDER.md)           | Suggested development sequence           |
+| 🎞 [ExerciseDB Expansion Plan](./docs/EXERCISEDB_EXPANSION.md)      | Scale-up strategy for ES→EN GIF matching |
 
 ---
 

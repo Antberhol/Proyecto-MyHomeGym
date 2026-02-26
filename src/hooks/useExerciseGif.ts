@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
 
 interface ExerciseDbItem {
+    name?: string
     gifUrl?: string
     target?: string
 }
@@ -25,12 +27,65 @@ export const EXERCISE_GIF_PLACEHOLDER =
         '</svg>',
     )
 
-function normalizeExerciseName(value: string) {
-    return value.trim().toLowerCase()
+async function searchExerciseDbByCandidates(
+    candidates: string[],
+    apiKey: string,
+    signal: AbortSignal,
+): Promise<ExerciseDbItem | null> {
+    for (const candidate of candidates) {
+        const response = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}`,
+            {
+                headers: {
+                    'X-RapidAPI-Key': apiKey,
+                    'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+                },
+                signal,
+            },
+        )
+
+        if (!response.ok) {
+            continue
+        }
+
+        const payload = (await response.json()) as ExerciseDbItem[]
+        if (!Array.isArray(payload) || payload.length === 0) {
+            continue
+        }
+
+        const normalizedCandidate = normalizeExerciseName(candidate)
+        const exact = payload.find(
+            (item) => item.gifUrl && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
+        )
+        if (exact) {
+            return exact
+        }
+
+        const partial = payload.find(
+            (item) =>
+                item.gifUrl &&
+                (normalizeExerciseName(item.name ?? '').includes(normalizedCandidate) ||
+                    normalizedCandidate.includes(normalizeExerciseName(item.name ?? ''))),
+        )
+        if (partial) {
+            return partial
+        }
+
+        const firstWithGif = payload.find((item) => item.gifUrl)
+        if (firstWithGif) {
+            return firstWithGif
+        }
+    }
+
+    return null
 }
 
 export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
+    const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
+    const cached = normalizedName ? exerciseGifCache.get(normalizedName) : undefined
+    const shouldFetch = Boolean(normalizedName && apiKey && !cached)
+
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: EXERCISE_GIF_PLACEHOLDER,
         targetMuscle: '',
@@ -38,53 +93,22 @@ export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
     })
 
     useEffect(() => {
-        if (!normalizedName) {
-            setState({
-                gifUrl: EXERCISE_GIF_PLACEHOLDER,
-                targetMuscle: '',
-                isLoading: false,
-            })
-            return
-        }
-
-        const cached = exerciseGifCache.get(normalizedName)
-        if (cached) {
-            setState({ ...cached, isLoading: false })
-            return
-        }
-
-        const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
-        if (!apiKey) {
-            setState({
-                gifUrl: EXERCISE_GIF_PLACEHOLDER,
-                targetMuscle: '',
-                isLoading: false,
-            })
+        if (!shouldFetch || !apiKey) {
             return
         }
 
         const controller = new AbortController()
-        setState((current) => ({ ...current, isLoading: true }))
 
         const run = async () => {
+            setState({
+                gifUrl: EXERCISE_GIF_PLACEHOLDER,
+                targetMuscle: '',
+                isLoading: true,
+            })
+
             try {
-                const response = await fetch(
-                    `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(normalizedName)}`,
-                    {
-                        headers: {
-                            'X-RapidAPI-Key': apiKey,
-                            'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-                        },
-                        signal: controller.signal,
-                    },
-                )
-
-                if (!response.ok) {
-                    throw new Error('ExerciseDB request failed')
-                }
-
-                const payload = (await response.json()) as ExerciseDbItem[]
-                const firstResult = payload?.find((item) => item.gifUrl)
+                const candidates = getExerciseDbQueryCandidates(exerciseName)
+                const firstResult = await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
 
                 const resolved: ExerciseGifData = {
                     gifUrl: firstResult?.gifUrl || EXERCISE_GIF_PLACEHOLDER,
@@ -110,7 +134,22 @@ export function useExerciseGif(exerciseName: string): UseExerciseGifResult {
         return () => {
             controller.abort()
         }
-    }, [normalizedName])
+    }, [apiKey, exerciseName, normalizedName, shouldFetch])
+
+    if (!normalizedName || !apiKey) {
+        return {
+            gifUrl: EXERCISE_GIF_PLACEHOLDER,
+            targetMuscle: '',
+            isLoading: false,
+        }
+    }
+
+    if (cached) {
+        return {
+            ...cached,
+            isLoading: false,
+        }
+    }
 
     return state
 }

@@ -273,6 +273,7 @@ Estrategia recomendada: priorizar pruebas de lógica pura, hooks críticos de fl
 | 🛠 [Guía de Configuración y Dependencias](./docs/SETUP_AND_DEPENDENCIES.md) | Setup del entorno y stack base           |
 | 📅 [Plan Maestro](./docs/MASTER_PLAN.md)                                    | Plan de evolución por fases              |
 | 🧭 [Orden de Implementación](./docs/IMPLEMENTATION_ORDER.md)                | Secuencia sugerida de desarrollo         |
+| 🎞 [Plan de expansión ExerciseDB](./docs/EXERCISEDB_EXPANSION.md)            | Escalado de catálogo y mapeos ES→EN      |
 
 ---
 
