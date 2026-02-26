@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
+import { getPreferredExerciseDbName } from '../constants/exerciseDbAliases'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
@@ -71,9 +72,14 @@ export function ExerciseDetailPage() {
         void run()
     }, [id])
 
+    const englishAlias =
+        exercise?.exerciseDbName ??
+        exercise?.exerciseDbAliases?.[0] ??
+        (exercise ? getPreferredExerciseDbName(exercise.nombre) : undefined)
+
     const detail = useExerciseDetail(exercise?.nombre ?? '', {
         exerciseDbId: exercise?.exerciseDbId,
-        exerciseDbName: exercise?.exerciseDbName,
+        exerciseDbName: englishAlias,
         exerciseDbAliases: exercise?.exerciseDbAliases,
     })
 
@@ -118,7 +124,14 @@ export function ExerciseDetailPage() {
                     </div>
                 )}
 
-                <h1 className="text-2xl font-bold">{exercise.nombre}</h1>
+                <div>
+                    <h1 className="text-2xl font-bold">{exercise.nombre}</h1>
+                    {englishAlias ? (
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            Alias EN: <span className="font-medium">{englishAlias}</span>
+                        </p>
+                    ) : null}
+                </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800">
