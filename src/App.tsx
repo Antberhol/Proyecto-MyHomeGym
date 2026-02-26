@@ -1,9 +1,9 @@
-import { Suspense, lazy, useEffect, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { GoogleLoginButton } from './components/auth/GoogleLoginButton'
 import { AppShell } from './components/layout/AppShell'
 import { ReloadPrompt } from './components/pwa/ReloadPrompt'
-import { PinPad } from './components/security/PinPad'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { profileRepository } from './repositories/profileRepository'
@@ -48,8 +48,8 @@ function App() {
     return result ?? null
   }, [])
   const theme = useUiStore((state) => state.theme)
-  const isLocked = useAuthStore((state) => state.isLocked)
-  const lock = useAuthStore((state) => state.lock)
+  const user = useAuthStore((state) => state.user)
+  const isAuthReady = useAuthStore((state) => state.isAuthReady)
   const setUser = useAuthStore((state) => state.setUser)
 
   useEffect(() => {
@@ -77,58 +77,44 @@ function App() {
     root.classList.toggle('dark', shouldUseDark)
   }, [theme])
 
-  useEffect(() => {
-    let lockTimerId: number | undefined
-
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        lockTimerId = window.setTimeout(() => {
-          lock()
-        }, 60_000)
-        return
-      }
-
-      if (lockTimerId) {
-        window.clearTimeout(lockTimerId)
-        lockTimerId = undefined
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange)
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      if (lockTimerId) {
-        window.clearTimeout(lockTimerId)
-      }
-    }
-  }, [lock])
-
-  const renderWithSecurity = (content: ReactNode) => (
-    <>
-      {content}
-      {isLocked && <PinPad />}
-    </>
-  )
-
-  // undefined = still loading, null = loaded but no profile
-  if (profileQuery === undefined) {
-    return renderWithSecurity(<LoadingSpinner />)
+  if (!isAuthReady) {
+    return <LoadingSpinner />
   }
 
-  if (profileQuery === null) {
-    return renderWithSecurity(
-      <Suspense fallback={<LoadingSpinner />}>
-        <OnboardingWizard />
-      </Suspense>,
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gym-bgLight p-4 dark:bg-gym-bgDark dark:text-white">
+        <div className="mx-auto mt-16 w-full max-w-md rounded-2xl bg-white p-6 shadow dark:bg-gym-cardDark">
+          <h1 className="text-2xl font-bold">MyHomeGym</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Inicia sesión con Google para acceder a tu app y sincronizar tus datos entre dispositivos.
+          </p>
+          <div className="mt-4">
+            <GoogleLoginButton />
+          </div>
+        </div>
+      </div>
     )
   }
 
-  return renderWithSecurity(
+  // undefined = still loading, null = loaded but no profile
+  if (profileQuery === undefined) {
+    return <LoadingSpinner />
+  }
+
+  if (profileQuery === null) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <OnboardingWizard />
+      </Suspense>
+    )
+  }
+
+  return (
     <>
       <AppRouter />
       <ReloadPrompt />
-    </>,
+    </>
   )
 }
 
