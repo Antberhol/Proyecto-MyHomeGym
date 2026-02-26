@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { getExerciseIllustrationUrl } from '../../utils/exerciseIllustration'
+import { useEffect, useState } from 'react'
+import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseThumbnailProps {
     nombre: string
@@ -11,34 +11,34 @@ interface ExerciseThumbnailProps {
 
 export function ExerciseThumbnail({
     nombre,
-    grupoMuscularPrimario,
-    equipoNecesario,
-    imagenUrl,
+    grupoMuscularPrimario: _grupoMuscularPrimario,
+    equipoNecesario: _equipoNecesario,
+    imagenUrl: _imagenUrl,
     className = 'h-16 w-24',
 }: ExerciseThumbnailProps) {
-    const fallbackUrl = useMemo(
-        () =>
-            getExerciseIllustrationUrl({
-                nombre,
-                grupoMuscularPrimario,
-                equipoNecesario,
-            }),
-        [equipoNecesario, grupoMuscularPrimario, nombre],
-    )
+    const { gifUrl, isLoading } = useExerciseGif(nombre)
+    const [gifLoaded, setGifLoaded] = useState(false)
 
-    const [currentSrc, setCurrentSrc] = useState(imagenUrl?.trim() || fallbackUrl)
+    useEffect(() => {
+        setGifLoaded(false)
+    }, [gifUrl])
 
     return (
-        <img
-            src={currentSrc}
-            alt={`Ilustración de ${nombre}`}
-            className={`${className} rounded-lg border border-slate-200 object-cover dark:border-slate-700`}
-            loading="lazy"
-            onError={() => {
-                if (currentSrc !== fallbackUrl) {
-                    setCurrentSrc(fallbackUrl)
-                }
-            }}
-        />
+        <div className={`relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
+            {(isLoading || !gifLoaded) && (
+                <div className="absolute inset-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
+            )}
+            <img
+                src={gifUrl || EXERCISE_GIF_PLACEHOLDER}
+                alt={`GIF de ${nombre}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                onLoad={() => setGifLoaded(true)}
+                onError={(event) => {
+                    event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                    setGifLoaded(true)
+                }}
+            />
+        </div>
     )
 }

@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { ExerciseCard } from '../components/exercises/ExerciseCard'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import type { DifficultyLevel } from '../types/models'
-import { getExerciseIllustrationUrl } from '../utils/exerciseIllustration'
 
 const customExerciseSchema = z.object({
   nombre: z.string().min(2).max(120),
@@ -68,11 +67,6 @@ export function CatalogoPage() {
       gruposMuscularesSecundarios: [],
       nivelDificultad: values.nivelDificultad as DifficultyLevel,
       equipoNecesario: values.equipoNecesario,
-      imagenUrl: getExerciseIllustrationUrl({
-        nombre: values.nombre,
-        grupoMuscularPrimario: values.grupoMuscularPrimario,
-        equipoNecesario: values.equipoNecesario,
-      }),
       instrucciones: values.instrucciones,
       esPersonalizado: true,
       createdAt: now,
@@ -109,11 +103,6 @@ export function CatalogoPage() {
       nombre: editNombre.trim() || 'Ejercicio',
       grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
       equipoNecesario: editEquipo.trim() || 'Ninguno',
-      imagenUrl: getExerciseIllustrationUrl({
-        nombre: editNombre.trim() || 'Ejercicio',
-        grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
-        equipoNecesario: editEquipo.trim() || 'Ninguno',
-      }),
       nivelDificultad: editNivel,
       instrucciones: editInstrucciones.trim() || 'Sin instrucciones',
       updatedAt: new Date().toISOString(),

@@ -85,8 +85,8 @@ export function ExerciseSelectorModal({
                                 type="button"
                                 onClick={() => setGroup(item)}
                                 className={`h-11 whitespace-nowrap rounded-full px-4 text-sm font-medium ${active
-                                        ? 'bg-gym-primary text-white'
-                                        : 'border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
+                                    ? 'bg-gym-primary text-white'
+                                    : 'border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
                                     }`}
                             >
                                 {item === 'todos' ? 'Todos' : item.charAt(0).toUpperCase() + item.slice(1)}
@@ -113,22 +113,22 @@ export function ExerciseSelectorModal({
                                     />
                                     <div>
                                         <p className="font-semibold">{exercise.nombre}</p>
-                                    <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
-                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
-                                            {exercise.grupoMuscularPrimario}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1">
-                                            {equipmentIcon(exercise.equipoNecesario)} {exercise.equipoNecesario}
-                                        </span>
-                                    </div>
+                                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+                                            <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
+                                                {exercise.grupoMuscularPrimario}
+                                            </span>
+                                            <span className="inline-flex items-center gap-1">
+                                                {equipmentIcon(exercise.equipoNecesario)} {exercise.equipoNecesario}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => toggle(exercise.id)}
                                     className={`h-11 rounded-lg px-3 text-xs font-medium ${checked
-                                            ? 'bg-gym-primary text-white'
-                                            : 'border border-slate-300 dark:border-slate-600'
+                                        ? 'bg-gym-primary text-white'
+                                        : 'border border-slate-300 dark:border-slate-600'
                                         }`}
                                 >
                                     {checked ? 'Añadido' : 'Añadir'}

@@ -179,10 +179,10 @@ export function ActiveExerciseCard({
                                             )
                                         }
                                         className={`h-9 w-full rounded border px-2 text-xs ${(current.rpe ?? 0) >= 9
-                                                ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'
-                                                : (current.rpe ?? 0) >= 6
-                                                    ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300'
-                                                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300'
+                                            ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'
+                                            : (current.rpe ?? 0) >= 6
+                                                ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300'
+                                                : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300'
                                             }`}
                                     >
                                         <option value="">RPE (1-10)</option>

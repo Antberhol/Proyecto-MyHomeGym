@@ -103,34 +103,34 @@ function SortableItem({
                     <p className="font-medium">
                         {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
                     </p>
-                {isEditing ? (
-                    <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
-                        <input
-                            type="number"
-                            value={editSeries}
-                            onChange={(event) => onEditSeriesChange(Number(event.target.value) || 1)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                            placeholder="Series"
-                        />
-                        <input
-                            value={editRepeticiones}
-                            onChange={(event) => onEditRepeticionesChange(event.target.value)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                            placeholder="Reps"
-                        />
-                        <input
-                            type="number"
-                            value={editDescansoSegundos}
-                            onChange={(event) => onEditDescansoChange(Number(event.target.value) || 15)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                            placeholder="Descanso"
-                        />
-                    </div>
-                ) : (
-                    <p className="text-xs text-slate-600 dark:text-slate-300">
-                        {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
-                    </p>
-                )}
+                    {isEditing ? (
+                        <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
+                            <input
+                                type="number"
+                                value={editSeries}
+                                onChange={(event) => onEditSeriesChange(Number(event.target.value) || 1)}
+                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                placeholder="Series"
+                            />
+                            <input
+                                value={editRepeticiones}
+                                onChange={(event) => onEditRepeticionesChange(event.target.value)}
+                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                placeholder="Reps"
+                            />
+                            <input
+                                type="number"
+                                value={editDescansoSegundos}
+                                onChange={(event) => onEditDescansoChange(Number(event.target.value) || 15)}
+                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                placeholder="Descanso"
+                            />
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                            {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
+                        </p>
+                    )}
                 </div>
             </div>
             <div className="flex items-center gap-2">
