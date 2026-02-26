@@ -71,7 +71,11 @@ export function ExerciseDetailPage() {
         void run()
     }, [id])
 
-    const detail = useExerciseDetail(exercise?.nombre ?? '')
+    const detail = useExerciseDetail(exercise?.nombre ?? '', {
+        exerciseDbId: exercise?.exerciseDbId,
+        exerciseDbName: exercise?.exerciseDbName,
+        exerciseDbAliases: exercise?.exerciseDbAliases,
+    })
 
     if (isCatalogLoading || (exercise && detail.isLoading)) {
         return <ExerciseDetailSkeleton />

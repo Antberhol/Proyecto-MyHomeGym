@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { normalizeExerciseName } from '../constants/exerciseDbAliases'
+import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
 
 export interface ExerciseDetailData {
     gifUrl: string
@@ -22,6 +22,12 @@ interface UseExerciseDetailResult {
     data: ExerciseDetailData | null
     isLoading: boolean
     notFound: boolean
+}
+
+interface UseExerciseDetailOptions {
+    exerciseDbId?: string
+    exerciseDbName?: string
+    exerciseDbAliases?: string[]
 }
 
 const detailCache = new Map<string, ExerciseDetailData | null>()
@@ -49,10 +55,82 @@ function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): Exercis
     return partial ?? items[0]
 }
 
-export function useExerciseDetail(exerciseName: string): UseExerciseDetailResult {
+function buildQueryCandidates(exerciseName: string, options?: UseExerciseDetailOptions): string[] {
+    const candidates = new Set<string>()
+
+    if (options?.exerciseDbName?.trim()) {
+        candidates.add(normalizeExerciseName(options.exerciseDbName))
+    }
+
+    for (const alias of options?.exerciseDbAliases ?? []) {
+        if (alias.trim()) {
+            candidates.add(normalizeExerciseName(alias))
+        }
+    }
+
+    for (const candidate of getExerciseDbQueryCandidates(exerciseName)) {
+        candidates.add(candidate)
+    }
+
+    return Array.from(candidates)
+}
+
+async function searchExerciseByCandidates(
+    candidates: string[],
+    apiKey: string,
+    signal: AbortSignal,
+): Promise<ExerciseDbItem | null> {
+    for (const candidate of candidates) {
+        const response = await fetch(
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
+            { signal },
+        )
+
+        if (!response.ok) {
+            continue
+        }
+
+        const payload = (await response.json()) as ExerciseDbItem[]
+        if (!Array.isArray(payload) || payload.length === 0) {
+            continue
+        }
+
+        const best = selectBestMatch(payload, candidate)
+        if (best?.id) {
+            return best
+        }
+    }
+
+    return null
+}
+
+async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: AbortSignal): Promise<ExerciseDbItem | null> {
+    const response = await fetch(
+        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
+        { signal },
+    )
+
+    if (!response.ok) {
+        return null
+    }
+
+    const payload = (await response.json()) as ExerciseDbItem
+    if (!payload?.id) {
+        return null
+    }
+
+    return payload
+}
+
+export function useExerciseDetail(exerciseName: string, options?: UseExerciseDetailOptions): UseExerciseDetailResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
-    const cached = normalizedName ? detailCache.get(normalizedName) : undefined
+    const exerciseDbId = options?.exerciseDbId
+    const exerciseDbName = options?.exerciseDbName
+    const exerciseDbAliases = options?.exerciseDbAliases
+    const aliasSignature = (exerciseDbAliases ?? []).join('|')
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}`
+    const cached = normalizedName ? detailCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && apiKey && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
         data: null,
@@ -71,28 +149,18 @@ export function useExerciseDetail(exerciseName: string): UseExerciseDetailResult
             setState({ data: null, isLoading: true, notFound: false })
 
             try {
-                const response = await fetch(
-                    `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(normalizedName)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
-                    { signal: controller.signal },
-                )
-
-                if (!response.ok) {
-                    detailCache.set(normalizedName, null)
-                    setState({ data: null, isLoading: false, notFound: true })
-                    return
-                }
-
-                const payload = (await response.json()) as ExerciseDbItem[]
-                if (!Array.isArray(payload) || payload.length === 0) {
-                    detailCache.set(normalizedName, null)
-                    setState({ data: null, isLoading: false, notFound: true })
-                    return
-                }
-
-                const bestMatch = selectBestMatch(payload, normalizedName)
+                const byId = exerciseDbId?.trim()
+                    ? await searchExerciseById(exerciseDbId, apiKey, controller.signal)
+                    : null
+                const candidates = buildQueryCandidates(exerciseName, {
+                    exerciseDbId,
+                    exerciseDbName,
+                    exerciseDbAliases,
+                })
+                const bestMatch = byId ?? (await searchExerciseByCandidates(candidates, apiKey, controller.signal))
 
                 if (!bestMatch?.id) {
-                    detailCache.set(normalizedName, null)
+                    detailCache.set(cacheKey, null)
                     setState({ data: null, isLoading: false, notFound: true })
                     return
                 }
@@ -105,11 +173,11 @@ export function useExerciseDetail(exerciseName: string): UseExerciseDetailResult
                     secondaryMuscles: Array.isArray(bestMatch.secondaryMuscles) ? bestMatch.secondaryMuscles : [],
                 }
 
-                detailCache.set(normalizedName, detailData)
+                detailCache.set(cacheKey, detailData)
                 setState({ data: detailData, isLoading: false, notFound: false })
             } catch {
                 if (!controller.signal.aborted) {
-                    detailCache.set(normalizedName, null)
+                    detailCache.set(cacheKey, null)
                     setState({ data: null, isLoading: false, notFound: true })
                 }
             }
@@ -120,7 +188,7 @@ export function useExerciseDetail(exerciseName: string): UseExerciseDetailResult
         return () => {
             controller.abort()
         }
-    }, [apiKey, normalizedName, shouldFetch])
+    }, [aliasSignature, apiKey, cacheKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
     if (!normalizedName || !apiKey) {
         return {
