@@ -26,6 +26,7 @@ interface UseExerciseGifOptions {
 }
 
 const exerciseGifCache = new Map<string, ExerciseGifData>()
+let hasWarnedMissingExerciseDbKey = false
 
 export const EXERCISE_GIF_PLACEHOLDER =
     'data:image/svg+xml;utf8,' +
@@ -154,6 +155,13 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         resolvedExerciseDbName: undefined,
         isLoading: false,
     })
+
+    useEffect(() => {
+        if (!apiKey && !hasWarnedMissingExerciseDbKey) {
+            hasWarnedMissingExerciseDbKey = true
+            console.warn('VITE_EXERCISEDB_API_KEY is missing. Exercise GIFs will use placeholder images.')
+        }
+    }, [apiKey])
 
     useEffect(() => {
         if (!shouldFetch || !apiKey) {

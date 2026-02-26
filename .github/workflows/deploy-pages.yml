@@ -43,6 +43,7 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET != '' && secrets.VITE_FIREBASE_STORAGE_BUCKET || vars.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID != '' && secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID != '' && secrets.VITE_FIREBASE_APP_ID || vars.VITE_FIREBASE_APP_ID }}
+          VITE_EXERCISEDB_API_KEY: ${{ secrets.VITE_EXERCISEDB_API_KEY != '' && secrets.VITE_EXERCISEDB_API_KEY || vars.VITE_EXERCISEDB_API_KEY }}
         run: |
           missing=0
           for key in \
@@ -51,7 +52,8 @@ jobs:
             VITE_FIREBASE_PROJECT_ID \
             VITE_FIREBASE_STORAGE_BUCKET \
             VITE_FIREBASE_MESSAGING_SENDER_ID \
-            VITE_FIREBASE_APP_ID
+            VITE_FIREBASE_APP_ID \
+            VITE_EXERCISEDB_API_KEY
           do
             if [ -z "${!key}" ]; then
               echo "::error ::Missing $key in repository Secrets or Variables"
