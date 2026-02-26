@@ -37,13 +37,33 @@ jobs:
       - name: Build app
         env:
           VITE_BASE_PATH: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}/', github.event.repository.name) }}
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-        run: npm run build
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY != '' && secrets.VITE_FIREBASE_API_KEY || vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN != '' && secrets.VITE_FIREBASE_AUTH_DOMAIN || vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID != '' && secrets.VITE_FIREBASE_PROJECT_ID || vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET != '' && secrets.VITE_FIREBASE_STORAGE_BUCKET || vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID != '' && secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID != '' && secrets.VITE_FIREBASE_APP_ID || vars.VITE_FIREBASE_APP_ID }}
+        run: |
+          missing=0
+          for key in \
+            VITE_FIREBASE_API_KEY \
+            VITE_FIREBASE_AUTH_DOMAIN \
+            VITE_FIREBASE_PROJECT_ID \
+            VITE_FIREBASE_STORAGE_BUCKET \
+            VITE_FIREBASE_MESSAGING_SENDER_ID \
+            VITE_FIREBASE_APP_ID
+          do
+            if [ -z "${!key}" ]; then
+              echo "::error ::Missing $key in repository Secrets or Variables"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          npm run build
 
       - name: Add SPA fallback for GitHub Pages
         run: cp dist/index.html dist/404.html

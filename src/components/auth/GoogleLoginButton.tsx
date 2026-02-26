@@ -49,7 +49,7 @@ export function GoogleLoginButton() {
             {authError && <p className="text-sm text-red-600">{authError}</p>}
             {!isFirebaseReady && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Configura VITE_FIREBASE_* para habilitar el login (en local y en GitHub Actions Secrets).
+                    Configura VITE_FIREBASE_* para habilitar el login (en local y en GitHub Actions Secrets/Variables).
                 </p>
             )}
         </div>
