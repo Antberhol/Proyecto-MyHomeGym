@@ -110,6 +110,46 @@ npm install
 npm run dev
 ```
 
+Antes de ejecutar la app, configura variables de Firebase:
+
+```bash
+cp .env.example .env.local
+```
+
+Después completa todos los valores `VITE_FIREBASE_*` en `.env.local`.
+
+### Despliegue en GitHub Pages (Firebase)
+
+Añade las mismas variables como **Repository Secrets** en GitHub:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+### Reglas de Firestore (obligatorias para sincronización)
+
+Si las reglas de Firestore bloquean todo, el login funciona pero la sincronización cloud falla.
+
+1. Abre Firebase Console → Firestore Database → Rules.
+2. Pega el contenido de `firestore.rules`.
+3. Pulsa Publish.
+
+Regla mínima segura para esta app:
+
+```txt
+rules_version = '2';
+service cloud.firestore {
+    match /databases/{database}/documents {
+        match /users/{userId}/{document=**} {
+            allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+    }
+}
+```
+
 La app estará disponible en la URL de Vite (por defecto, `http://localhost:5173`).
 
 ### Validación técnica local

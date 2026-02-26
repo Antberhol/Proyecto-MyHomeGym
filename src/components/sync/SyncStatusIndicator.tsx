@@ -4,6 +4,7 @@ import { useSyncStore } from '../../stores/sync-store'
 export function SyncStatusIndicator() {
     const status = useSyncStore((state) => state.status)
     const pendingChanges = useSyncStore((state) => state.pendingChanges)
+    const lastError = useSyncStore((state) => state.lastError)
 
     if (status === 'idle') {
         return (
@@ -34,9 +35,12 @@ export function SyncStatusIndicator() {
 
     if (status === 'error') {
         return (
-            <span className="inline-flex items-center gap-1 rounded-full border border-red-300 px-2 py-1 text-xs text-red-700 dark:border-red-700 dark:text-red-300">
+            <span
+                className="inline-flex items-center gap-1 rounded-full border border-red-300 px-2 py-1 text-xs text-red-700 dark:border-red-700 dark:text-red-300"
+                title={lastError}
+            >
                 <CloudOff size={14} />
-                Error sync
+                {lastError ?? 'Error sync'}
             </span>
         )
     }

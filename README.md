@@ -139,6 +139,27 @@ Add the same variables as **Repository Secrets** in GitHub:
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 
+### Firestore rules (required for sync)
+
+If Firestore rules are set to deny-all, login works but cloud sync fails.
+
+1. Open Firebase Console → Firestore Database → Rules.
+2. Paste the content from `firestore.rules`.
+3. Publish rules.
+
+Minimal secure rule used by this app:
+
+```txt
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
 ### Local technical validation
 
 ```bash

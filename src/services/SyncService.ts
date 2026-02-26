@@ -28,6 +28,35 @@ class SyncService {
     private unsubscribeTrainingSaved?: () => void
     private started = false
 
+    private formatSyncError(error: unknown, fallback: string) {
+        const code =
+            typeof error === 'object' && error !== null && 'code' in error
+                ? String((error as { code?: string }).code)
+                : ''
+
+        if (code.includes('permission-denied')) {
+            return 'Firestore no permite sincronizar. Revisa las reglas para usuarios autenticados.'
+        }
+
+        if (code.includes('failed-precondition') || code.includes('not-found')) {
+            return 'Firestore no está inicializado. Crea la base de datos en Firebase Console.'
+        }
+
+        if (code.includes('unauthenticated')) {
+            return 'La sesión no es válida para sincronizar. Cierra sesión y vuelve a entrar.'
+        }
+
+        if (code.includes('unavailable')) {
+            return 'Firestore no está disponible ahora mismo. Inténtalo de nuevo en unos segundos.'
+        }
+
+        if (error instanceof Error && error.message.trim()) {
+            return error.message
+        }
+
+        return fallback
+    }
+
     private get initialSyncKey() {
         return `${INITIAL_SYNC_KEY_PREFIX}${this.user?.uid ?? 'anon'}`
     }
@@ -106,12 +135,11 @@ class SyncService {
             }
 
             await this.flushQueue()
-            syncStore.setStatus('synced')
-            syncStore.setLastSyncAt(new Date().toISOString())
-            syncStore.setLastError(undefined)
         } catch (error) {
             syncStore.setStatus('error')
-            syncStore.setLastError(error instanceof Error ? error.message : 'No se pudo sincronizar al iniciar sesión')
+            syncStore.setLastError(
+                this.formatSyncError(error, 'No se pudo sincronizar al iniciar sesión'),
+            )
         }
     }
 
@@ -168,7 +196,7 @@ class SyncService {
             await this.enqueueTraining(trainingId)
             useSyncStore.getState().setStatus('error')
             useSyncStore.getState().setLastError(
-                error instanceof Error ? error.message : 'Error enviando entrenamiento a la nube',
+                this.formatSyncError(error, 'Error enviando entrenamiento a la nube'),
             )
         } finally {
             const pending = await db.getPendingSyncOperations()
@@ -219,37 +247,48 @@ class SyncService {
 
         useSyncStore.getState().setStatus('syncing')
 
-        const pending = await db.getPendingSyncOperations()
-        useSyncStore.getState().setPendingChanges(pending.length)
+        try {
+            const pending = await db.getPendingSyncOperations()
+            useSyncStore.getState().setPendingChanges(pending.length)
+            let lastQueueError: string | undefined
 
-        for (const operation of pending) {
-            try {
-                if (operation.entityType === 'training') {
-                    const payload = JSON.parse(operation.payload) as PendingTrainingPayload
-                    await this.pushTraining(payload.trainingId)
+            for (const operation of pending) {
+                try {
+                    if (operation.entityType === 'training') {
+                        const payload = JSON.parse(operation.payload) as PendingTrainingPayload
+                        await this.pushTraining(payload.trainingId)
+                    }
+
+                    await db.markSyncOperationDone(operation.id)
+                } catch (error) {
+                    const errorMessage = this.formatSyncError(error, 'Error de sincronización en cola')
+                    lastQueueError = errorMessage
+                    await db.markSyncOperationFailed(
+                        operation.id,
+                        errorMessage,
+                    )
                 }
-
-                await db.markSyncOperationDone(operation.id)
-            } catch (error) {
-                await db.markSyncOperationFailed(
-                    operation.id,
-                    error instanceof Error ? error.message : 'Error de sincronización en cola',
-                )
             }
+
+            const remaining = await db.getPendingSyncOperations()
+            useSyncStore.getState().setPendingChanges(remaining.length)
+
+            if (remaining.length === 0) {
+                await this.pushLocalBackupToCloud()
+                useSyncStore.getState().setStatus('synced')
+                useSyncStore.getState().setLastSyncAt(new Date().toISOString())
+                useSyncStore.getState().setLastError(undefined)
+                return
+            }
+
+            useSyncStore.getState().setStatus(navigator.onLine ? 'error' : 'offline')
+            useSyncStore.getState().setLastError(
+                lastQueueError ?? 'Hay cambios pendientes sin sincronizar. Revisa tu conexión o permisos.',
+            )
+        } catch (error) {
+            useSyncStore.getState().setStatus(navigator.onLine ? 'error' : 'offline')
+            useSyncStore.getState().setLastError(this.formatSyncError(error, 'Error general de sincronización'))
         }
-
-        const remaining = await db.getPendingSyncOperations()
-        useSyncStore.getState().setPendingChanges(remaining.length)
-
-        if (remaining.length === 0) {
-            await this.pushLocalBackupToCloud()
-            useSyncStore.getState().setStatus('synced')
-            useSyncStore.getState().setLastSyncAt(new Date().toISOString())
-            useSyncStore.getState().setLastError(undefined)
-            return
-        }
-
-        useSyncStore.getState().setStatus(navigator.onLine ? 'error' : 'offline')
     }
 }
 
