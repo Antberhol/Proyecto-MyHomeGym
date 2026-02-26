@@ -3,6 +3,7 @@ export interface DefaultExerciseSeed {
     nombre: string
     grupoMuscularPrimario: string
     equipoNecesario: string
+    imagenUrl?: string
 }
 
 export const defaultExercises: DefaultExerciseSeed[] = [

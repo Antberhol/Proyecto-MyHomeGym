@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
+import { ExerciseThumbnail } from '../components/exercises/ExerciseThumbnail'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import type { DifficultyLevel } from '../types/models'
+import { getExerciseIllustrationUrl } from '../utils/exerciseIllustration'
 
 const customExerciseSchema = z.object({
   nombre: z.string().min(2).max(120),
@@ -66,6 +68,11 @@ export function CatalogoPage() {
       gruposMuscularesSecundarios: [],
       nivelDificultad: values.nivelDificultad as DifficultyLevel,
       equipoNecesario: values.equipoNecesario,
+      imagenUrl: getExerciseIllustrationUrl({
+        nombre: values.nombre,
+        grupoMuscularPrimario: values.grupoMuscularPrimario,
+        equipoNecesario: values.equipoNecesario,
+      }),
       instrucciones: values.instrucciones,
       esPersonalizado: true,
       createdAt: now,
@@ -102,6 +109,11 @@ export function CatalogoPage() {
       nombre: editNombre.trim() || 'Ejercicio',
       grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
       equipoNecesario: editEquipo.trim() || 'Ninguno',
+      imagenUrl: getExerciseIllustrationUrl({
+        nombre: editNombre.trim() || 'Ejercicio',
+        grupoMuscularPrimario: editGrupoMuscular.trim() || 'General',
+        equipoNecesario: editEquipo.trim() || 'Ninguno',
+      }),
       nivelDificultad: editNivel,
       instrucciones: editInstrucciones.trim() || 'Sin instrucciones',
       updatedAt: new Date().toISOString(),
@@ -162,31 +174,40 @@ export function CatalogoPage() {
           useWindowScroll
           itemContent={(_, exercise) => (
             <article key={exercise.id} className="mb-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-semibold">{exercise.nombre}</h2>
-                <div className="flex items-center gap-2">
-                  {exercise.esPersonalizado && (
-                    <span className="rounded-full bg-gym-secondary px-2 py-1 text-xs text-white">Personalizado</span>
-                  )}
-                  {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => startEditExercise(exercise.id)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void deleteCustomExercise(exercise.id)}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
-                      >
-                        Borrar
-                      </button>
-                    </>
-                  )}
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <ExerciseThumbnail
+                    nombre={exercise.nombre}
+                    grupoMuscularPrimario={exercise.grupoMuscularPrimario}
+                    equipoNecesario={exercise.equipoNecesario}
+                    imagenUrl={exercise.imagenUrl}
+                    className="h-20 w-28"
+                  />
+                  <h2 className="font-semibold">{exercise.nombre}</h2>
                 </div>
+                <div className="flex items-center gap-2">
+                    {exercise.esPersonalizado && (
+                      <span className="rounded-full bg-gym-secondary px-2 py-1 text-xs text-white">Personalizado</span>
+                    )}
+                    {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startEditExercise(exercise.id)}
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void deleteCustomExercise(exercise.id)}
+                          className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
+                        >
+                          Borrar
+                        </button>
+                      </>
+                    )}
+                  </div>
               </div>
 
               {editingExerciseId === exercise.id ? (

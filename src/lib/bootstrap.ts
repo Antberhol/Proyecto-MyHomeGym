@@ -1,4 +1,5 @@
 import { defaultExercises } from '../constants/defaultExercises'
+import { getExerciseIllustrationUrl } from '../utils/exerciseIllustration'
 import { db } from './db'
 
 export async function bootstrapDatabase(): Promise<void> {
@@ -15,6 +16,7 @@ export async function bootstrapDatabase(): Promise<void> {
       gruposMuscularesSecundarios: [],
       nivelDificultad: 'intermedio' as const,
       equipoNecesario: exercise.equipoNecesario,
+      imagenUrl: exercise.imagenUrl ?? getExerciseIllustrationUrl(exercise),
       instrucciones: 'Mantén técnica controlada y progresión gradual de carga.',
       esPersonalizado: false,
       createdAt: now,

@@ -7,6 +7,7 @@ import type {
 } from './types'
 import { NumberStepper } from '../ui/NumberStepper'
 import { OneRepMaxBadge } from './OneRepMaxBadge'
+import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
 
 interface ActiveExerciseCardProps {
     activeRoutineExercise: ActiveRoutineExercise | undefined
@@ -67,10 +68,19 @@ export function ActiveExerciseCard({
                 </button>
             </div>
 
-            <p className="text-sm font-medium">
-                {activeExerciseIndex + 1}. {activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'} · {activeRoutineExercise.series}{' '}
-                series · objetivo {activeRoutineExercise.repeticiones}
-            </p>
+            <div className="flex items-center gap-3">
+                <ExerciseThumbnail
+                    nombre={activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'}
+                    grupoMuscularPrimario={activeRoutineExercise.ejercicio?.grupoMuscularPrimario}
+                    equipoNecesario={activeRoutineExercise.ejercicio?.equipoNecesario}
+                    imagenUrl={activeRoutineExercise.ejercicio?.imagenUrl}
+                    className="h-16 w-24"
+                />
+                <p className="text-sm font-medium">
+                    {activeExerciseIndex + 1}. {activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'} · {activeRoutineExercise.series}{' '}
+                    series · objetivo {activeRoutineExercise.repeticiones}
+                </p>
+            </div>
             {previousSession && (
                 <p className="text-xs text-slate-600 dark:text-slate-300">
                     Último registro ({new Date(previousSession.fecha).toLocaleDateString()}):{' '}

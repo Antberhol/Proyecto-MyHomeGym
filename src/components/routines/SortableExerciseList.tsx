@@ -13,11 +13,15 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
 
 interface SortableRoutineExercise {
     id: string
     ejercicio?: {
         nombre: string
+        grupoMuscularPrimario?: string
+        equipoNecesario?: string
+        imagenUrl?: string
     }
     series: number
     repeticiones: string
@@ -87,10 +91,18 @@ function SortableItem({
             style={style}
             className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
         >
-            <div>
-                <p className="font-medium">
-                    {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
-                </p>
+            <div className="flex items-center gap-3">
+                <ExerciseThumbnail
+                    nombre={item.ejercicio?.nombre || 'Ejercicio'}
+                    grupoMuscularPrimario={item.ejercicio?.grupoMuscularPrimario}
+                    equipoNecesario={item.ejercicio?.equipoNecesario}
+                    imagenUrl={item.ejercicio?.imagenUrl}
+                    className="h-12 w-16"
+                />
+                <div>
+                    <p className="font-medium">
+                        {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
+                    </p>
                 {isEditing ? (
                     <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
                         <input
@@ -119,6 +131,7 @@ function SortableItem({
                         {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
                     </p>
                 )}
+                </div>
             </div>
             <div className="flex items-center gap-2">
                 <button

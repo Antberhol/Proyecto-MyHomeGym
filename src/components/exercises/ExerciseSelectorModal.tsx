@@ -1,5 +1,6 @@
 import { Dumbbell, Search, Settings2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { BottomSheet } from '../ui/BottomSheet'
 
 interface ExerciseOption {
@@ -7,6 +8,7 @@ interface ExerciseOption {
     nombre: string
     grupoMuscularPrimario: string
     equipoNecesario: string
+    imagenUrl?: string
 }
 
 interface ExerciseSelectorModalProps {
@@ -101,8 +103,16 @@ export function ExerciseSelectorModal({
                                 key={exercise.id}
                                 className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
                             >
-                                <div>
-                                    <p className="font-semibold">{exercise.nombre}</p>
+                                <div className="flex items-center gap-3">
+                                    <ExerciseThumbnail
+                                        nombre={exercise.nombre}
+                                        grupoMuscularPrimario={exercise.grupoMuscularPrimario}
+                                        equipoNecesario={exercise.equipoNecesario}
+                                        imagenUrl={exercise.imagenUrl}
+                                        className="h-14 w-20"
+                                    />
+                                    <div>
+                                        <p className="font-semibold">{exercise.nombre}</p>
                                     <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
                                         <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
                                             {exercise.grupoMuscularPrimario}
@@ -110,6 +120,7 @@ export function ExerciseSelectorModal({
                                         <span className="inline-flex items-center gap-1">
                                             {equipmentIcon(exercise.equipoNecesario)} {exercise.equipoNecesario}
                                         </span>
+                                    </div>
                                     </div>
                                 </div>
                                 <button
