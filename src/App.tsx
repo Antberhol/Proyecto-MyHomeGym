@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { GoogleLoginButton } from './components/auth/GoogleLoginButton'
+import { Button } from './components/design-system/Button'
 import { AppShell } from './components/layout/AppShell'
 import { ReloadPrompt } from './components/pwa/ReloadPrompt'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
@@ -51,7 +52,9 @@ function App() {
   }, [])
   const theme = useUiStore((state) => state.theme)
   const user = useAuthStore((state) => state.user)
+  const isGuest = useAuthStore((state) => state.isGuest)
   const isAuthReady = useAuthStore((state) => state.isAuthReady)
+  const enterAsGuest = useAuthStore((state) => state.enterAsGuest)
   const setUser = useAuthStore((state) => state.setUser)
 
   useEffect(() => {
@@ -83,16 +86,25 @@ function App() {
     return <LoadingSpinner />
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return (
       <div className="min-h-screen bg-gym-bgLight p-4 dark:bg-gym-bgDark dark:text-white">
         <div className="mx-auto mt-16 w-full max-w-md rounded-2xl bg-white p-6 shadow dark:bg-gym-cardDark">
           <h1 className="text-2xl font-bold">MyHomeGym</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Inicia sesión con Google para acceder a tu app y sincronizar tus datos entre dispositivos.
+            Elige cómo quieres entrar: con Google para sincronizar en la nube o como invitado sin sincronización.
           </p>
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <GoogleLoginButton />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              fullWidth
+              onClick={enterAsGuest}
+            >
+              Entrar como invitado (sin sincronización en la nube)
+            </Button>
           </div>
         </div>
       </div>
