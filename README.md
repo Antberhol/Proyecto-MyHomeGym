@@ -126,6 +126,10 @@ cp .env.example .env.local
 
 Then fill all `VITE_FIREBASE_*` values in `.env.local`.
 
+Also add your RapidAPI key for ExerciseDB:
+
+- `VITE_EXERCISEDB_API_KEY`
+
 The app will be available at the Vite URL (default: `http://localhost:5173`).
 
 ### GitHub Pages deployment (Firebase)
@@ -138,6 +142,7 @@ Add the same variables as **Repository Secrets** in GitHub:
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
+- `VITE_EXERCISEDB_API_KEY`
 
 ### Firestore rules (required for sync)
 

@@ -118,6 +118,10 @@ cp .env.example .env.local
 
 Después completa todos los valores `VITE_FIREBASE_*` en `.env.local`.
 
+Añade también tu API key de RapidAPI para ExerciseDB:
+
+- `VITE_EXERCISEDB_API_KEY`
+
 ### Despliegue en GitHub Pages (Firebase)
 
 Añade las mismas variables como **Repository Secrets** en GitHub:
@@ -128,6 +132,7 @@ Añade las mismas variables como **Repository Secrets** en GitHub:
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
+- `VITE_EXERCISEDB_API_KEY`
 
 ### Reglas de Firestore (obligatorias para sincronización)
 
