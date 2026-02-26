@@ -36,6 +36,16 @@ function buildGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
+async function hasWorkingGif(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<boolean> {
+    const response = await fetch(buildGifUrl(exerciseId, apiKey), { signal })
+    if (!response.ok) {
+        return false
+    }
+
+    const contentType = response.headers.get('content-type') ?? ''
+    return contentType.includes('image')
+}
+
 function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): ExerciseDbItem | null {
     if (items.length === 0) {
         return null
@@ -96,6 +106,25 @@ async function searchExerciseByCandidates(
         }
 
         const best = selectBestMatch(payload, candidate)
+        const ordered = [best, ...payload].filter((item): item is ExerciseDbItem => Boolean(item?.id))
+        const seenIds = new Set<string>()
+
+        for (const item of ordered) {
+            const itemId = item.id
+            if (!itemId || seenIds.has(itemId)) {
+                continue
+            }
+            seenIds.add(itemId)
+
+            try {
+                if (await hasWorkingGif(itemId, apiKey, signal)) {
+                    return item
+                }
+            } catch {
+                continue
+            }
+        }
+
         if (best?.id) {
             return best
         }
@@ -116,6 +145,11 @@ async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: 
 
     const payload = (await response.json()) as ExerciseDbItem
     if (!payload?.id) {
+        return null
+    }
+
+    const hasGif = await hasWorkingGif(payload.id, apiKey, signal)
+    if (!hasGif) {
         return null
     }
 

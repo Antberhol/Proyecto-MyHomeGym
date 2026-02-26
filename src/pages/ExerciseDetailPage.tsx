@@ -5,6 +5,7 @@ import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
 import { getPreferredExerciseDbName } from '../constants/exerciseDbAliases'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
+import { EXERCISE_GIF_PLACEHOLDER } from '../hooks/useExerciseGif'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
 import type { Exercise } from '../types/models'
@@ -117,6 +118,9 @@ export function ExerciseDetailPage() {
                         alt={`GIF de ${exercise.nombre}`}
                         className="h-64 w-full rounded-xl border border-slate-200 object-cover dark:border-slate-700"
                         loading="lazy"
+                        onError={(event) => {
+                            event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                        }}
                     />
                 ) : (
                     <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
