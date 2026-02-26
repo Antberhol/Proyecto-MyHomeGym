@@ -65,7 +65,7 @@ async function searchExerciseDbByCandidates(
 
         const normalizedCandidate = normalizeExerciseName(candidate)
         const exact = payload.find(
-            (item) => item.gifUrl && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
+            (item) => (item.id || item.gifUrl) && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
         )
         if (exact) {
             return exact
@@ -73,7 +73,7 @@ async function searchExerciseDbByCandidates(
 
         const partial = payload.find(
             (item) =>
-                item.gifUrl &&
+                (item.id || item.gifUrl) &&
                 (normalizeExerciseName(item.name ?? '').includes(normalizedCandidate) ||
                     normalizedCandidate.includes(normalizeExerciseName(item.name ?? ''))),
         )
@@ -81,9 +81,9 @@ async function searchExerciseDbByCandidates(
             return partial
         }
 
-        const firstWithGif = payload.find((item) => item.gifUrl)
-        if (firstWithGif) {
-            return firstWithGif
+        const firstWithMediaReference = payload.find((item) => item.id || item.gifUrl)
+        if (firstWithMediaReference) {
+            return firstWithMediaReference
         }
     }
 
@@ -111,11 +111,31 @@ async function searchExerciseDbById(
     }
 
     const payload = (await response.json()) as ExerciseDbItem
-    if (!payload?.gifUrl) {
+    if (!payload?.id && !payload?.gifUrl) {
         return null
     }
 
     return payload
+}
+
+function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
+    return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
+}
+
+function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string): string {
+    if (!item) {
+        return EXERCISE_GIF_PLACEHOLDER
+    }
+
+    if (item.gifUrl) {
+        return item.gifUrl
+    }
+
+    if (item.id) {
+        return buildExerciseGifUrl(item.id, apiKey)
+    }
+
+    return EXERCISE_GIF_PLACEHOLDER
 }
 
 function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOptions) {
@@ -192,7 +212,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 const firstResult = byId ?? (await searchExerciseDbByCandidates(candidates, apiKey, controller.signal))
 
                 const resolved: ExerciseGifData = {
-                    gifUrl: firstResult?.gifUrl || EXERCISE_GIF_PLACEHOLDER,
+                    gifUrl: resolveExerciseGifUrl(firstResult, apiKey),
                     targetMuscle: firstResult?.target || '',
                     resolvedExerciseDbId: firstResult?.id,
                     resolvedExerciseDbName: firstResult?.name,
