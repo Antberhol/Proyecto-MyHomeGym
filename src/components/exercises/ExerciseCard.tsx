@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Exercise } from '../../types/models'
-import { useExerciseGif } from '../../hooks/useExerciseGif'
+import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseCardProps {
     exercise: Pick<Exercise, 'nombre' | 'grupoMuscularPrimario' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
@@ -30,7 +30,10 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                     className="h-full w-full object-cover"
                     loading="lazy"
                     onLoad={() => setGifLoaded(true)}
-                    onError={() => setGifLoaded(true)}
+                    onError={(event) => {
+                        event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                        setGifLoaded(true)
+                    }}
                 />
             </div>
             <div>
