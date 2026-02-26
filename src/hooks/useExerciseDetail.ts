@@ -9,6 +9,16 @@ export interface ExerciseDetailData {
     secondaryMuscles: string[]
 }
 
+export interface ExerciseDetailDebugInfo {
+    source: 'id' | 'candidate' | 'cache' | 'none'
+    resolvedExerciseDbId?: string
+    resolvedExerciseDbName?: string
+    usedCandidate?: string
+    candidatesTried: string[]
+    gifValidated: boolean
+    lastError?: string
+}
+
 interface ExerciseDbItem {
     id?: string
     name?: string
@@ -22,6 +32,7 @@ interface UseExerciseDetailResult {
     data: ExerciseDetailData | null
     isLoading: boolean
     notFound: boolean
+    debug: ExerciseDetailDebugInfo
 }
 
 interface UseExerciseDetailOptions {
@@ -30,7 +41,13 @@ interface UseExerciseDetailOptions {
     exerciseDbAliases?: string[]
 }
 
-const detailCache = new Map<string, ExerciseDetailData | null>()
+interface CachedDetailEntry {
+    data: ExerciseDetailData | null
+    notFound: boolean
+    debug: ExerciseDetailDebugInfo
+}
+
+const detailCache = new Map<string, CachedDetailEntry>()
 
 function buildGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
@@ -89,7 +106,7 @@ async function searchExerciseByCandidates(
     candidates: string[],
     apiKey: string,
     signal: AbortSignal,
-): Promise<ExerciseDbItem | null> {
+): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
     for (const candidate of candidates) {
         const response = await fetch(
             `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
@@ -118,7 +135,7 @@ async function searchExerciseByCandidates(
 
             try {
                 if (await hasWorkingGif(itemId, apiKey, signal)) {
-                    return item
+                    return { item, usedCandidate: candidate }
                 }
             } catch {
                 continue
@@ -126,7 +143,7 @@ async function searchExerciseByCandidates(
         }
 
         if (best?.id) {
-            return best
+            return { item: best, usedCandidate: candidate }
         }
     }
 
@@ -170,6 +187,11 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         data: null,
         isLoading: false,
         notFound: false,
+        debug: {
+            source: 'none',
+            candidatesTried: [],
+            gifValidated: false,
+        },
     })
 
     useEffect(() => {
@@ -180,22 +202,44 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         const controller = new AbortController()
 
         const run = async () => {
-            setState({ data: null, isLoading: true, notFound: false })
+            const candidates = buildQueryCandidates(exerciseName, {
+                exerciseDbId,
+                exerciseDbName,
+                exerciseDbAliases,
+            })
+
+            setState({
+                data: null,
+                isLoading: true,
+                notFound: false,
+                debug: {
+                    source: 'none',
+                    candidatesTried: candidates,
+                    gifValidated: false,
+                },
+            })
 
             try {
                 const byId = exerciseDbId?.trim()
                     ? await searchExerciseById(exerciseDbId, apiKey, controller.signal)
                     : null
-                const candidates = buildQueryCandidates(exerciseName, {
-                    exerciseDbId,
-                    exerciseDbName,
-                    exerciseDbAliases,
-                })
-                const bestMatch = byId ?? (await searchExerciseByCandidates(candidates, apiKey, controller.signal))
+                const byCandidate = byId
+                    ? null
+                    : await searchExerciseByCandidates(candidates, apiKey, controller.signal)
+                const bestMatch = byId ?? byCandidate?.item ?? null
 
                 if (!bestMatch?.id) {
-                    detailCache.set(cacheKey, null)
-                    setState({ data: null, isLoading: false, notFound: true })
+                    const notFoundEntry: CachedDetailEntry = {
+                        data: null,
+                        notFound: true,
+                        debug: {
+                            source: 'none',
+                            candidatesTried: candidates,
+                            gifValidated: false,
+                        },
+                    }
+                    detailCache.set(cacheKey, notFoundEntry)
+                    setState({ data: null, isLoading: false, notFound: true, debug: notFoundEntry.debug })
                     return
                 }
 
@@ -207,12 +251,39 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     secondaryMuscles: Array.isArray(bestMatch.secondaryMuscles) ? bestMatch.secondaryMuscles : [],
                 }
 
-                detailCache.set(cacheKey, detailData)
-                setState({ data: detailData, isLoading: false, notFound: false })
+                const successEntry: CachedDetailEntry = {
+                    data: detailData,
+                    notFound: false,
+                    debug: {
+                        source: byId ? 'id' : 'candidate',
+                        resolvedExerciseDbId: bestMatch.id,
+                        resolvedExerciseDbName: bestMatch.name,
+                        usedCandidate: byCandidate?.usedCandidate,
+                        candidatesTried: candidates,
+                        gifValidated: true,
+                    },
+                }
+
+                detailCache.set(cacheKey, successEntry)
+                setState({ data: detailData, isLoading: false, notFound: false, debug: successEntry.debug })
             } catch {
                 if (!controller.signal.aborted) {
-                    detailCache.set(cacheKey, null)
-                    setState({ data: null, isLoading: false, notFound: true })
+                    const errorEntry: CachedDetailEntry = {
+                        data: null,
+                        notFound: true,
+                        debug: {
+                            source: 'none',
+                            candidatesTried: buildQueryCandidates(exerciseName, {
+                                exerciseDbId,
+                                exerciseDbName,
+                                exerciseDbAliases,
+                            }),
+                            gifValidated: false,
+                            lastError: 'request_failed',
+                        },
+                    }
+                    detailCache.set(cacheKey, errorEntry)
+                    setState({ data: null, isLoading: false, notFound: true, debug: errorEntry.debug })
                 }
             }
         }
@@ -229,14 +300,24 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             data: null,
             isLoading: false,
             notFound: false,
+            debug: {
+                source: 'none',
+                candidatesTried: [],
+                gifValidated: false,
+                lastError: apiKey ? undefined : 'missing_api_key',
+            },
         }
     }
 
     if (cached !== undefined) {
         return {
-            data: cached,
+            data: cached.data,
             isLoading: false,
-            notFound: cached === null,
+            notFound: cached.notFound,
+            debug: {
+                ...cached.debug,
+                source: 'cache',
+            },
         }
     }
 

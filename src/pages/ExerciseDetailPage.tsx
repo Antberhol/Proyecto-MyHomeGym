@@ -137,6 +137,17 @@ export function ExerciseDetailPage() {
                     ) : null}
                 </div>
 
+                <div className="rounded-lg border border-dashed border-slate-300 p-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                    <p className="font-semibold">Diagnóstico API (temporal)</p>
+                    <p>source: {detail.debug.source}</p>
+                    <p>alias usado: {englishAlias || 'n/a'}</p>
+                    <p>candidate usado: {detail.debug.usedCandidate || 'n/a'}</p>
+                    <p>exerciseDbId resuelto: {detail.debug.resolvedExerciseDbId || 'n/a'}</p>
+                    <p>exerciseDbName resuelto: {detail.debug.resolvedExerciseDbName || 'n/a'}</p>
+                    <p>gif validado: {detail.debug.gifValidated ? 'sí' : 'no'}</p>
+                    <p>error: {detail.debug.lastError || 'none'}</p>
+                </div>
+
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Músculo objetivo</p>
