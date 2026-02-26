@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
+import { exerciseRepository } from '../repositories/exerciseRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
 import type { Exercise } from '../types/models'
 
@@ -38,26 +39,30 @@ export function ExerciseDetailPage() {
                 return
             }
 
-            if (!isFirebaseConfigured || !firebaseFirestore) {
-                setCatalogError('Firestore no está configurado en este entorno.')
-                setIsCatalogLoading(false)
-                return
-            }
-
             try {
+                const localExercise = await exerciseRepository.getExerciseById(id)
+                if (localExercise) {
+                    setExercise(localExercise)
+                    return
+                }
+
+                if (!isFirebaseConfigured || !firebaseFirestore) {
+                    setCatalogError('No se encontró el ejercicio solicitado.')
+                    return
+                }
+
                 const exerciseRef = doc(firebaseFirestore, 'ejerciciosCatalogo', id)
                 const snapshot = await getDoc(exerciseRef)
 
                 if (!snapshot.exists()) {
                     setCatalogError('No se encontró el ejercicio solicitado.')
-                    setIsCatalogLoading(false)
                     return
                 }
 
                 const rawData = snapshot.data() as Omit<Exercise, 'id'>
                 setExercise({ id: snapshot.id, ...rawData })
             } catch {
-                setCatalogError('No se pudo cargar el ejercicio desde Firestore.')
+                setCatalogError('No se pudo cargar el ejercicio.')
             } finally {
                 setIsCatalogLoading(false)
             }

@@ -6,6 +6,10 @@ export const exerciseRepository = {
         return db.getAllExercisesCatalog()
     },
 
+    async getExerciseById(exerciseId: string): Promise<Exercise | undefined> {
+        return db.getExerciseById(exerciseId)
+    },
+
     async createExercise(exercise: Exercise): Promise<string> {
         return db.addExercise(exercise)
     },

@@ -153,6 +153,10 @@ class GymDatabase extends Dexie {
     return this.ejerciciosCatalogo.toArray()
   }
 
+  getExerciseById(exerciseId: string) {
+    return this.ejerciciosCatalogo.get(exerciseId)
+  }
+
   getExercisesCount() {
     return this.ejerciciosCatalogo.count()
   }
