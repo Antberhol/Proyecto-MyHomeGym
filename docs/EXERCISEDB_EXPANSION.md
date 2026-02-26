@@ -39,9 +39,9 @@ Scale the exercise catalog to support a much larger subset of ExerciseDB while k
 
 Use this table to progressively map and validate more exercises:
 
-| Spanish Name | Preferred ExerciseDB Name | Status | Notes |
-| --- | --- | --- | --- |
-| Press de banca | barbell bench press | Done | Base catalog |
-| Sentadilla trasera | barbell back squat | Done | Base catalog |
-| Jalón al pecho | lat pulldown | Done | Base catalog |
-| _pending_ | _pending_ | Pending | Add new mapping |
+| Spanish Name       | Preferred ExerciseDB Name | Status  | Notes           |
+| ------------------ | ------------------------- | ------- | --------------- |
+| Press de banca     | barbell bench press       | Done    | Base catalog    |
+| Sentadilla trasera | barbell back squat        | Done    | Base catalog    |
+| Jalón al pecho     | lat pulldown              | Done    | Base catalog    |
+| _pending_          | _pending_                 | Pending | Add new mapping |

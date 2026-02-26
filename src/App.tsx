@@ -14,6 +14,7 @@ import { useUiStore } from './stores/ui-store'
 
 const OnboardingWizard = lazy(() => import('./components/profile/OnboardingWizard').then((module) => ({ default: module.OnboardingWizard })))
 const CatalogoPage = lazy(() => import('./pages/Catalogo').then((module) => ({ default: module.CatalogoPage })))
+const ExerciseDetailPage = lazy(() => import('./pages/ExerciseDetailPage').then((module) => ({ default: module.ExerciseDetailPage })))
 const DashboardPage = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.DashboardPage })))
 const EntrenarPage = lazy(() => import('./pages/Entrenar').then((module) => ({ default: module.EntrenarPage })))
 const MisRutinasPage = lazy(() => import('./pages/MisRutinas').then((module) => ({ default: module.MisRutinasPage })))
@@ -31,6 +32,7 @@ function AppRouter() {
             <Route path="/entrenar" element={<EntrenarPage />} />
             <Route path="/rutinas" element={<MisRutinasPage />} />
             <Route path="/catalogo" element={<CatalogoPage />} />
+            <Route path="/catalogo/:id" element={<ExerciseDetailPage />} />
             <Route path="/progreso" element={<ProgresoPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />

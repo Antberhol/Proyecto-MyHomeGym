@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { z } from 'zod'
-import { ExerciseCard } from '../components/exercises/ExerciseCard'
 import {
   getExerciseDbAliasesForName,
   getExerciseDbQueryCandidates,
@@ -24,6 +24,7 @@ const customExerciseSchema = z.object({
 type CustomExerciseForm = z.infer<typeof customExerciseSchema>
 
 export function CatalogoPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState('todos')
   const [equipmentFilter, setEquipmentFilter] = useState('todos')
@@ -183,25 +184,42 @@ export function CatalogoPage() {
           data={filteredExercises}
           useWindowScroll
           itemContent={(_, exercise) => (
-            <article key={exercise.id} className="mb-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+            <article
+              key={exercise.id}
+              className="mb-3 cursor-pointer rounded-xl bg-white p-4 shadow transition hover:shadow-md dark:bg-gym-cardDark"
+              onClick={() => {
+                if (editingExerciseId !== exercise.id) {
+                  navigate(`/catalogo/${exercise.id}`)
+                }
+              }}
+            >
               <div className="mb-2 flex items-start justify-between gap-3">
-                <ExerciseCard exercise={exercise} />
+                <div>
+                  <h2 className="font-semibold">{exercise.nombre}</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">Objetivo: {exercise.grupoMuscularPrimario}</p>
+                  <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    ⓘ Pulsa para más información
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
-                  {exercise.esPersonalizado && (
-                    <span className="rounded-full bg-gym-secondary px-2 py-1 text-xs text-white">Personalizado</span>
-                  )}
                   {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
                     <>
                       <button
                         type="button"
-                        onClick={() => startEditExercise(exercise.id)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          startEditExercise(exercise.id)
+                        }}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs"
                       >
                         Editar
                       </button>
                       <button
                         type="button"
-                        onClick={() => void deleteCustomExercise(exercise.id)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void deleteCustomExercise(exercise.id)
+                        }}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
                       >
                         Borrar
@@ -250,30 +268,27 @@ export function CatalogoPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => void saveExerciseEdits()}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void saveExerciseEdits()
+                      }}
                       className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
                     >
                       Guardar
                     </button>
                     <button
                       type="button"
-                      onClick={cancelEditExercise}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        cancelEditExercise()
+                      }}
                       className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
                     >
                       Cancelar
                     </button>
                   </div>
                 </div>
-              ) : (
-                <>
-                  <p className="text-sm text-slate-500 dark:text-slate-300">{exercise.descripcion}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.grupoMuscularPrimario}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.equipoNecesario}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">{exercise.nivelDificultad}</span>
-                  </div>
-                </>
-              )}
+              ) : null}
             </article>
           )}
         />
