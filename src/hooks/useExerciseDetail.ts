@@ -48,19 +48,47 @@ interface CachedDetailEntry {
 }
 
 const detailCache = new Map<string, CachedDetailEntry>()
-
-function buildGifUrl(exerciseId: string, apiKey: string): string {
-    return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
-}
+const gifObjectUrlCache = new Map<string, string>()
 
 async function hasWorkingGif(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<boolean> {
-    const response = await fetch(buildGifUrl(exerciseId, apiKey), { signal })
+    const objectUrl = await fetchGifObjectUrl(exerciseId, apiKey, signal)
+    return Boolean(objectUrl)
+}
+
+async function fetchGifObjectUrl(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<string | null> {
+    const cached = gifObjectUrlCache.get(exerciseId)
+    if (cached) {
+        return cached
+    }
+
+    const response = await fetch(
+        `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}`,
+        {
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+            },
+            signal,
+        },
+    )
+
     if (!response.ok) {
-        return false
+        return null
     }
 
     const contentType = response.headers.get('content-type') ?? ''
-    return contentType.includes('image')
+    if (!contentType.includes('image')) {
+        return null
+    }
+
+    const imageBlob = await response.blob()
+    if (imageBlob.size === 0) {
+        return null
+    }
+
+    const objectUrl = URL.createObjectURL(imageBlob)
+    gifObjectUrlCache.set(exerciseId, objectUrl)
+    return objectUrl
 }
 
 function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): ExerciseDbItem | null {
@@ -244,7 +272,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 }
 
                 const detailData: ExerciseDetailData = {
-                    gifUrl: buildGifUrl(bestMatch.id, apiKey),
+                    gifUrl: (await fetchGifObjectUrl(bestMatch.id, apiKey, controller.signal)) ?? '',
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
                     instructions: Array.isArray(bestMatch.instructions) ? bestMatch.instructions : [],
@@ -260,7 +288,8 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         resolvedExerciseDbName: bestMatch.name,
                         usedCandidate: byCandidate?.usedCandidate,
                         candidatesTried: candidates,
-                        gifValidated: true,
+                        gifValidated: Boolean(detailData.gifUrl),
+                        lastError: detailData.gifUrl ? undefined : 'gif_fetch_failed',
                     },
                 }
 
