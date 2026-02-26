@@ -44,14 +44,8 @@ async function searchExerciseDbByCandidates(
 ): Promise<ExerciseDbItem | null> {
     for (const candidate of candidates) {
         const response = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}`,
-            {
-                headers: {
-                    'X-RapidAPI-Key': apiKey,
-                    'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-                },
-                signal,
-            },
+            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
+            { signal },
         )
 
         if (!response.ok) {
@@ -96,14 +90,8 @@ async function searchExerciseDbById(
     signal: AbortSignal,
 ): Promise<ExerciseDbItem | null> {
     const response = await fetch(
-        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}`,
-        {
-            headers: {
-                'X-RapidAPI-Key': apiKey,
-                'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-            },
-            signal,
-        },
+        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
+        { signal },
     )
 
     if (!response.ok) {
