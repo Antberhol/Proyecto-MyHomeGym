@@ -7,6 +7,8 @@ import type {
   RegisteredTraining,
   Routine,
   RoutineExercise,
+  SyncEntityType,
+  SyncQueueItem,
   UserProfile,
 } from '../types/models'
 
@@ -19,6 +21,7 @@ class GymDatabase extends Dexie {
   private ejerciciosRealizados!: Table<PerformedExercise, string>
   private medidasCorporalesHistorico!: Table<BodyMeasurement, string>
   private prs!: Table<PersonalRecord, string>
+  private pendingSyncQueue!: Table<SyncQueueItem, string>
 
   constructor() {
     super('gym_offline_db')
@@ -54,6 +57,18 @@ class GymDatabase extends Dexie {
       medidasCorporalesHistorico: 'id, fechaRegistro',
       prs: 'id, ejercicioId, tipo, fecha',
     })
+
+    this.version(4).stores({
+      userProfile: 'id, nombre, updatedAt, isSynced, ownerUid',
+      ejerciciosCatalogo: 'id, nombre, grupoMuscularPrimario, nivelDificultad, equipoNecesario, esPersonalizado, updatedAt, isSynced, ownerUid',
+      rutinas: 'id, nombre, activa, updatedAt, isSynced, ownerUid',
+      rutinaEjercicios: 'id, rutinaId, ejercicioId, orden, rpe, updatedAt, isSynced, ownerUid',
+      entrenamientosRegistrados: 'id, rutinaId, fecha, completado, updatedAt, isSynced, ownerUid',
+      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha, rpe, updatedAt, isSynced, ownerUid, [ejercicioId+fecha]',
+      medidasCorporalesHistorico: 'id, fechaRegistro, updatedAt, isSynced, ownerUid',
+      prs: 'id, ejercicioId, tipo, fecha, updatedAt, isSynced, ownerUid',
+      pendingSyncQueue: 'id, entityType, entityId, status, createdAt',
+    })
   }
 
   getAllRoutines() {
@@ -61,7 +76,11 @@ class GymDatabase extends Dexie {
   }
 
   addRoutine(routine: Routine) {
-    return this.rutinas.add(routine)
+    return this.rutinas.add({
+      ...routine,
+      updatedAt: routine.updatedAt ?? new Date().toISOString(),
+      isSynced: routine.isSynced ?? false,
+    })
   }
 
   updateRoutine(routineId: string, changes: Partial<Routine>) {
@@ -139,7 +158,11 @@ class GymDatabase extends Dexie {
   }
 
   addExercise(exercise: Exercise) {
-    return this.ejerciciosCatalogo.add(exercise)
+    return this.ejerciciosCatalogo.add({
+      ...exercise,
+      updatedAt: exercise.updatedAt ?? new Date().toISOString(),
+      isSynced: exercise.isSynced ?? false,
+    })
   }
 
   updateExercise(exerciseId: string, changes: Partial<Exercise>) {
@@ -211,7 +234,11 @@ class GymDatabase extends Dexie {
   }
 
   addBodyMeasurement(measurement: BodyMeasurement) {
-    return this.medidasCorporalesHistorico.add(measurement)
+    return this.medidasCorporalesHistorico.add({
+      ...measurement,
+      updatedAt: measurement.updatedAt ?? measurement.fechaRegistro,
+      isSynced: measurement.isSynced ?? false,
+    })
   }
 
   getAllBodyMeasurements() {
@@ -235,7 +262,66 @@ class GymDatabase extends Dexie {
   }
 
   addPersonalRecord(record: PersonalRecord) {
-    return this.prs.add(record)
+    return this.prs.add({
+      ...record,
+      updatedAt: record.updatedAt ?? record.fecha,
+      isSynced: record.isSynced ?? false,
+    })
+  }
+
+  enqueueSyncOperation(input: {
+    entityType: SyncEntityType
+    entityId: string
+    payload: string
+  }) {
+    const now = new Date().toISOString()
+
+    return this.pendingSyncQueue.put({
+      id: crypto.randomUUID(),
+      entityType: input.entityType,
+      entityId: input.entityId,
+      payload: input.payload,
+      createdAt: now,
+      status: 'pending',
+      retryCount: 0,
+    })
+  }
+
+  getPendingSyncOperations() {
+    return this.pendingSyncQueue.where('status').equals('pending').sortBy('createdAt')
+  }
+
+  async markSyncOperationDone(id: string) {
+    await this.pendingSyncQueue.delete(id)
+  }
+
+  async markSyncOperationFailed(id: string, errorMessage: string) {
+    const item = await this.pendingSyncQueue.get(id)
+    if (!item) return
+
+    await this.pendingSyncQueue.put({
+      ...item,
+      status: 'pending',
+      retryCount: item.retryCount + 1,
+      lastError: errorMessage,
+    })
+  }
+
+  async updateTrainingSyncState(trainingId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.entrenamientosRegistrados.update(trainingId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
+
+    const linkedSets = await this.ejerciciosRealizados.where('entrenamientoId').equals(trainingId).toArray()
+    await Promise.all(
+      linkedSets.map((item) =>
+        this.ejerciciosRealizados.update(item.id, {
+          isSynced,
+          lastSyncedAt: syncedAtIso,
+        }),
+      ),
+    )
   }
 
   clearPersonalRecords() {
@@ -258,6 +344,7 @@ class GymDatabase extends Dexie {
         this.ejerciciosRealizados,
         this.medidasCorporalesHistorico,
         this.prs,
+        this.pendingSyncQueue,
       ],
       async () => {
         await Promise.all([
@@ -269,6 +356,7 @@ class GymDatabase extends Dexie {
           this.ejerciciosRealizados.clear(),
           this.medidasCorporalesHistorico.clear(),
           this.prs.clear(),
+          this.pendingSyncQueue.clear(),
         ])
       },
     )
@@ -295,6 +383,7 @@ class GymDatabase extends Dexie {
         this.ejerciciosRealizados,
         this.medidasCorporalesHistorico,
         this.prs,
+        this.pendingSyncQueue,
       ],
       async () => {
         await Promise.all([
@@ -306,6 +395,7 @@ class GymDatabase extends Dexie {
           this.ejerciciosRealizados.clear(),
           this.medidasCorporalesHistorico.clear(),
           this.prs.clear(),
+          this.pendingSyncQueue.clear(),
         ])
 
         if (payload.userProfile.length > 0) await this.userProfile.bulkAdd(payload.userProfile)
@@ -354,10 +444,22 @@ class GymDatabase extends Dexie {
   }
 
   async saveCompletedTraining(training: RegisteredTraining, performed: PerformedExercise[]) {
+    const now = new Date().toISOString()
+    const normalizedTraining: RegisteredTraining = {
+      ...training,
+      updatedAt: training.updatedAt ?? now,
+      isSynced: false,
+    }
+    const normalizedPerformed = performed.map((item) => ({
+      ...item,
+      updatedAt: item.updatedAt ?? now,
+      isSynced: false,
+    }))
+
     await this.transaction('rw', this.entrenamientosRegistrados, this.ejerciciosRealizados, async () => {
-      await this.entrenamientosRegistrados.add(training)
-      if (performed.length > 0) {
-        await this.ejerciciosRealizados.bulkAdd(performed)
+      await this.entrenamientosRegistrados.add(normalizedTraining)
+      if (normalizedPerformed.length > 0) {
+        await this.ejerciciosRealizados.bulkAdd(normalizedPerformed)
       }
     })
   }

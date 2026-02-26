@@ -12,6 +12,7 @@ import {
   Workflow,
 } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { SyncStatusIndicator } from '../sync/SyncStatusIndicator'
 import { useUiStore } from '../../stores/ui-store'
 
 const navItems = [
@@ -31,20 +32,30 @@ const mobileNavItems = [
   { to: '/perfil', label: 'Perfil', icon: User },
 ]
 
-function NavItem({ to, label, icon: Icon }: (typeof navItems)[number]) {
+function NavItem({
+  to,
+  label,
+  icon: Icon,
+  isExpanded,
+}: (typeof navItems)[number] & { isExpanded: boolean }) {
   return (
     <NavLink
       to={to}
       aria-label={`Ir a ${label}`}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
+        `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${isExpanded ? 'gap-3' : 'justify-center'} ${isActive
           ? 'bg-gym-primary text-white'
           : 'text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700'
         }`
       }
     >
-      <Icon size={18} />
-      <span>{label}</span>
+      <Icon size={18} className="flex-shrink-0" />
+      <span
+        className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? 'max-w-[10rem] opacity-100' : 'max-w-0 opacity-0'
+          }`}
+      >
+        {label}
+      </span>
     </NavLink>
   )
 }
@@ -64,19 +75,28 @@ export function AppShell() {
             type="button"
             onClick={toggleSidebar}
             aria-label="Alternar menú lateral"
-            className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600"
+            className={`mb-4 inline-flex w-full items-center rounded-lg border border-slate-300 px-3 py-2 text-sm transition-all duration-300 dark:border-slate-600 ${sidebarCollapsed ? 'justify-center' : 'gap-2'
+              }`}
           >
-            <Menu size={16} />
-            {!sidebarCollapsed && <span>Menú</span>}
+            <Menu size={16} className="flex-shrink-0" />
+            <span
+              className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'max-w-0 opacity-0' : 'max-w-[6rem] opacity-100'
+                }`}
+            >
+              Menú
+            </span>
           </button>
           <nav aria-label="Navegación principal" className="space-y-2">
             {navItems.map((item) => (
-              <NavItem key={item.to} {...item} />
+              <NavItem key={item.to} {...item} isExpanded={!sidebarCollapsed} />
             ))}
           </nav>
         </aside>
 
         <main className="flex-1 p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
+          <div className="mb-4 flex justify-end">
+            <SyncStatusIndicator />
+          </div>
           <Outlet />
         </main>
       </div>

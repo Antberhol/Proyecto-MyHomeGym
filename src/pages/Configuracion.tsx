@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import { GoogleLoginButton } from '../components/auth/GoogleLoginButton'
 import { exportAllDataJson, exportSummaryPdf, exportTrainingsCsv, importAllDataJson, importTrainingsCsv } from '../lib/export'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications'
@@ -101,6 +102,15 @@ export function ConfiguracionPage() {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Configuración</h1>
+
+            <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+                <h2 className="mb-2 text-lg font-semibold">Cuenta y nube</h2>
+                <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
+                    Inicia sesión para activar backup y sincronización entre dispositivos. La app sigue funcionando offline.
+                </p>
+
+                <GoogleLoginButton />
+            </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
                 <h2 className="mb-2 text-lg font-semibold">Mantenimiento local</h2>

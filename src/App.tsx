@@ -7,6 +7,8 @@ import { PinPad } from './components/security/PinPad'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { profileRepository } from './repositories/profileRepository'
+import { authService } from './services/authService'
+import { syncService } from './services/SyncService'
 import { useAuthStore } from './stores/auth-store'
 import { useUiStore } from './stores/ui-store'
 
@@ -48,10 +50,25 @@ function App() {
   const theme = useUiStore((state) => state.theme)
   const isLocked = useAuthStore((state) => state.isLocked)
   const lock = useAuthStore((state) => state.lock)
+  const setUser = useAuthStore((state) => state.setUser)
 
   useEffect(() => {
     void bootstrapDatabase()
   }, [])
+
+  useEffect(() => {
+    syncService.start()
+
+    const unsubscribe = authService.onAuthChanged((authUser) => {
+      setUser(authUser)
+      void syncService.setAuthenticatedUser(authUser)
+    })
+
+    return () => {
+      unsubscribe()
+      syncService.stop()
+    }
+  }, [setUser])
 
   useEffect(() => {
     const root = document.documentElement

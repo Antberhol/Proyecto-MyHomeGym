@@ -2,7 +2,28 @@ export type DifficultyLevel = 'basico' | 'intermedio' | 'avanzado'
 export type DevelopmentLevel = 'basico' | 'medio' | 'avanzado' | 'experto'
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-export interface UserProfile {
+export type SyncEntityType = 'training'
+export type SyncQueueStatus = 'pending' | 'failed'
+
+export interface SyncMetadata {
+  updatedAt?: string
+  isSynced?: boolean
+  lastSyncedAt?: string
+  ownerUid?: string
+}
+
+export interface SyncQueueItem {
+  id: string
+  entityType: SyncEntityType
+  entityId: string
+  payload: string
+  createdAt: string
+  status: SyncQueueStatus
+  retryCount: number
+  lastError?: string
+}
+
+export interface UserProfile extends SyncMetadata {
   id: string
   nombre?: string
   pesoCorporal: number
@@ -15,7 +36,7 @@ export interface UserProfile {
   updatedAt: string
 }
 
-export interface Exercise {
+export interface Exercise extends SyncMetadata {
   id: string
   nombre: string
   descripcion: string
@@ -30,7 +51,7 @@ export interface Exercise {
   updatedAt: string
 }
 
-export interface Routine {
+export interface Routine extends SyncMetadata {
   id: string
   nombre: string
   descripcion?: string
@@ -41,7 +62,7 @@ export interface Routine {
   updatedAt: string
 }
 
-export interface RoutineExercise {
+export interface RoutineExercise extends SyncMetadata {
   id: string
   rutinaId: string
   ejercicioId: string
@@ -54,7 +75,7 @@ export interface RoutineExercise {
   notas?: string
 }
 
-export interface RegisteredTraining {
+export interface RegisteredTraining extends SyncMetadata {
   id: string
   rutinaId?: string
   fecha: string
@@ -64,7 +85,7 @@ export interface RegisteredTraining {
   volumenTotal: number
 }
 
-export interface PerformedExercise {
+export interface PerformedExercise extends SyncMetadata {
   id: string
   entrenamientoId: string
   ejercicioId: string
@@ -75,7 +96,7 @@ export interface PerformedExercise {
   fecha: string
 }
 
-export interface BodyMeasurement {
+export interface BodyMeasurement extends SyncMetadata {
   id: string
   pesoCorporal: number
   cintura?: number
@@ -85,7 +106,7 @@ export interface BodyMeasurement {
   fechaRegistro: string
 }
 
-export interface PersonalRecord {
+export interface PersonalRecord extends SyncMetadata {
   id: string
   ejercicioId: string
   tipo: 'peso_maximo' | 'volumen_serie' | 'volumen_total' | 'reps_mismo_peso'
