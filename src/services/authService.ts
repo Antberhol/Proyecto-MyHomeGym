@@ -8,6 +8,7 @@ import {
     signOut,
     type User,
 } from 'firebase/auth'
+import { db } from '../lib/db'
 import { firebaseAuth, isFirebaseConfigured } from './firebase'
 
 export interface AuthUser {
@@ -51,7 +52,21 @@ export const authService = {
 
     async signOut(): Promise<void> {
         const auth = getFirebaseAuthOrThrow()
-        await signOut(auth)
+
+        try {
+            await signOut(auth)
+        } finally {
+            try {
+                await db.delete()
+            } catch (error) {
+                void error
+            }
+
+            localStorage.removeItem('auth-storage')
+            localStorage.removeItem('sync-storage')
+            localStorage.removeItem('ui-storage')
+            window.location.reload()
+        }
     },
 
     onAuthChanged(callback: (user: AuthUser | null) => void): () => void {

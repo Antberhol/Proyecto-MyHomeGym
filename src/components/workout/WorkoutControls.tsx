@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface WorkoutControlsProps {
     sessionSeconds: number
     sessionRunning: boolean
@@ -23,10 +25,12 @@ export function WorkoutControls({
     onFinishWorkout,
     onDiscardWorkout,
 }: WorkoutControlsProps) {
+    const { t } = useTranslation()
+
     return (
         <section className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-3">
             <div>
-                <p className="text-sm text-slate-500 dark:text-slate-300">Cronómetro de sesión</p>
+                <p className="text-sm text-slate-500 dark:text-slate-300">{t('training.controls.sessionTimer')}</p>
                 <p className="text-3xl font-bold">{formatClock(sessionSeconds)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                     <button
@@ -34,20 +38,20 @@ export function WorkoutControls({
                         onClick={onToggleSession}
                         className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
                     >
-                        {sessionRunning ? 'Pausar' : 'Reanudar'}
+                        {sessionRunning ? t('training.controls.pause') : t('training.controls.resume')}
                     </button>
                     <button
                         type="button"
                         onClick={onApplySessionDuration}
                         className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
                     >
-                        Usar en duración
+                        {t('training.controls.useForDuration')}
                     </button>
                 </div>
             </div>
 
             <div>
-                <p className="text-sm text-slate-500 dark:text-slate-300">Timer de descanso</p>
+                <p className="text-sm text-slate-500 dark:text-slate-300">{t('training.controls.restTimer')}</p>
                 <p className="text-3xl font-bold">{formatClock(restSeconds)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                     <button
@@ -76,7 +80,7 @@ export function WorkoutControls({
                         onClick={onResetRest}
                         className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
                     >
-                        Reset
+                        {t('training.controls.reset')}
                     </button>
                 </div>
             </div>
@@ -87,14 +91,14 @@ export function WorkoutControls({
                     onClick={onFinishWorkout}
                     className="w-full rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
                 >
-                    Finalizar entrenamiento
+                    {t('training.controls.finishWorkout')}
                 </button>
                 <button
                     type="button"
                     onClick={onDiscardWorkout}
                     className="w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300"
                 >
-                    Descartar entrenamiento
+                    {t('training.controls.discardWorkout')}
                 </button>
             </div>
         </section>

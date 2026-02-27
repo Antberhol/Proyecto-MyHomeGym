@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { z } from 'zod'
 import { db } from './db'
 
 function toCsvValue(value: unknown): string {
@@ -20,6 +21,52 @@ interface ExportData {
     medidasCorporalesHistorico: unknown[]
     prs: unknown[]
 }
+
+function sanitizeText(value: string): string {
+    return value.replace(/[<>]/g, '').trim()
+}
+
+const safeOptionalText = z
+    .string()
+    .max(4000)
+    .transform((value) => sanitizeText(value))
+    .optional()
+
+const routineImportSchema = z
+    .object({
+        id: z.string().min(1),
+        nombre: z.string().min(1).max(120).transform((value) => sanitizeText(value)),
+        descripcion: safeOptionalText,
+        diasSemana: z.array(z.string().min(1)).default([]),
+        activa: z.coerce.boolean().default(true),
+        color: z.string().min(3).max(30),
+    })
+    .passthrough()
+
+const trainingImportSchema = z
+    .object({
+        id: z.string().min(1),
+        rutinaId: z.string().min(1).optional(),
+        fecha: z.string().min(1),
+        duracionMinutos: z.coerce.number().min(0),
+        volumenTotal: z.coerce.number().min(0),
+        completado: z.coerce.boolean(),
+        notas: safeOptionalText,
+    })
+    .passthrough()
+
+const jsonImportSchema = z.object({
+    version: z.union([z.string().min(1), z.number()]),
+    exportedAt: z.string().min(1),
+    userProfile: z.array(z.record(z.string(), z.unknown())).default([]),
+    ejerciciosCatalogo: z.array(z.record(z.string(), z.unknown())).default([]),
+    rutinas: z.array(routineImportSchema).default([]),
+    rutinaEjercicios: z.array(z.record(z.string(), z.unknown())).default([]),
+    entrenamientosRegistrados: z.array(trainingImportSchema).default([]),
+    ejerciciosRealizados: z.array(z.record(z.string(), z.unknown())).default([]),
+    medidasCorporalesHistorico: z.array(z.record(z.string(), z.unknown())).default([]),
+    prs: z.array(z.record(z.string(), z.unknown())).default([]),
+})
 
 export async function exportAllDataJson(): Promise<void> {
     const snapshot = await db.exportAllData()
@@ -49,11 +96,14 @@ export async function exportAllDataJson(): Promise<void> {
 
 export async function importAllDataJson(file: File): Promise<{ imported: number; skipped: number }> {
     const content = await file.text()
-    const data = JSON.parse(content) as ExportData
+    const unknownPayload = JSON.parse(content) as unknown
+    const parsed = jsonImportSchema.safeParse(unknownPayload)
 
-    if (!data.version || !data.exportedAt) {
+    if (!parsed.success) {
         throw new Error('Formato de archivo inválido')
     }
+
+    const data = parsed.data
 
     let imported = 0
     let skipped = 0

@@ -50,7 +50,7 @@ interface CachedDetailEntry {
 }
 
 const detailCache = new Map<string, CachedDetailEntry>()
-const gifObjectUrlCache = new Map<string, string>()
+const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 
 async function translateInstructionToSpanish(text: string, signal: AbortSignal): Promise<string> {
@@ -121,45 +121,19 @@ async function maybeTranslateInstructions(
     return translated
 }
 
-async function hasWorkingGif(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<boolean> {
-    const objectUrl = await fetchGifObjectUrl(exerciseId, apiKey, signal)
-    return Boolean(objectUrl)
+function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
+    return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
-async function fetchGifObjectUrl(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<string | null> {
-    const cached = gifObjectUrlCache.get(exerciseId)
+function resolveExerciseGifUrl(exerciseId: string, apiKey: string): string {
+    const cached = gifUrlCache.get(exerciseId)
     if (cached) {
         return cached
     }
 
-    const response = await fetch(
-        `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}`,
-        {
-            headers: {
-                'X-RapidAPI-Key': apiKey,
-                'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-            },
-            signal,
-        },
-    )
-
-    if (!response.ok) {
-        return null
-    }
-
-    const contentType = response.headers.get('content-type') ?? ''
-    if (!contentType.includes('image')) {
-        return null
-    }
-
-    const imageBlob = await response.blob()
-    if (imageBlob.size === 0) {
-        return null
-    }
-
-    const objectUrl = URL.createObjectURL(imageBlob)
-    gifObjectUrlCache.set(exerciseId, objectUrl)
-    return objectUrl
+    const resolved = buildExerciseGifUrl(exerciseId, apiKey)
+    gifUrlCache.set(exerciseId, resolved)
+    return resolved
 }
 
 function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): ExerciseDbItem | null {
@@ -222,25 +196,6 @@ async function searchExerciseByCandidates(
         }
 
         const best = selectBestMatch(payload, candidate)
-        const ordered = [best, ...payload].filter((item): item is ExerciseDbItem => Boolean(item?.id))
-        const seenIds = new Set<string>()
-
-        for (const item of ordered) {
-            const itemId = item.id
-            if (!itemId || seenIds.has(itemId)) {
-                continue
-            }
-            seenIds.add(itemId)
-
-            try {
-                if (await hasWorkingGif(itemId, apiKey, signal)) {
-                    return { item, usedCandidate: candidate }
-                }
-            } catch {
-                continue
-            }
-        }
-
         if (best?.id) {
             return { item: best, usedCandidate: candidate }
         }
@@ -261,11 +216,6 @@ async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: 
 
     const payload = (await response.json()) as ExerciseDbItem
     if (!payload?.id) {
-        return null
-    }
-
-    const hasGif = await hasWorkingGif(payload.id, apiKey, signal)
-    if (!hasGif) {
         return null
     }
 
@@ -347,7 +297,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
 
                 const rawInstructions = Array.isArray(bestMatch.instructions) ? bestMatch.instructions : []
                 const detailData: ExerciseDetailData = {
-                    gifUrl: (await fetchGifObjectUrl(bestMatch.id, apiKey, controller.signal)) ?? '',
+                    gifUrl: resolveExerciseGifUrl(bestMatch.id, apiKey),
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
                     instructions: rawInstructions,

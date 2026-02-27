@@ -7,8 +7,11 @@ import { ActiveExerciseCard } from '../components/workout/ActiveExerciseCard'
 import { RestTimerOverlay } from '../components/workout/RestTimerOverlay'
 import { WorkoutControls } from '../components/workout/WorkoutControls'
 import { useActiveWorkoutController } from '../hooks/useActiveWorkoutController'
+import { useTranslation } from 'react-i18next'
 
 export function EntrenarPage() {
+  const { t } = useTranslation()
+
   const {
     form,
     view,
@@ -60,7 +63,7 @@ export function EntrenarPage() {
     return (
       <div className="space-y-6">
         <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
-          <h1 className="text-2xl font-bold">Entrenar</h1>
+          <h1 className="text-2xl font-bold">{t('training.pageTitle')}</h1>
         </header>
         <RoutineSelector
           routines={routines}
@@ -75,7 +78,7 @@ export function EntrenarPage() {
     return (
       <div className="space-y-6">
         <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
-          <h1 className="text-2xl font-bold">Resumen de entrenamiento</h1>
+          <h1 className="text-2xl font-bold">{t('training.summary.title')}</h1>
         </header>
 
         {lastSavedMessage && (
@@ -84,7 +87,7 @@ export function EntrenarPage() {
 
         <div className="w-full space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gym-cardDark">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Resumen de entrenamiento</h2>
+            <h2 className="text-lg font-semibold">{t('training.summary.title')}</h2>
             <button
               type="button"
               onClick={() => {
@@ -92,28 +95,28 @@ export function EntrenarPage() {
               }}
               className="inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-2 text-xs"
             >
-              <Share2 size={14} /> Compartir
+              <Share2 size={14} /> {t('training.summary.share')}
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              Duración: <span className="font-semibold">{trainingSummary.durationMinutes} min</span>
+              {t('training.summary.duration')}: <span className="font-semibold">{trainingSummary.durationMinutes} {t('training.summary.min')}</span>
             </div>
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              Volumen: <span className="font-semibold">{trainingSummary.totalVolume.toFixed(0)} kg</span>
+              {t('training.summary.volume')}: <span className="font-semibold">{trainingSummary.totalVolume.toFixed(0)} kg</span>
             </div>
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              Series: <span className="font-semibold">{trainingSummary.setCount}</span>
+              {t('training.summary.sets')}: <span className="font-semibold">{trainingSummary.setCount}</span>
             </div>
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-              PRs nuevos: <span className="font-semibold">{trainingSummary.prsCreated}</span>
+              {t('training.summary.newPrs')}: <span className="font-semibold">{trainingSummary.prsCreated}</span>
             </div>
           </div>
 
           {sharePreviewData && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Vista previa para compartir</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('training.summary.sharePreview')}</h3>
               <div className="mx-auto w-fit rounded-2xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-700 dark:bg-slate-900">
                 <div className="relative h-[320px] w-[180px] overflow-hidden rounded-2xl">
                   <div className="absolute left-0 top-0 origin-top-left scale-50">
@@ -125,9 +128,9 @@ export function EntrenarPage() {
           )}
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold">Desglose por ejercicio</h3>
+            <h3 className="mb-2 text-sm font-semibold">{t('training.summary.breakdownByExercise')}</h3>
             {trainingSummary.byExercise.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-300">No hubo series registradas para mostrar desglose.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-300">{t('training.summary.noBreakdown')}</p>
             ) : (
               <div className="h-56">
                 <Virtuoso
@@ -135,7 +138,7 @@ export function EntrenarPage() {
                   itemContent={(_, item) => (
                     <div className="mb-2 flex items-center justify-between rounded border border-slate-200 p-2 text-sm dark:border-slate-700">
                       <span>{item.name}</span>
-                      <span>{item.sets} series · {item.volume.toFixed(0)} kg</span>
+                      <span>{item.sets} {t('training.summary.setsLower')} · {item.volume.toFixed(0)} kg</span>
                     </div>
                   )}
                 />
@@ -148,7 +151,7 @@ export function EntrenarPage() {
             onClick={exitToSelection}
             className="h-11 w-full rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white"
           >
-            Finalizar y Salir
+            {t('training.summary.finishAndExit')}
           </button>
         </div>
       </div>
@@ -159,14 +162,14 @@ export function EntrenarPage() {
     <div className="space-y-6">
       <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
+          <h1 className="text-2xl font-bold">{t('training.registerTitle')}</h1>
           <button
             type="button"
             onClick={openPlateCalculator}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium dark:border-slate-600"
           >
             <Calculator size={16} />
-            Calculadora de discos
+            {t('training.plateCalculator')}
           </button>
         </div>
       </header>
@@ -185,7 +188,7 @@ export function EntrenarPage() {
         }}
         onDiscardWorkout={() => {
           const shouldDiscard = window.confirm(
-            '¿Seguro que quieres descartar este entrenamiento? Se perderán los datos no guardados.',
+            t('training.confirmDiscard'),
           )
 
           if (!shouldDiscard) return
@@ -203,7 +206,7 @@ export function EntrenarPage() {
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-2">
         <select {...form.register('rutinaId')} className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm">
-          <option value="">Entreno libre</option>
+          <option value="">{t('training.freeTraining')}</option>
           {routines.map((routine) => (
             <option key={routine.id} value={routine.id}>
               {routine.nombre}
@@ -215,7 +218,7 @@ export function EntrenarPage() {
           type="number"
           {...form.register('duracionMinutos')}
           className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-          placeholder="Duración (min)"
+          placeholder={t('training.durationPlaceholder')}
         />
 
         {selectedRoutineExercises.length === 0 && freeExercisesDraft.length === 0 && (
@@ -223,21 +226,21 @@ export function EntrenarPage() {
             type="number"
             {...form.register('volumenTotalManual')}
             className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-            placeholder="Volumen total manual (kg)"
+            placeholder={t('training.manualVolumePlaceholder')}
           />
         )}
 
         <input
           {...form.register('notas')}
           className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-          placeholder="Notas"
+          placeholder={t('training.notesPlaceholder')}
         />
 
         {selectedRoutineExercises.length > 0 && (
           <div className="space-y-3 rounded-lg border border-slate-200 p-3 md:col-span-2 dark:border-slate-700">
-            <h2 className="text-base font-semibold">Entrenamiento guiado por rutina</h2>
+            <h2 className="text-base font-semibold">{t('training.guidedTitle')}</h2>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              Campos autocompletados con el último registro de cada ejercicio. Puedes editarlos libremente.
+              {t('training.guidedDescription')}
             </p>
             <ActiveExerciseCard
               activeRoutineExercise={activeRoutineExercise}
@@ -259,9 +262,9 @@ export function EntrenarPage() {
 
         {selectedRoutineExercises.length === 0 && (
           <div className="space-y-3 rounded-lg border border-slate-200 p-3 md:col-span-2 dark:border-slate-700">
-            <h2 className="text-base font-semibold">Registro detallado (entreno libre)</h2>
+            <h2 className="text-base font-semibold">{t('training.freeLogTitle')}</h2>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              Añade ejercicios y registra cada serie con repeticiones y peso. Si no registras series, puedes usar el volumen manual.
+              {t('training.freeLogDescription')}
             </p>
 
             <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
@@ -270,7 +273,7 @@ export function EntrenarPage() {
                 onChange={(event) => setFreeExerciseId(event.target.value)}
                 className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:col-span-2 md:text-sm"
               >
-                <option value="">Selecciona ejercicio</option>
+                <option value="">{t('training.selectExercise')}</option>
                 {exercises.map((exercise) => (
                   <option key={exercise.id} value={exercise.id}>
                     {exercise.nombre}
@@ -283,20 +286,20 @@ export function EntrenarPage() {
                 value={freeSeriesCount}
                 onChange={(event) => setFreeSeriesCount(Math.max(1, Number(event.target.value) || 1))}
                 className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                placeholder="Series"
+                placeholder={t('training.setsPlaceholder')}
               />
               <button
                 type="button"
                 onClick={addFreeExerciseDraft}
                 className="rounded border border-slate-300 px-3 py-2 text-xs"
               >
-                Añadir ejercicio
+                {t('training.addExercise')}
               </button>
             </div>
 
             <div className="space-y-3">
               {freeExercisesDraft.map((draft) => {
-                const exerciseName = exercises.find((exercise) => exercise.id === draft.ejercicioId)?.nombre || 'Ejercicio'
+                const exerciseName = exercises.find((exercise) => exercise.id === draft.ejercicioId)?.nombre || t('training.exercise')
                 return (
                   <div key={draft.id} className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
                     <div className="mb-2 flex items-center justify-between gap-2">
@@ -307,14 +310,14 @@ export function EntrenarPage() {
                           onClick={() => addFreeSet(draft.id)}
                           className="rounded border border-slate-300 px-3 py-2 text-[11px]"
                         >
-                          + Serie
+                          {t('training.addSet')}
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFreeExerciseDraft(draft.id)}
                           className="rounded border border-slate-300 px-3 py-2 text-[11px] text-red-600"
                         >
-                          Quitar
+                          {t('training.remove')}
                         </button>
                       </div>
                     </div>
@@ -322,13 +325,13 @@ export function EntrenarPage() {
                       {draft.sets.map((set, setIndex) => (
                         <div key={`${draft.id}-${setIndex + 1}`} className="rounded bg-slate-50 p-2 dark:bg-slate-800">
                           <div className="mb-1 flex items-center justify-between">
-                            <p className="text-xs font-medium">Serie {setIndex + 1}</p>
+                            <p className="text-xs font-medium">{t('training.setNumber', { number: setIndex + 1 })}</p>
                             <button
                               type="button"
                               onClick={() => removeFreeSet(draft.id, setIndex)}
                               className="text-[11px] text-red-600"
                             >
-                              borrar
+                              {t('training.delete')}
                             </button>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
@@ -337,7 +340,7 @@ export function EntrenarPage() {
                               value={set.reps === 0 ? '' : set.reps}
                               onChange={(event) => updateFreeSetData(draft.id, setIndex, 'reps', event.target.value)}
                               className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                              placeholder="Reps"
+                              placeholder={t('training.repsPlaceholder')}
                             />
                             <input
                               type="number"
@@ -345,7 +348,7 @@ export function EntrenarPage() {
                               value={set.peso === 0 ? '' : set.peso}
                               onChange={(event) => updateFreeSetData(draft.id, setIndex, 'peso', event.target.value)}
                               className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                              placeholder="Peso"
+                              placeholder={t('training.weightPlaceholder')}
                             />
                           </div>
                         </div>
@@ -355,14 +358,14 @@ export function EntrenarPage() {
                 )
               })}
               {freeExercisesDraft.length === 0 && (
-                <p className="text-xs text-slate-500 dark:text-slate-300">No has añadido ejercicios al registro libre.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300">{t('training.noFreeExercises')}</p>
               )}
             </div>
           </div>
         )}
 
         <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
-          Guardar entrenamiento
+          {t('training.saveWorkout')}
         </button>
       </form>
     </div>

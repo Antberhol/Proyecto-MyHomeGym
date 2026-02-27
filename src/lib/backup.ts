@@ -1,15 +1,48 @@
 import { db } from './db'
 import { z } from 'zod'
 
+function sanitizeText(value: string): string {
+    return value.replace(/[<>]/g, '').trim()
+}
+
+const safeOptionalText = z
+    .string()
+    .max(4000)
+    .transform((value) => sanitizeText(value))
+    .optional()
+
+const routineImportSchema = z
+    .object({
+        id: z.string().min(1),
+        nombre: z.string().min(1).max(120).transform((value) => sanitizeText(value)),
+        descripcion: safeOptionalText,
+        diasSemana: z.array(z.string().min(1)).default([]),
+        activa: z.coerce.boolean().default(true),
+        color: z.string().min(3).max(30),
+    })
+    .passthrough()
+
+const trainingImportSchema = z
+    .object({
+        id: z.string().min(1),
+        rutinaId: z.string().min(1).optional(),
+        fecha: z.string().min(1),
+        duracionMinutos: z.coerce.number().min(0),
+        volumenTotal: z.coerce.number().min(0),
+        completado: z.coerce.boolean(),
+        notas: safeOptionalText,
+    })
+    .passthrough()
+
 const backupPayloadSchema = z.object({
     version: z.number().int().min(1),
     exportedAt: z.string().datetime(),
     data: z.object({
         userProfile: z.array(z.record(z.string(), z.unknown())),
         ejerciciosCatalogo: z.array(z.record(z.string(), z.unknown())),
-        rutinas: z.array(z.record(z.string(), z.unknown())),
+        rutinas: z.array(routineImportSchema),
         rutinaEjercicios: z.array(z.record(z.string(), z.unknown())),
-        entrenamientosRegistrados: z.array(z.record(z.string(), z.unknown())),
+        entrenamientosRegistrados: z.array(trainingImportSchema),
         ejerciciosRealizados: z.array(z.record(z.string(), z.unknown())),
         medidasCorporalesHistorico: z.array(z.record(z.string(), z.unknown())),
         prs: z.array(z.record(z.string(), z.unknown())),

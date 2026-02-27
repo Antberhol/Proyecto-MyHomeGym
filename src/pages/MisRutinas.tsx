@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { ExerciseSelectorModal } from '../components/exercises/ExerciseSelectorModal'
 import { SortableExerciseList } from '../components/routines/SortableExerciseList'
@@ -18,6 +19,7 @@ const routineSchema = z.object({
 type RoutineForm = z.infer<typeof routineSchema>
 
 export function MisRutinasPage() {
+  const { t } = useTranslation()
   const routines = useLiveQuery(() => routineAdminRepository.listRoutines(), []) ?? []
   const exercises = useLiveQuery(() => routineAdminRepository.listExercises(), []) ?? []
   const routineExercises = useLiveQuery(() => routineAdminRepository.listRoutineExercises(), []) ?? []
@@ -209,25 +211,25 @@ export function MisRutinasPage() {
   return (
     <div className="space-y-6">
       <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
-        <h1 className="text-2xl font-bold">Mis rutinas</h1>
+        <h1 className="text-2xl font-bold">{t('routines.title')}</h1>
       </header>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Nueva rutina</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('routines.newRoutine')}</h2>
         <form onSubmit={onCreate} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             {...form.register('nombre')}
-            placeholder="Nombre de rutina"
+            placeholder={t('routines.routineNamePlaceholder')}
             className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('diasSemana')}
-            placeholder="lunes,miercoles,viernes"
+            placeholder={t('routines.daysPlaceholder')}
             className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('descripcion')}
-            placeholder="Descripción"
+            placeholder={t('routines.descriptionPlaceholder')}
             className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
@@ -236,7 +238,7 @@ export function MisRutinasPage() {
             className="h-10 w-full rounded-lg border border-slate-300"
           />
           <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
-            Crear rutina
+            {t('routines.createRoutine')}
           </button>
         </form>
       </section>
@@ -260,19 +262,19 @@ export function MisRutinasPage() {
                     value={editRoutineNombre}
                     onChange={(event) => setEditRoutineNombre(event.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder="Nombre"
+                    placeholder={t('routines.namePlaceholder')}
                   />
                   <input
                     value={editRoutineDescripcion}
                     onChange={(event) => setEditRoutineDescripcion(event.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder="Descripción"
+                    placeholder={t('routines.descriptionPlaceholder')}
                   />
                   <input
                     value={editRoutineDiasSemana}
                     onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder="lunes,miercoles,viernes"
+                    placeholder={t('routines.daysPlaceholder')}
                   />
                   <input
                     type="color"
@@ -286,20 +288,20 @@ export function MisRutinasPage() {
                       onClick={() => void saveRoutineEdits()}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                     >
-                      Guardar
+                      {t('common.save')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelEditRoutine}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                     >
-                      Cancelar
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || 'Sin descripción'}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || t('common.noDescription')}</p>
                   <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
                 </>
               )}
@@ -310,21 +312,21 @@ export function MisRutinasPage() {
                   onClick={() => setSelectedRoutineId(routine.id)}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                 >
-                  Gestionar ejercicios
+                  {t('routines.manageExercises')}
                 </button>
                 <button
                   type="button"
                   onClick={() => startEditRoutine(routine.id)}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                 >
-                  Editar
+                  {t('common.edit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                 >
-                  {routine.activa ? 'Desactivar' : 'Activar'}
+                  {routine.activa ? t('routines.deactivate') : t('routines.activate')}
                 </button>
               </div>
             </article>
@@ -336,14 +338,14 @@ export function MisRutinasPage() {
         <section className="space-y-4 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
-              Constructor de rutina: {routines.find((routine) => routine.id === selectedRoutineId)?.nombre}
+              {t('routines.builderTitle')}: {routines.find((routine) => routine.id === selectedRoutineId)?.nombre}
             </h2>
             <button
               type="button"
               onClick={() => setSelectedRoutineId('')}
               className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
             >
-              Cerrar
+              {t('common.close')}
             </button>
           </div>
 
@@ -353,7 +355,7 @@ export function MisRutinasPage() {
               onClick={() => setIsExerciseSelectorOpen(true)}
               className="h-11 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium dark:border-slate-600 md:col-span-2"
             >
-              + Añadir ejercicio
+              {t('routines.addExercise')}
             </button>
 
             <input
@@ -361,14 +363,14 @@ export function MisRutinasPage() {
               value={series}
               onChange={(event) => setSeries(Number(event.target.value) || 1)}
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-              placeholder="Series"
+              placeholder={t('training.setsPlaceholder')}
             />
 
             <input
               value={repeticiones}
               onChange={(event) => setRepeticiones(event.target.value)}
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-              placeholder="Reps"
+              placeholder={t('training.repsPlaceholder')}
             />
 
             <input
@@ -376,7 +378,7 @@ export function MisRutinasPage() {
               value={descansoSegundos}
               onChange={(event) => setDescansoSegundos(Number(event.target.value) || 15)}
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-              placeholder="Descanso (s)"
+              placeholder={t('routines.restPlaceholder')}
             />
           </div>
 
@@ -426,7 +428,7 @@ export function MisRutinasPage() {
             />
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:text-slate-300">
-              Esta rutina todavía no tiene ejercicios asignados.
+              {t('routines.noExercises')}
             </div>
           )}
         </section>

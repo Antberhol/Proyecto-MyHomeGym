@@ -8,6 +8,7 @@ import type {
 import { NumberStepper } from '../ui/NumberStepper'
 import { OneRepMaxBadge } from './OneRepMaxBadge'
 import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
+import { useTranslation } from 'react-i18next'
 
 interface ActiveExerciseCardProps {
     activeRoutineExercise: ActiveRoutineExercise | undefined
@@ -40,6 +41,8 @@ export function ActiveExerciseCard({
     getSetValue,
     updateSetData,
 }: ActiveExerciseCardProps) {
+    const { t } = useTranslation()
+
     if (!activeRoutineExercise) {
         return null
     }
@@ -54,23 +57,23 @@ export function ActiveExerciseCard({
                     onClick={onPrevious}
                     className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
                 >
-                    Anterior
+                    {t('training.exerciseCard.previous')}
                 </button>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Ejercicio {activeExerciseIndex + 1} de {totalExercises}
+                    {t('training.exerciseCard.exerciseCount', { current: activeExerciseIndex + 1, total: totalExercises })}
                 </p>
                 <button
                     type="button"
                     onClick={onNext}
                     className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
                 >
-                    Siguiente
+                    {t('training.exerciseCard.next')}
                 </button>
             </div>
 
             <div className="flex items-center gap-3">
                 <ExerciseThumbnail
-                    nombre={activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'}
+                    nombre={activeRoutineExercise.ejercicio?.nombre || t('training.exerciseCard.exercise')}
                     grupoMuscularPrimario={activeRoutineExercise.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={activeRoutineExercise.ejercicio?.equipoNecesario}
                     imagenUrl={activeRoutineExercise.ejercicio?.imagenUrl}
@@ -80,13 +83,17 @@ export function ActiveExerciseCard({
                     className="h-16 w-24"
                 />
                 <p className="text-sm font-medium">
-                    {activeExerciseIndex + 1}. {activeRoutineExercise.ejercicio?.nombre || 'Ejercicio'} · {activeRoutineExercise.series}{' '}
-                    series · objetivo {activeRoutineExercise.repeticiones}
+                    {t('training.exerciseCard.summary', {
+                        index: activeExerciseIndex + 1,
+                        name: activeRoutineExercise.ejercicio?.nombre || t('training.exerciseCard.exercise'),
+                        series: activeRoutineExercise.series,
+                        reps: activeRoutineExercise.repeticiones,
+                    })}
                 </p>
             </div>
             {previousSession && (
                 <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Último registro ({new Date(previousSession.fecha).toLocaleDateString()}):{' '}
+                    {t('training.exerciseCard.lastRecord', { date: new Date(previousSession.fecha).toLocaleDateString() })}:{' '}
                     {previousSession.sets.map((set) => `S${set.serieNumero} ${set.repeticionesRealizadas}x${set.pesoUtilizado}kg`).join(' · ')}
                 </p>
             )}
@@ -94,34 +101,34 @@ export function ActiveExerciseCard({
             {activeExerciseSuggestedWeight !== null && (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/20">
                     <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                        Carga sugerida: <span className="font-semibold">{activeExerciseSuggestedWeight} kg</span>
+                        {t('training.exerciseCard.suggestedLoad')} <span className="font-semibold">{activeExerciseSuggestedWeight} kg</span>
                     </p>
                     <button
                         type="button"
                         onClick={onApplySuggestedWeight}
                         className="mt-2 rounded border border-emerald-400 px-2 py-1 text-[11px] text-emerald-700 dark:text-emerald-300"
                     >
-                        Aplicar sugerencia a todas las series
+                        {t('training.exerciseCard.applySuggestion')}
                     </button>
                 </div>
             )}
 
             {activeExercisePrTarget && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-900 dark:bg-amber-950/20">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Siguiente objetivo PR</p>
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">{t('training.exerciseCard.nextPrTarget')}</p>
                     {activeExercisePrTarget.targetPeso && (
                         <p className="text-xs text-amber-700 dark:text-amber-300">
-                            Peso máximo: superar <span className="font-semibold">{activeExercisePrTarget.targetPeso} kg</span>
+                            {t('training.exerciseCard.maxWeight')}: <span className="font-semibold">{t('training.exerciseCard.beatValue', { value: `${activeExercisePrTarget.targetPeso} kg` })}</span>
                         </p>
                     )}
                     {activeExercisePrTarget.targetVolumenSerie && (
                         <p className="text-xs text-amber-700 dark:text-amber-300">
-                            Volumen por serie: superar <span className="font-semibold">{activeExercisePrTarget.targetVolumenSerie}</span>
+                            {t('training.exerciseCard.volumePerSet')}: <span className="font-semibold">{t('training.exerciseCard.beatValue', { value: activeExercisePrTarget.targetVolumenSerie })}</span>
                         </p>
                     )}
                     {activeExercisePrTarget.repsMismoPeso && (
                         <p className="text-xs text-amber-700 dark:text-amber-300">
-                            Repeticiones mismo peso: superar <span className="font-semibold">{activeExercisePrTarget.repsMismoPeso.valor}</span> ({activeExercisePrTarget.repsMismoPeso.detalle})
+                            {t('training.exerciseCard.repsSameWeight')}: {t('training.exerciseCard.beatValue', { value: activeExercisePrTarget.repsMismoPeso.valor })} ({activeExercisePrTarget.repsMismoPeso.detalle})
                         </p>
                     )}
                 </div>
@@ -138,10 +145,10 @@ export function ActiveExerciseCard({
 
                     return (
                         <div key={key} className="rounded-md bg-slate-50 p-2 dark:bg-slate-800">
-                            <p className="mb-2 text-xs font-medium">Serie {serieNumero}</p>
+                            <p className="mb-2 text-xs font-medium">{t('training.exerciseCard.setNumber', { number: serieNumero })}</p>
                             {previousSet && (
                                 <p className="mb-2 text-[11px] text-slate-600 dark:text-slate-300">
-                                    Anterior: {previousSet.repeticionesRealizadas} reps · {previousSet.pesoUtilizado} kg
+                                    {t('training.exerciseCard.previousSet')}: {previousSet.repeticionesRealizadas} {t('training.exerciseCard.repsShort')} · {previousSet.pesoUtilizado} kg
                                 </p>
                             )}
                             <div className="grid grid-cols-1 gap-2">
@@ -188,7 +195,7 @@ export function ActiveExerciseCard({
                                                 : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300'
                                             }`}
                                     >
-                                        <option value="">RPE (1-10)</option>
+                                        <option value="">{t('training.exerciseCard.rpePlaceholder')}</option>
                                         {Array.from({ length: 10 }, (_, idx) => idx + 1).map((rpeValue) => (
                                             <option key={rpeValue} value={rpeValue}>{rpeValue}</option>
                                         ))}
@@ -201,7 +208,7 @@ export function ActiveExerciseCard({
                                 onClick={() => onStartRestTimer(activeRoutineExercise.descansoSegundos)}
                                 className="mt-2 w-full rounded border border-slate-300 px-2 py-1 text-[11px]"
                             >
-                                Iniciar descanso ({activeRoutineExercise.descansoSegundos}s)
+                                {t('training.exerciseCard.startRest', { seconds: activeRoutineExercise.descansoSegundos })}
                             </button>
                         </div>
                     )
@@ -209,9 +216,9 @@ export function ActiveExerciseCard({
             </div>
 
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold">Historial reciente del ejercicio</p>
+                <p className="mb-2 text-xs font-semibold">{t('training.exerciseCard.recentHistory')}</p>
                 {activeExerciseHistory.length === 0 ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-300">Aún no hay sesiones previas de este ejercicio.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">{t('training.exerciseCard.noHistory')}</p>
                 ) : (
                     <ul className="space-y-1 text-xs">
                         {activeExerciseHistory.map((session) => (
