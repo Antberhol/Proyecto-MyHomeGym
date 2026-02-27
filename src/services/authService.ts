@@ -1,7 +1,9 @@
 import {
+    type AuthError,
     type Auth,
     GoogleAuthProvider,
     browserLocalPersistence,
+    signInWithRedirect,
     onAuthStateChanged,
     setPersistence,
     signInWithPopup,
@@ -37,6 +39,30 @@ function getFirebaseAuthOrThrow(): Auth {
     return firebaseAuth
 }
 
+function mapFirebaseAuthError(error: unknown): Error {
+    const code = (error as AuthError | undefined)?.code
+
+    switch (code) {
+        case 'auth/popup-blocked':
+            return new Error('El navegador bloqueó la ventana de Google. Reintenta o permite popups para este sitio.')
+        case 'auth/popup-closed-by-user':
+            return new Error('Se cerró la ventana de inicio de sesión antes de completar la autenticación.')
+        case 'auth/cancelled-popup-request':
+            return new Error('Se canceló el intento de inicio de sesión. Inténtalo de nuevo.')
+        case 'auth/unauthorized-domain':
+            return new Error('Este dominio no está autorizado en Firebase Auth. Añade el dominio actual en Authorized domains.')
+        case 'auth/operation-not-allowed':
+            return new Error('El proveedor Google no está habilitado en Firebase Authentication.')
+        case 'auth/network-request-failed':
+            return new Error('No se pudo conectar con Firebase. Revisa tu conexión e inténtalo de nuevo.')
+        default:
+            if (error instanceof Error && error.message) {
+                return new Error(`No se pudo iniciar sesión con Google: ${error.message}`)
+            }
+            return new Error('No se pudo iniciar sesión con Google.')
+    }
+}
+
 export const authService = {
     isAvailable: isFirebaseConfigured,
 
@@ -45,9 +71,26 @@ export const authService = {
 
         await setPersistence(auth, browserLocalPersistence)
         const provider = new GoogleAuthProvider()
-        const result = await signInWithPopup(auth, provider)
+        provider.setCustomParameters({ prompt: 'select_account' })
 
-        return toAuthUser(result.user) as AuthUser
+        try {
+            const result = await signInWithPopup(auth, provider)
+            return toAuthUser(result.user) as AuthUser
+        } catch (error) {
+            const authErrorCode = (error as AuthError | undefined)?.code
+
+            if (
+                authErrorCode === 'auth/popup-blocked' ||
+                authErrorCode === 'auth/popup-closed-by-user' ||
+                authErrorCode === 'auth/cancelled-popup-request' ||
+                authErrorCode === 'auth/internal-error'
+            ) {
+                await signInWithRedirect(auth, provider)
+                return new Promise<AuthUser>(() => undefined)
+            }
+
+            throw mapFirebaseAuthError(error)
+        }
     },
 
     async signOut(): Promise<void> {

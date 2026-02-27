@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import {
@@ -209,10 +208,8 @@ export function CatalogoPage() {
       </div>
 
       <div>
-        <Virtuoso
-          data={filteredExercises}
-          useWindowScroll
-          itemContent={(_, exercise) => (
+        <div className="space-y-3">
+          {filteredExercises.map((exercise) => (
             <article
               key={exercise.id}
               className="mb-3 cursor-pointer rounded-xl bg-white p-4 shadow transition hover:shadow-md dark:bg-gym-cardDark"
@@ -319,8 +316,8 @@ export function CatalogoPage() {
                 </div>
               ) : null}
             </article>
-          )}
-        />
+          ))}
+        </div>
       </div>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">

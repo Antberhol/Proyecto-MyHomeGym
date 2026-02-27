@@ -23,6 +23,7 @@ export interface ExerciseDetailDebugInfo {
 interface ExerciseDbItem {
     id?: string
     name?: string
+    gifUrl?: string
     target?: string
     equipment?: string
     instructions?: string[]
@@ -125,14 +126,22 @@ function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
-function resolveExerciseGifUrl(exerciseId: string, apiKey: string): string {
-    const cached = gifUrlCache.get(exerciseId)
+function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey: string): string {
+    if (item.gifUrl?.trim()) {
+        return item.gifUrl
+    }
+
+    if (!item.id) {
+        return ''
+    }
+
+    const cached = gifUrlCache.get(item.id)
     if (cached) {
         return cached
     }
 
-    const resolved = buildExerciseGifUrl(exerciseId, apiKey)
-    gifUrlCache.set(exerciseId, resolved)
+    const resolved = buildExerciseGifUrl(item.id, apiKey)
+    gifUrlCache.set(item.id, resolved)
     return resolved
 }
 
@@ -297,7 +306,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
 
                 const rawInstructions = Array.isArray(bestMatch.instructions) ? bestMatch.instructions : []
                 const detailData: ExerciseDetailData = {
-                    gifUrl: resolveExerciseGifUrl(bestMatch.id, apiKey),
+                    gifUrl: resolveExerciseGifUrl(bestMatch, apiKey),
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
                     instructions: rawInstructions,
