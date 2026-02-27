@@ -3,8 +3,6 @@ import {
     type Auth,
     GoogleAuthProvider,
     browserLocalPersistence,
-    getRedirectResult,
-    signInWithRedirect,
     onAuthStateChanged,
     setPersistence,
     signInWithPopup,
@@ -78,18 +76,6 @@ export const authService = {
             const result = await signInWithPopup(auth, provider)
             return toAuthUser(result.user) as AuthUser
         } catch (popupError) {
-            const authErrorCode = (popupError as AuthError | undefined)?.code
-
-            if (
-                authErrorCode === 'auth/popup-blocked' ||
-                authErrorCode === 'auth/popup-closed-by-user' ||
-                authErrorCode === 'auth/cancelled-popup-request' ||
-                authErrorCode === 'auth/internal-error'
-            ) {
-                await signInWithRedirect(auth, provider)
-                return new Promise<AuthUser>(() => undefined)
-            }
-
             throw mapFirebaseAuthError(popupError)
         }
     },
@@ -110,17 +96,6 @@ export const authService = {
             localStorage.removeItem('sync-storage')
             localStorage.removeItem('ui-storage')
             window.location.reload()
-        }
-    },
-
-    async resolveRedirectSignIn(): Promise<AuthUser | null> {
-        const auth = getFirebaseAuthOrThrow()
-
-        try {
-            const result = await getRedirectResult(auth)
-            return toAuthUser(result?.user ?? null)
-        } catch (error) {
-            throw mapFirebaseAuthError(error)
         }
     },
 
