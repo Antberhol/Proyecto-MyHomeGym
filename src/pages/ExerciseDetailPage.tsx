@@ -112,21 +112,15 @@ export function ExerciseDetailPage() {
             </Button>
 
             <Card className="space-y-4">
-                {detail.data?.gifUrl ? (
-                    <img
-                        src={detail.data.gifUrl}
-                        alt={`GIF de ${exercise.nombre}`}
-                        className="h-64 w-full rounded-xl border border-slate-200 object-cover dark:border-slate-700"
-                        loading="lazy"
-                        onError={(event) => {
-                            event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
-                        }}
-                    />
-                ) : (
-                    <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                        No se encontró información detallada para este ejercicio
-                    </div>
-                )}
+                <img
+                    src={detail.data?.gifUrl || EXERCISE_GIF_PLACEHOLDER}
+                    alt={`GIF de ${exercise.nombre}`}
+                    className="h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 dark:border-slate-700 dark:bg-slate-800 md:h-96"
+                    loading="lazy"
+                    onError={(event) => {
+                        event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                    }}
+                />
 
                 <div>
                     <h1 className="text-2xl font-bold">{exercise.nombre}</h1>
@@ -135,17 +129,6 @@ export function ExerciseDetailPage() {
                             Alias EN: <span className="font-medium">{englishAlias}</span>
                         </p>
                     ) : null}
-                </div>
-
-                <div className="rounded-lg border border-dashed border-slate-300 p-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    <p className="font-semibold">Diagnóstico API (temporal)</p>
-                    <p>source: {detail.debug.source}</p>
-                    <p>alias usado: {englishAlias || 'n/a'}</p>
-                    <p>candidate usado: {detail.debug.usedCandidate || 'n/a'}</p>
-                    <p>exerciseDbId resuelto: {detail.debug.resolvedExerciseDbId || 'n/a'}</p>
-                    <p>exerciseDbName resuelto: {detail.debug.resolvedExerciseDbName || 'n/a'}</p>
-                    <p>gif validado: {detail.debug.gifValidated ? 'sí' : 'no'}</p>
-                    <p>error: {detail.debug.lastError || 'none'}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

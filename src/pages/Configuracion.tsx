@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton'
+import { Button } from '../components/design-system/Button'
 import { exportAllDataJson, exportSummaryPdf, exportTrainingsCsv, importAllDataJson, importTrainingsCsv } from '../lib/export'
+import { resyncExerciseGifMappings } from '../lib/bootstrap'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications'
 
@@ -11,6 +13,7 @@ async function clearAllData() {
 
 export function ConfiguracionPage() {
     const [statusMessage, setStatusMessage] = useState('')
+    const [isResyncingGifs, setIsResyncingGifs] = useState(false)
     const importCsvInputRef = useRef<HTMLInputElement>(null)
     const importJsonInputRef = useRef<HTMLInputElement>(null)
 
@@ -99,6 +102,24 @@ export function ConfiguracionPage() {
         }
     }
 
+    const handleResyncGifs = async () => {
+        try {
+            setIsResyncingGifs(true)
+            const result = await resyncExerciseGifMappings()
+
+            if (result.skipped) {
+                setStatusMessage('No se pudo resincronizar GIFs: falta la API key de ExerciseDB (VITE_EXERCISEDB_API_KEY).')
+                return
+            }
+
+            setStatusMessage(`Resincronización completada. Ejercicios revisados: ${result.scanned}. Actualizados con ID/GIF: ${result.updated}.`)
+        } catch (error) {
+            setStatusMessage(error instanceof Error ? error.message : 'No se pudo resincronizar los GIFs del catálogo.')
+        } finally {
+            setIsResyncingGifs(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Configuración</h1>
@@ -125,6 +146,18 @@ export function ConfiguracionPage() {
                 >
                     Borrar todos los datos locales
                 </button>
+
+                <div className="mt-3">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleResyncGifs()}
+                        disabled={isResyncingGifs}
+                    >
+                        {isResyncingGifs ? 'Resincronizando GIFs...' : 'Resincronizar GIFs del catálogo'}
+                    </Button>
+                </div>
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
