@@ -7,6 +7,17 @@ import {
 } from '../constants/exerciseDbAliases'
 import { db } from './db'
 
+const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+
+function buildExerciseDbRequestInit(apiKey: string): RequestInit {
+  return {
+    headers: {
+      'X-RapidAPI-Key': apiKey,
+      'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
+    },
+  }
+}
+
 interface ExerciseDbLookupItem {
   id?: string
   name?: string
@@ -83,7 +94,8 @@ async function resolveExerciseDbMatchByCandidates(
 ): Promise<ExerciseDbLookupItem | null> {
   for (const candidate of candidates) {
     const response = await fetch(
-      `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
+      `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/name/${encodeURIComponent(candidate)}`,
+      buildExerciseDbRequestInit(apiKey),
     )
 
     if (!response.ok) {

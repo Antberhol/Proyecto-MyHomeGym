@@ -27,6 +27,17 @@ interface UseExerciseGifOptions {
 
 const exerciseGifCache = new Map<string, ExerciseGifData>()
 let hasWarnedMissingExerciseDbKey = false
+const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+
+function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
+    return {
+        signal,
+        headers: {
+            'X-RapidAPI-Key': apiKey,
+            'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
+        },
+    }
+}
 
 export const EXERCISE_GIF_PLACEHOLDER =
     'data:image/svg+xml;utf8,' +
@@ -44,8 +55,8 @@ async function searchExerciseDbByCandidates(
 ): Promise<ExerciseDbItem | null> {
     for (const candidate of candidates) {
         const response = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
-            { signal },
+            `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/name/${encodeURIComponent(candidate)}`,
+            buildExerciseDbRequestInit(apiKey, signal),
         )
 
         if (!response.ok) {
@@ -90,8 +101,8 @@ async function searchExerciseDbById(
     signal: AbortSignal,
 ): Promise<ExerciseDbItem | null> {
     const response = await fetch(
-        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
-        { signal },
+        `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/exercise/${encodeURIComponent(exerciseDbId)}`,
+        buildExerciseDbRequestInit(apiKey, signal),
     )
 
     if (!response.ok) {

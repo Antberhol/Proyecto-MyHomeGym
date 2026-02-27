@@ -53,6 +53,17 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
+const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+
+function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
+    return {
+        signal,
+        headers: {
+            'X-RapidAPI-Key': apiKey,
+            'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
+        },
+    }
+}
 
 async function translateInstructionToSpanish(text: string, signal: AbortSignal): Promise<string> {
     const normalizedText = text.trim()
@@ -191,8 +202,8 @@ async function searchExerciseByCandidates(
 ): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
     for (const candidate of candidates) {
         const response = await fetch(
-            `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(candidate)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
-            { signal },
+            `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/name/${encodeURIComponent(candidate)}`,
+            buildExerciseDbRequestInit(apiKey, signal),
         )
 
         if (!response.ok) {
@@ -215,8 +226,8 @@ async function searchExerciseByCandidates(
 
 async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: AbortSignal): Promise<ExerciseDbItem | null> {
     const response = await fetch(
-        `https://exercisedb.p.rapidapi.com/exercises/exercise/${encodeURIComponent(exerciseDbId)}?rapidapi-key=${encodeURIComponent(apiKey)}`,
-        { signal },
+        `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/exercise/${encodeURIComponent(exerciseDbId)}`,
+        buildExerciseDbRequestInit(apiKey, signal),
     )
 
     if (!response.ok) {
