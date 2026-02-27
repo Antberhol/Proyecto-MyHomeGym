@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { StreakBadge } from '../components/StreakBadge'
 import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
@@ -10,6 +11,7 @@ import { formatWorkoutToCSV, formatWorkoutToText, type TrainingData } from '../u
 const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
 
 export function DashboardPage() {
+  const { t } = useTranslation()
   const streaks = useStreaks()
   const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
   const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
@@ -149,7 +151,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">{t('nav.dashboard')}</h1>
           <StreakBadge
             dayStreak={streaks.currentDayStreak}
             weekStreak={streaks.currentWeekStreak}

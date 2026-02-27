@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton'
 import { Button } from '../components/design-system/Button'
 import { useLanguage } from '../context/useLanguage'
@@ -13,6 +14,7 @@ async function clearAllData() {
 }
 
 export function ConfiguracionPage() {
+    const { t } = useTranslation()
     const { currentLanguage, changeLanguage } = useLanguage()
     const [statusMessage, setStatusMessage] = useState('')
     const [isResyncingGifs, setIsResyncingGifs] = useState(false)
@@ -124,26 +126,26 @@ export function ConfiguracionPage() {
 
     const handleChangeLanguage = async (lang: 'es' | 'en') => {
         await changeLanguage(lang)
-        setStatusMessage(lang === 'es' ? 'Idioma cambiado a Español.' : 'Language changed to English.')
+        setStatusMessage(t(lang === 'es' ? 'settings.languageChangedEs' : 'settings.languageChangedEn'))
     }
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Configuración</h1>
+            <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Cuenta y nube</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.accountCloudTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Inicia sesión para activar backup y sincronización entre dispositivos. La app sigue funcionando offline.
+                    {t('settings.accountCloudDescription')}
                 </p>
 
                 <GoogleLoginButton />
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Mantenimiento local</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.localMaintenanceTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Herramientas para reiniciar la aplicación y gestionar datos offline.
+                    {t('settings.localMaintenanceDescription')}
                 </p>
 
                 <button
@@ -151,7 +153,7 @@ export function ConfiguracionPage() {
                     onClick={() => void handleClearData()}
                     className="rounded-lg border border-red-400 px-4 py-2 text-sm font-semibold text-red-600"
                 >
-                    Borrar todos los datos locales
+                    {t('settings.clearLocalData')}
                 </button>
 
                 <div className="mt-3">
@@ -162,15 +164,15 @@ export function ConfiguracionPage() {
                         onClick={() => void handleResyncGifs()}
                         disabled={isResyncingGifs}
                     >
-                        {isResyncingGifs ? 'Resincronizando GIFs...' : 'Resincronizar GIFs del catálogo'}
+                        {isResyncingGifs ? t('settings.resyncingGifs') : t('settings.resyncGifs')}
                     </Button>
                 </div>
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Idioma / Language</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.languageTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Idioma actual: <span className="font-medium">{currentLanguage === 'es' ? 'Español' : 'English'}</span>
+                    {t('settings.currentLanguage')}: <span className="font-medium">{currentLanguage === 'es' ? t('settings.spanish') : t('settings.english')}</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
                     <Button
@@ -181,7 +183,7 @@ export function ConfiguracionPage() {
                             void handleChangeLanguage('es')
                         }}
                     >
-                        🇪🇸 Español
+                        🇪🇸 {t('settings.spanish')}
                     </Button>
                     <Button
                         type="button"
@@ -191,15 +193,15 @@ export function ConfiguracionPage() {
                             void handleChangeLanguage('en')
                         }}
                     >
-                        🇬🇧 English
+                        🇬🇧 {t('settings.english')}
                     </Button>
                 </div>
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Notificaciones</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.notificationsTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Activa recordatorios locales para no perder constancia de entrenamientos.
+                    {t('settings.notificationsDescription')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -207,22 +209,22 @@ export function ConfiguracionPage() {
                         onClick={() => void handleEnableNotifications()}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Habilitar notificaciones
+                        {t('settings.enableNotifications')}
                     </button>
                     <button
                         type="button"
                         onClick={handleTestNotification}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Enviar prueba
+                        {t('settings.sendTest')}
                     </button>
                 </div>
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Backup completo (JSON)</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.backupJsonTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Exporta e importa todos los datos de la app en formato JSON (rutinas, entrenamientos, PRs, medidas, etc.).
+                    {t('settings.backupJsonDescription')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -230,14 +232,14 @@ export function ConfiguracionPage() {
                         onClick={() => void handleExportJson()}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Exportar backup JSON
+                        {t('settings.exportBackupJson')}
                     </button>
                     <button
                         type="button"
                         onClick={handleOpenImportJson}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Importar backup JSON
+                        {t('settings.importBackupJson')}
                     </button>
                 </div>
                 <input
@@ -250,23 +252,23 @@ export function ConfiguracionPage() {
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Resumen PDF</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.pdfSummaryTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Genera un PDF con el resumen de tu progreso: perfil, entrenamientos, PRs y medidas corporales.
+                    {t('settings.pdfSummaryDescription')}
                 </p>
                 <button
                     type="button"
                     onClick={() => void handleExportPdf()}
                     className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                 >
-                    Generar resumen PDF
+                    {t('settings.generatePdfSummary')}
                 </button>
             </section>
 
             <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-                <h2 className="mb-2 text-lg font-semibold">Exportación CSV</h2>
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.csvExportTitle')}</h2>
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
-                    Exporta e importa entrenamientos en CSV para análisis externo.
+                    {t('settings.csvExportDescription')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -274,14 +276,14 @@ export function ConfiguracionPage() {
                         onClick={() => void handleExportCsv()}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Exportar entrenamientos CSV
+                        {t('settings.exportTrainingsCsv')}
                     </button>
                     <button
                         type="button"
                         onClick={handleOpenImportCsv}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
                     >
-                        Importar entrenamientos CSV
+                        {t('settings.importTrainingsCsv')}
                     </button>
                 </div>
                 <input
