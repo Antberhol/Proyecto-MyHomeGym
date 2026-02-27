@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton'
 import { Button } from '../components/design-system/Button'
+import { useLanguage } from '../context/useLanguage'
 import { exportAllDataJson, exportSummaryPdf, exportTrainingsCsv, importAllDataJson, importTrainingsCsv } from '../lib/export'
 import { resyncExerciseGifMappings } from '../lib/bootstrap'
 import { settingsRepository } from '../repositories/settingsRepository'
@@ -12,6 +13,7 @@ async function clearAllData() {
 }
 
 export function ConfiguracionPage() {
+    const { currentLanguage, changeLanguage } = useLanguage()
     const [statusMessage, setStatusMessage] = useState('')
     const [isResyncingGifs, setIsResyncingGifs] = useState(false)
     const importCsvInputRef = useRef<HTMLInputElement>(null)
@@ -120,6 +122,11 @@ export function ConfiguracionPage() {
         }
     }
 
+    const handleChangeLanguage = async (lang: 'es' | 'en') => {
+        await changeLanguage(lang)
+        setStatusMessage(lang === 'es' ? 'Idioma cambiado a Español.' : 'Language changed to English.')
+    }
+
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Configuración</h1>
@@ -156,6 +163,35 @@ export function ConfiguracionPage() {
                         disabled={isResyncingGifs}
                     >
                         {isResyncingGifs ? 'Resincronizando GIFs...' : 'Resincronizar GIFs del catálogo'}
+                    </Button>
+                </div>
+            </section>
+
+            <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+                <h2 className="mb-2 text-lg font-semibold">Idioma / Language</h2>
+                <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
+                    Idioma actual: <span className="font-medium">{currentLanguage === 'es' ? 'Español' : 'English'}</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        type="button"
+                        variant={currentLanguage === 'es' ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                            void handleChangeLanguage('es')
+                        }}
+                    >
+                        🇪🇸 Español
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={currentLanguage === 'en' ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                            void handleChangeLanguage('en')
+                        }}
+                    >
+                        🇬🇧 English
                     </Button>
                 </div>
             </section>

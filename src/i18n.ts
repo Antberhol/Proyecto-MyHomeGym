@@ -9,15 +9,15 @@ const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
 const initialLanguage = storedLanguage === 'en' || storedLanguage === 'es' ? storedLanguage : 'es'
 
 i18n.use(initReactI18next).init({
-  resources: {
-    en: { translation: en },
-    es: { translation: es },
-  },
-  lng: initialLanguage,
-  fallbackLng: 'es',
-  interpolation: {
-    escapeValue: false,
-  },
+    resources: {
+        en: { translation: en },
+        es: { translation: es },
+    },
+    lng: initialLanguage,
+    fallbackLng: 'es',
+    interpolation: {
+        escapeValue: false,
+    },
 })
 
 export default i18n

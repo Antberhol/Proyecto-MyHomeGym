@@ -1,46 +1,46 @@
 {
-  "languageSelection": {
-    "title": "Choose your language",
-    "subtitle": "Select the main language for the app"
-  },
-  "auth": {
-    "chooseEntry": "Choose how to enter: with Google for cloud sync or as a guest without cloud sync.",
-    "continueAsGuest": "Continue as guest (without cloud sync)",
-    "googleUser": "Google user",
-    "authenticatedUser": "Authenticated user",
-    "logout": "Log out",
-    "connecting": "Connecting...",
-    "loginWithGoogle": "Sign in with Google",
-    "firebaseConfigMissing": "Configure VITE_FIREBASE_* to enable login (locally and in GitHub Actions Secrets/Variables)."
-  },
-  "common": {
-    "menu": "Menu",
-    "backToCatalog": "← Back to catalog",
-    "notFoundDetailedInfo": "Detailed information was not found for this exercise",
-    "translating": "Translating..."
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "train": "Train",
-    "routines": "Routines",
-    "catalog": "Catalog",
-    "progress": "Progress",
-    "profile": "Profile",
-    "settings": "Settings",
-    "home": "Home"
-  },
-  "sync": {
-    "noCloud": "No cloud",
-    "offline": "Offline",
-    "syncing": "Syncing...",
-    "error": "Sync error",
-    "synced": "Synced"
-  },
-  "exerciseDetail": {
-    "alias": "EN alias",
-    "target": "Target muscle",
-    "equipment": "Equipment",
-    "secondaryMuscles": "Secondary muscles",
-    "instructions": "Step-by-step instructions"
-  }
+    "languageSelection": {
+        "title": "Choose your language",
+        "subtitle": "Select the main language for the app"
+    },
+    "auth": {
+        "chooseEntry": "Choose how to enter: with Google for cloud sync or as a guest without cloud sync.",
+        "continueAsGuest": "Continue as guest (without cloud sync)",
+        "googleUser": "Google user",
+        "authenticatedUser": "Authenticated user",
+        "logout": "Log out",
+        "connecting": "Connecting...",
+        "loginWithGoogle": "Sign in with Google",
+        "firebaseConfigMissing": "Configure VITE_FIREBASE_* to enable login (locally and in GitHub Actions Secrets/Variables)."
+    },
+    "common": {
+        "menu": "Menu",
+        "backToCatalog": "← Back to catalog",
+        "notFoundDetailedInfo": "Detailed information was not found for this exercise",
+        "translating": "Translating..."
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "train": "Train",
+        "routines": "Routines",
+        "catalog": "Catalog",
+        "progress": "Progress",
+        "profile": "Profile",
+        "settings": "Settings",
+        "home": "Home"
+    },
+    "sync": {
+        "noCloud": "No cloud",
+        "offline": "Offline",
+        "syncing": "Syncing...",
+        "error": "Sync error",
+        "synced": "Synced"
+    },
+    "exerciseDetail": {
+        "alias": "EN alias",
+        "target": "Target muscle",
+        "equipment": "Equipment",
+        "secondaryMuscles": "Secondary muscles",
+        "instructions": "Step-by-step instructions"
+    }
 }
