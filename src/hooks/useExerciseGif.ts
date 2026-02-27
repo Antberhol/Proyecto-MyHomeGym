@@ -121,8 +121,12 @@ function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string): string {
+function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string, fallbackExerciseDbId?: string): string {
     if (!item) {
+        if (fallbackExerciseDbId?.trim()) {
+            return buildExerciseGifUrl(fallbackExerciseDbId, apiKey)
+        }
+
         return EXERCISE_GIF_PLACEHOLDER
     }
 
@@ -211,7 +215,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 const firstResult = byId ?? (await searchExerciseDbByCandidates(candidates, apiKey, controller.signal))
 
                 const resolved: ExerciseGifData = {
-                    gifUrl: resolveExerciseGifUrl(firstResult, apiKey),
+                    gifUrl: resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId),
                     targetMuscle: firstResult?.target || '',
                     resolvedExerciseDbId: firstResult?.id,
                     resolvedExerciseDbName: firstResult?.name,
@@ -221,8 +225,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 setState({ ...resolved, isLoading: false })
             } catch {
                 if (!controller.signal.aborted) {
+                    const fallbackGifUrl = exerciseDbId?.trim()
+                        ? buildExerciseGifUrl(exerciseDbId, apiKey)
+                        : EXERCISE_GIF_PLACEHOLDER
+
                     const fallback = {
-                        gifUrl: EXERCISE_GIF_PLACEHOLDER,
+                        gifUrl: fallbackGifUrl,
                         targetMuscle: '',
                         resolvedExerciseDbId: undefined,
                         resolvedExerciseDbName: undefined,

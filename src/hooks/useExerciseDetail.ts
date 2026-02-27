@@ -301,6 +301,37 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 const bestMatch = byId ?? byCandidate?.item ?? null
 
                 if (!bestMatch?.id) {
+                    if (exerciseDbId?.trim()) {
+                        const fallbackData: ExerciseDetailData = {
+                            gifUrl: buildExerciseGifUrl(exerciseDbId, apiKey),
+                            target: '',
+                            equipment: '',
+                            instructions: [],
+                            secondaryMuscles: [],
+                        }
+
+                        const fallbackEntry: CachedDetailEntry = {
+                            data: fallbackData,
+                            notFound: false,
+                            debug: {
+                                source: 'id',
+                                resolvedExerciseDbId: exerciseDbId,
+                                candidatesTried: candidates,
+                                gifValidated: true,
+                            },
+                        }
+
+                        detailCache.set(cacheKey, fallbackEntry)
+                        setState({
+                            data: fallbackData,
+                            isLoading: false,
+                            isTranslatingInstructions: false,
+                            notFound: false,
+                            debug: fallbackEntry.debug,
+                        })
+                        return
+                    }
+
                     const notFoundEntry: CachedDetailEntry = {
                         data: null,
                         notFound: true,
