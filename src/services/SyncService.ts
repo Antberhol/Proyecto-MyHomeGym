@@ -21,6 +21,24 @@ interface PendingTrainingPayload {
     trainingId: string
 }
 
+function sanitizeFirestoreValue<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => sanitizeFirestoreValue(item))
+            .filter((item) => item !== undefined) as T
+    }
+
+    if (value && typeof value === 'object') {
+        const entries = Object.entries(value as Record<string, unknown>)
+            .filter(([, entryValue]) => entryValue !== undefined)
+            .map(([key, entryValue]) => [key, sanitizeFirestoreValue(entryValue)])
+
+        return Object.fromEntries(entries) as T
+    }
+
+    return value
+}
+
 const INITIAL_SYNC_KEY_PREFIX = 'myhomegym-cloud-initial-sync:'
 
 class SyncService {
@@ -165,13 +183,14 @@ class SyncService {
 
         const backupRef = doc(firebaseFirestore, 'users', this.user.uid, 'meta', 'backup')
         const currentData = await db.exportAllData()
+        const sanitizedBackupDoc = sanitizeFirestoreValue({
+            updatedAt: new Date().toISOString(),
+            data: currentData,
+        } satisfies CloudBackupDoc)
 
         await setDoc(
             backupRef,
-            {
-                updatedAt: new Date().toISOString(),
-                data: currentData,
-            } satisfies CloudBackupDoc,
+            sanitizedBackupDoc,
             { merge: true },
         )
     }
@@ -226,14 +245,15 @@ class SyncService {
         )
 
         const trainingRef = doc(firebaseFirestore, 'users', this.user.uid, 'trainings', trainingId)
+        const sanitizedTrainingPayload = sanitizeFirestoreValue({
+            training,
+            performed,
+            uploadedAt: new Date().toISOString(),
+        } satisfies CloudTrainingPayload)
 
         await setDoc(
             trainingRef,
-            {
-                training,
-                performed,
-                uploadedAt: new Date().toISOString(),
-            } satisfies CloudTrainingPayload,
+            sanitizedTrainingPayload,
             { merge: true },
         )
 
