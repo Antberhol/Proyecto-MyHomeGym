@@ -11,33 +11,24 @@ import {
   UserCircle,
   Workflow,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
+import { useLanguage } from '../../context/useLanguage'
 import { SyncStatusIndicator } from '../sync/SyncStatusIndicator'
 import { useUiStore } from '../../stores/ui-store'
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/entrenar', label: 'Entrenar', icon: Dumbbell },
-  { to: '/rutinas', label: 'Rutinas', icon: Workflow },
-  { to: '/catalogo', label: 'Catálogo', icon: BookOpen },
-  { to: '/progreso', label: 'Progreso', icon: Activity },
-  { to: '/perfil', label: 'Perfil', icon: UserCircle },
-  { to: '/configuracion', label: 'Config', icon: Settings },
-]
-
-const mobileNavItems = [
-  { to: '/', label: 'Inicio', icon: Home },
-  { to: '/entrenar', label: 'Entrenar', icon: Dumbbell },
-  { to: '/rutinas', label: 'Rutinas', icon: List },
-  { to: '/perfil', label: 'Perfil', icon: User },
-]
+interface NavEntry {
+  to: string
+  label: string
+  icon: typeof LayoutDashboard
+}
 
 function NavItem({
   to,
   label,
   icon: Icon,
   isExpanded,
-}: (typeof navItems)[number] & { isExpanded: boolean }) {
+}: NavEntry & { isExpanded: boolean }) {
   return (
     <NavLink
       to={to}
@@ -61,8 +52,27 @@ function NavItem({
 }
 
 export function AppShell() {
+  const { t } = useTranslation()
+  const { currentLanguage, changeLanguage } = useLanguage()
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useUiStore((state) => state.toggleSidebar)
+
+  const navItems: NavEntry[] = [
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/entrenar', label: t('nav.train'), icon: Dumbbell },
+    { to: '/rutinas', label: t('nav.routines'), icon: Workflow },
+    { to: '/catalogo', label: t('nav.catalog'), icon: BookOpen },
+    { to: '/progreso', label: t('nav.progress'), icon: Activity },
+    { to: '/perfil', label: t('nav.profile'), icon: UserCircle },
+    { to: '/configuracion', label: t('nav.settings'), icon: Settings },
+  ]
+
+  const mobileNavItems: NavEntry[] = [
+    { to: '/', label: t('nav.home'), icon: Home },
+    { to: '/entrenar', label: t('nav.train'), icon: Dumbbell },
+    { to: '/rutinas', label: t('nav.routines'), icon: List },
+    { to: '/perfil', label: t('nav.profile'), icon: User },
+  ]
 
   return (
     <div className="min-h-[100dvh] bg-gym-bgLight dark:bg-gym-bgDark dark:text-white">
@@ -83,7 +93,7 @@ export function AppShell() {
               className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'max-w-0 opacity-0' : 'max-w-[6rem] opacity-100'
                 }`}
             >
-              Menú
+              {t('common.menu')}
             </span>
           </button>
           <nav aria-label="Navegación principal" className="space-y-2">
@@ -94,7 +104,16 @@ export function AppShell() {
         </aside>
 
         <main className="app-main-content flex-1 overflow-y-auto p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void changeLanguage(currentLanguage === 'es' ? 'en' : 'es')
+              }}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-600"
+            >
+              {currentLanguage === 'es' ? 'EN' : 'ES'}
+            </button>
             <SyncStatusIndicator />
           </div>
           <Outlet />

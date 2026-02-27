@@ -1,0 +1,46 @@
+{
+  "languageSelection": {
+    "title": "Selecciona tu idioma",
+    "subtitle": "Elige el idioma principal de la app"
+  },
+  "auth": {
+    "chooseEntry": "Elige cómo quieres entrar: con Google para sincronizar en la nube o como invitado sin sincronización.",
+    "continueAsGuest": "Entrar como invitado (sin sincronización en la nube)",
+    "googleUser": "Usuario de Google",
+    "authenticatedUser": "Usuario autenticado",
+    "logout": "Cerrar sesión",
+    "connecting": "Conectando...",
+    "loginWithGoogle": "Iniciar sesión con Google",
+    "firebaseConfigMissing": "Configura VITE_FIREBASE_* para habilitar el login (en local y en GitHub Actions Secrets/Variables)."
+  },
+  "common": {
+    "menu": "Menú",
+    "backToCatalog": "← Volver al catálogo",
+    "notFoundDetailedInfo": "No se encontró información detallada para este ejercicio",
+    "translating": "Traduciendo..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "train": "Entrenar",
+    "routines": "Rutinas",
+    "catalog": "Catálogo",
+    "progress": "Progreso",
+    "profile": "Perfil",
+    "settings": "Config",
+    "home": "Inicio"
+  },
+  "sync": {
+    "noCloud": "Sin nube",
+    "offline": "Offline",
+    "syncing": "Sincronizando...",
+    "error": "Error de sync",
+    "synced": "Sincronizado"
+  },
+  "exerciseDetail": {
+    "alias": "Alias EN",
+    "target": "Músculo objetivo",
+    "equipment": "Equipo",
+    "secondaryMuscles": "Músculos secundarios",
+    "instructions": "Instrucciones paso a paso"
+  }
+}

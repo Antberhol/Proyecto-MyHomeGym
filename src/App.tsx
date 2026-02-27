@@ -1,11 +1,14 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTranslation } from 'react-i18next'
 import { GoogleLoginButton } from './components/auth/GoogleLoginButton'
 import { Button } from './components/design-system/Button'
 import { AppShell } from './components/layout/AppShell'
 import { ReloadPrompt } from './components/pwa/ReloadPrompt'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
+import { useLanguage } from './context/useLanguage'
+import { LANGUAGE_STORAGE_KEY } from './i18n'
 import { bootstrapDatabase } from './lib/bootstrap'
 import { profileRepository } from './repositories/profileRepository'
 import { authService } from './services/authService'
@@ -46,6 +49,8 @@ function AppRouter() {
 }
 
 function App() {
+  const { t } = useTranslation()
+  const { changeLanguage } = useLanguage()
   const profileQuery = useLiveQuery(async () => {
     const result = await profileRepository.getProfile()
     return result ?? null
@@ -56,6 +61,18 @@ function App() {
   const isAuthReady = useAuthStore((state) => state.isAuthReady)
   const enterAsGuest = useAuthStore((state) => state.enterAsGuest)
   const setUser = useAuthStore((state) => state.setUser)
+  const [hasSelectedLanguage, setHasSelectedLanguage] = useState(() => {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    return stored === 'es' || stored === 'en'
+  })
+
+  const languageButtons = useMemo(
+    () => [
+      { code: 'es' as const, label: 'Español', flag: '🇪🇸' },
+      { code: 'en' as const, label: 'English', flag: '🇬🇧' },
+    ],
+    [],
+  )
 
   useEffect(() => {
     void bootstrapDatabase()
@@ -82,6 +99,33 @@ function App() {
     root.classList.toggle('dark', shouldUseDark)
   }, [theme])
 
+  if (!hasSelectedLanguage) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-gym-bgLight p-4 dark:bg-gym-bgDark dark:text-white">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow dark:bg-gym-cardDark">
+          <h1 className="text-2xl font-bold">{t('languageSelection.title')}</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t('languageSelection.subtitle')}</p>
+          <div className="mt-5 grid grid-cols-1 gap-3">
+            {languageButtons.map((option) => (
+              <button
+                key={option.code}
+                type="button"
+                className="flex items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-4 text-lg font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                onClick={() => {
+                  void changeLanguage(option.code)
+                  setHasSelectedLanguage(true)
+                }}
+              >
+                <span aria-hidden="true" className="text-2xl">{option.flag}</span>
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!isAuthReady) {
     return <LoadingSpinner />
   }
@@ -92,7 +136,7 @@ function App() {
         <div className="mx-auto mt-16 w-full max-w-md rounded-2xl bg-white p-6 shadow dark:bg-gym-cardDark">
           <h1 className="text-2xl font-bold">MyHomeGym</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Elige cómo quieres entrar: con Google para sincronizar en la nube o como invitado sin sincronización.
+            {t('auth.chooseEntry')}
           </p>
           <div className="mt-4 space-y-3">
             <GoogleLoginButton />
@@ -103,7 +147,7 @@ function App() {
               fullWidth
               onClick={enterAsGuest}
             >
-              Entrar como invitado (sin sincronización en la nube)
+              {t('auth.continueAsGuest')}
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
@@ -26,6 +27,7 @@ function ExerciseDetailSkeleton() {
 }
 
 export function ExerciseDetailPage() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const { id } = useParams<{ id: string }>()
 
@@ -92,7 +94,7 @@ export function ExerciseDetailPage() {
         return (
             <div className="space-y-4">
                 <Button variant="secondary" size="sm" onClick={() => navigate('/catalogo')}>
-                    ← Volver al catálogo
+                    {t('common.backToCatalog')}
                 </Button>
                 <Card>
                     <p className="text-sm text-slate-600 dark:text-slate-300">{catalogError}</p>
@@ -108,7 +110,7 @@ export function ExerciseDetailPage() {
     return (
         <div className="space-y-4">
             <Button variant="secondary" size="sm" onClick={() => navigate('/catalogo')}>
-                ← Volver al catálogo
+                {t('common.backToCatalog')}
             </Button>
 
             <Card className="space-y-4">
@@ -126,25 +128,25 @@ export function ExerciseDetailPage() {
                     <h1 className="text-2xl font-bold">{exercise.nombre}</h1>
                     {englishAlias ? (
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                            Alias EN: <span className="font-medium">{englishAlias}</span>
+                            {t('exerciseDetail.alias')}: <span className="font-medium">{englishAlias}</span>
                         </p>
                     ) : null}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Músculo objetivo</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{t('exerciseDetail.target')}</p>
                         <p className="mt-1 text-sm font-medium">{detail.data?.target || exercise.grupoMuscularPrimario}</p>
                     </div>
 
                     <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Equipo</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{t('exerciseDetail.equipment')}</p>
                         <p className="mt-1 text-sm font-medium">{detail.data?.equipment || exercise.equipoNecesario}</p>
                     </div>
                 </div>
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">Músculos secundarios</h2>
+                    <h2 className="text-lg font-semibold">{t('exerciseDetail.secondaryMuscles')}</h2>
                     {detail.data && detail.data.secondaryMuscles.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                             {detail.data.secondaryMuscles.map((muscle) => (
@@ -154,12 +156,15 @@ export function ExerciseDetailPage() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-sm text-slate-600 dark:text-slate-300">No se encontró información detallada para este ejercicio</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{t('common.notFoundDetailedInfo')}</p>
                     )}
                 </section>
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">Instrucciones paso a paso</h2>
+                    <h2 className="text-lg font-semibold">{t('exerciseDetail.instructions')}</h2>
+                    {detail.isTranslatingInstructions ? (
+                        <p className="text-xs text-slate-500 dark:text-slate-300">{t('common.translating')}</p>
+                    ) : null}
                     {detail.data && detail.data.instructions.length > 0 ? (
                         <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700 dark:text-slate-200">
                             {detail.data.instructions.map((instruction, index) => (
@@ -167,7 +172,7 @@ export function ExerciseDetailPage() {
                             ))}
                         </ol>
                     ) : (
-                        <p className="text-sm text-slate-600 dark:text-slate-300">No se encontró información detallada para este ejercicio</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{t('common.notFoundDetailedInfo')}</p>
                     )}
                 </section>
             </Card>

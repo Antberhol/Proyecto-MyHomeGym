@@ -1,8 +1,10 @@
 import { Button } from '../design-system/Button'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../stores/auth-store'
 import { authService } from '../../services/authService'
 
 export function GoogleLoginButton() {
+    const { t } = useTranslation()
     const user = useAuthStore((state) => state.user)
     const isAuthLoading = useAuthStore((state) => state.isAuthLoading)
     const authError = useAuthStore((state) => state.authError)
@@ -17,12 +19,12 @@ export function GoogleLoginButton() {
                     {user.photoURL && (
                         <img
                             src={user.photoURL}
-                            alt={user.displayName ?? user.email ?? 'Usuario de Google'}
+                            alt={user.displayName ?? user.email ?? t('auth.googleUser')}
                             className="h-8 w-8 rounded-full"
                         />
                     )}
                     <p className="text-sm text-slate-700 dark:text-slate-200">
-                        {user.displayName ?? user.email ?? 'Usuario autenticado'}
+                        {user.displayName ?? user.email ?? t('auth.authenticatedUser')}
                     </p>
                     <Button
                         type="button"
@@ -31,7 +33,7 @@ export function GoogleLoginButton() {
                         onClick={() => void logout()}
                         disabled={isAuthLoading}
                     >
-                        Cerrar sesión
+                        {t('auth.logout')}
                     </Button>
                 </div>
             ) : (
@@ -42,14 +44,14 @@ export function GoogleLoginButton() {
                     onClick={() => void loginWithGoogle()}
                     disabled={isAuthLoading || !isFirebaseReady}
                 >
-                    {isAuthLoading ? 'Conectando...' : 'Iniciar sesión con Google'}
+                    {isAuthLoading ? t('auth.connecting') : t('auth.loginWithGoogle')}
                 </Button>
             )}
 
             {authError && <p className="text-sm text-red-600">{authError}</p>}
             {!isFirebaseReady && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Configura VITE_FIREBASE_* para habilitar el login (en local y en GitHub Actions Secrets/Variables).
+                    {t('auth.firebaseConfigMissing')}
                 </p>
             )}
         </div>

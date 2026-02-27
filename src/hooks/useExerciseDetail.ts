@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
+import i18n from '../i18n'
 
 export interface ExerciseDetailData {
     gifUrl: string
@@ -31,6 +32,7 @@ interface ExerciseDbItem {
 interface UseExerciseDetailResult {
     data: ExerciseDetailData | null
     isLoading: boolean
+    isTranslatingInstructions: boolean
     notFound: boolean
     debug: ExerciseDetailDebugInfo
 }
@@ -49,6 +51,75 @@ interface CachedDetailEntry {
 
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifObjectUrlCache = new Map<string, string>()
+const translatedInstructionCache = new Map<string, string>()
+
+async function translateInstructionToSpanish(text: string, signal: AbortSignal): Promise<string> {
+    const normalizedText = text.trim()
+    if (!normalizedText) {
+        return text
+    }
+
+    const cacheKey = `es|${normalizedText}`
+    const cached = translatedInstructionCache.get(cacheKey)
+    if (cached) {
+        return cached
+    }
+
+    const timeoutController = new AbortController()
+    const abortTimeout = window.setTimeout(() => timeoutController.abort(), 5000)
+    const relayAbort = () => timeoutController.abort()
+    signal.addEventListener('abort', relayAbort, { once: true })
+
+    try {
+        const response = await fetch('https://libretranslate.com/translate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                q: normalizedText,
+                source: 'en',
+                target: 'es',
+                format: 'text',
+            }),
+            signal: timeoutController.signal,
+        })
+
+        if (!response.ok) {
+            return text
+        }
+
+        const payload = (await response.json()) as { translatedText?: string }
+        const translated = payload.translatedText?.trim()
+        if (!translated) {
+            return text
+        }
+
+        translatedInstructionCache.set(cacheKey, translated)
+        return translated
+    } catch {
+        return text
+    } finally {
+        clearTimeout(abortTimeout)
+        signal.removeEventListener('abort', relayAbort)
+    }
+}
+
+async function maybeTranslateInstructions(
+    instructions: string[],
+    language: 'es' | 'en',
+    signal: AbortSignal,
+): Promise<string[]> {
+    if (language !== 'es' || instructions.length === 0) {
+        return instructions
+    }
+
+    const translated = await Promise.all(
+        instructions.map((instruction) => translateInstructionToSpanish(instruction, signal)),
+    )
+
+    return translated
+}
 
 async function hasWorkingGif(exerciseId: string, apiKey: string, signal: AbortSignal): Promise<boolean> {
     const objectUrl = await fetchGifObjectUrl(exerciseId, apiKey, signal)
@@ -203,17 +274,19 @@ async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: 
 
 export function useExerciseDetail(exerciseName: string, options?: UseExerciseDetailOptions): UseExerciseDetailResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
+    const currentLanguage = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
-    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}`
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}`
     const cached = normalizedName ? detailCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && apiKey && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
         data: null,
         isLoading: false,
+        isTranslatingInstructions: false,
         notFound: false,
         debug: {
             source: 'none',
@@ -239,6 +312,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             setState({
                 data: null,
                 isLoading: true,
+                isTranslatingInstructions: false,
                 notFound: false,
                 debug: {
                     source: 'none',
@@ -267,16 +341,37 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         },
                     }
                     detailCache.set(cacheKey, notFoundEntry)
-                    setState({ data: null, isLoading: false, notFound: true, debug: notFoundEntry.debug })
+                    setState({ data: null, isLoading: false, isTranslatingInstructions: false, notFound: true, debug: notFoundEntry.debug })
                     return
                 }
 
+                const rawInstructions = Array.isArray(bestMatch.instructions) ? bestMatch.instructions : []
                 const detailData: ExerciseDetailData = {
                     gifUrl: (await fetchGifObjectUrl(bestMatch.id, apiKey, controller.signal)) ?? '',
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
-                    instructions: Array.isArray(bestMatch.instructions) ? bestMatch.instructions : [],
+                    instructions: rawInstructions,
                     secondaryMuscles: Array.isArray(bestMatch.secondaryMuscles) ? bestMatch.secondaryMuscles : [],
+                }
+
+                if (currentLanguage === 'es' && rawInstructions.length > 0) {
+                    setState({
+                        data: detailData,
+                        isLoading: false,
+                        isTranslatingInstructions: true,
+                        notFound: false,
+                        debug: {
+                            source: byId ? 'id' : 'candidate',
+                            resolvedExerciseDbId: bestMatch.id,
+                            resolvedExerciseDbName: bestMatch.name,
+                            usedCandidate: byCandidate?.usedCandidate,
+                            candidatesTried: candidates,
+                            gifValidated: Boolean(detailData.gifUrl),
+                            lastError: detailData.gifUrl ? undefined : 'gif_fetch_failed',
+                        },
+                    })
+
+                    detailData.instructions = await maybeTranslateInstructions(rawInstructions, currentLanguage, controller.signal)
                 }
 
                 const successEntry: CachedDetailEntry = {
@@ -294,7 +389,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 }
 
                 detailCache.set(cacheKey, successEntry)
-                setState({ data: detailData, isLoading: false, notFound: false, debug: successEntry.debug })
+                setState({ data: detailData, isLoading: false, isTranslatingInstructions: false, notFound: false, debug: successEntry.debug })
             } catch {
                 if (!controller.signal.aborted) {
                     const errorEntry: CachedDetailEntry = {
@@ -312,7 +407,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         },
                     }
                     detailCache.set(cacheKey, errorEntry)
-                    setState({ data: null, isLoading: false, notFound: true, debug: errorEntry.debug })
+                    setState({ data: null, isLoading: false, isTranslatingInstructions: false, notFound: true, debug: errorEntry.debug })
                 }
             }
         }
@@ -322,12 +417,13 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         return () => {
             controller.abort()
         }
-    }, [aliasSignature, apiKey, cacheKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
+    }, [aliasSignature, apiKey, cacheKey, currentLanguage, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
     if (!normalizedName || !apiKey) {
         return {
             data: null,
             isLoading: false,
+            isTranslatingInstructions: false,
             notFound: false,
             debug: {
                 source: 'none',
@@ -342,6 +438,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         return {
             data: cached.data,
             isLoading: false,
+            isTranslatingInstructions: false,
             notFound: cached.notFound,
             debug: {
                 ...cached.debug,
