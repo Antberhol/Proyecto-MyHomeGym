@@ -3,6 +3,7 @@ import {
     type Auth,
     GoogleAuthProvider,
     browserLocalPersistence,
+    getRedirectResult,
     signInWithRedirect,
     onAuthStateChanged,
     setPersistence,
@@ -74,19 +75,26 @@ export const authService = {
         provider.setCustomParameters({ prompt: 'select_account' })
 
         try {
-            const result = await signInWithPopup(auth, provider)
-            return toAuthUser(result.user) as AuthUser
+            await signInWithRedirect(auth, provider)
+            return new Promise<AuthUser>(() => undefined)
         } catch (error) {
-            const authErrorCode = (error as AuthError | undefined)?.code
+            try {
+                const result = await signInWithPopup(auth, provider)
+                return toAuthUser(result.user) as AuthUser
+            } catch (popupError) {
+                const authErrorCode = (popupError as AuthError | undefined)?.code
 
-            if (
-                authErrorCode === 'auth/popup-blocked' ||
-                authErrorCode === 'auth/popup-closed-by-user' ||
-                authErrorCode === 'auth/cancelled-popup-request' ||
-                authErrorCode === 'auth/internal-error'
-            ) {
-                await signInWithRedirect(auth, provider)
-                return new Promise<AuthUser>(() => undefined)
+                if (
+                    authErrorCode === 'auth/popup-blocked' ||
+                    authErrorCode === 'auth/popup-closed-by-user' ||
+                    authErrorCode === 'auth/cancelled-popup-request' ||
+                    authErrorCode === 'auth/internal-error'
+                ) {
+                    await signInWithRedirect(auth, provider)
+                    return new Promise<AuthUser>(() => undefined)
+                }
+
+                throw mapFirebaseAuthError(popupError)
             }
 
             throw mapFirebaseAuthError(error)
@@ -117,6 +125,10 @@ export const authService = {
             callback(null)
             return () => undefined
         }
+
+        void getRedirectResult(firebaseAuth).catch((error: unknown) => {
+            console.error('Google redirect auth error:', error)
+        })
 
         return onAuthStateChanged(firebaseAuth, (user) => {
             callback(toAuthUser(user))
