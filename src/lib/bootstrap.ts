@@ -17,6 +17,43 @@ interface ExerciseDbBackfillResult {
   updated: number
 }
 
+function buildDefaultExerciseRecord(
+  exercise: (typeof defaultExercises)[number],
+  now: string,
+) {
+  const preferredName = getPreferredExerciseDbName(exercise.nombre) ?? getExerciseDbQueryCandidates(exercise.nombre)[0]
+  const aliases = getExerciseDbAliasesForName(exercise.nombre)
+
+  return {
+    id: exercise.id,
+    nombre: exercise.nombre,
+    descripcion: `Ejercicio base para ${exercise.grupoMuscularPrimario}.`,
+    grupoMuscularPrimario: exercise.grupoMuscularPrimario,
+    gruposMuscularesSecundarios: [],
+    nivelDificultad: 'intermedio' as const,
+    equipoNecesario: exercise.equipoNecesario,
+    imagenUrl: exercise.imagenUrl,
+    exerciseDbName: preferredName,
+    exerciseDbAliases: aliases.length > 0 ? aliases : undefined,
+    instrucciones: 'Mantén técnica controlada y progresión gradual de carga.',
+    esPersonalizado: false,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+async function insertMissingDefaultExercises(now: string) {
+  const existing = await db.getAllExercisesCatalog()
+  const existingIds = new Set(existing.map((exercise) => exercise.id))
+  const missingDefaults = defaultExercises
+    .filter((exercise) => !existingIds.has(exercise.id))
+    .map((exercise) => buildDefaultExerciseRecord(exercise, now))
+
+  if (missingDefaults.length > 0) {
+    await db.bulkAddExercises(missingDefaults)
+  }
+}
+
 function selectBestExerciseDbMatch(items: ExerciseDbLookupItem[], rawCandidate: string) {
   if (items.length === 0) {
     return null
@@ -133,12 +170,14 @@ export async function bootstrapDatabase(): Promise<void> {
   const exerciseCount = await db.getExercisesCount()
   const now = new Date().toISOString()
   const exerciseDbApiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
+  const defaultExerciseById = new Map(defaultExercises.map((exercise) => [exercise.id, exercise]))
 
   if (exerciseCount > 0) {
     const existing = await db.getAllExercisesCatalog()
 
     await Promise.all(
       existing.map(async (exercise) => {
+        const defaultSeed = defaultExerciseById.get(exercise.id)
         const preferredName = getPreferredExerciseDbName(exercise.nombre) ?? getExerciseDbQueryCandidates(exercise.nombre)[0]
         const aliases = getExerciseDbAliasesForName(exercise.nombre)
 
@@ -147,6 +186,10 @@ export async function bootstrapDatabase(): Promise<void> {
           exercise.exerciseDbAliases && exercise.exerciseDbAliases.length > 0
             ? exercise.exerciseDbAliases
             : aliases
+        const nextDisplayName =
+          defaultSeed && !exercise.esPersonalizado ? defaultSeed.nombre : exercise.nombre
+        const nextEquipment =
+          defaultSeed && !exercise.esPersonalizado ? defaultSeed.equipoNecesario : exercise.equipoNecesario
 
         if (!nextName && nextAliases.length === 0) {
           return
@@ -156,18 +199,24 @@ export async function bootstrapDatabase(): Promise<void> {
         const hasAliasesChange =
           nextAliases.length > 0 &&
           JSON.stringify(nextAliases) !== JSON.stringify(exercise.exerciseDbAliases ?? [])
+        const hasDisplayNameChange = nextDisplayName !== exercise.nombre
+        const hasEquipmentChange = nextEquipment !== exercise.equipoNecesario
 
-        if (!hasNameChange && !hasAliasesChange) {
+        if (!hasNameChange && !hasAliasesChange && !hasDisplayNameChange && !hasEquipmentChange) {
           return
         }
 
         await db.updateExercise(exercise.id, {
+          nombre: nextDisplayName,
+          equipoNecesario: nextEquipment,
           exerciseDbName: nextName,
           exerciseDbAliases: nextAliases.length > 0 ? nextAliases : undefined,
           updatedAt: new Date().toISOString(),
         })
       }),
     )
+
+    await insertMissingDefaultExercises(now)
 
     if (exerciseDbApiKey) {
       await backfillExerciseDbIds(exerciseDbApiKey)
@@ -177,28 +226,7 @@ export async function bootstrapDatabase(): Promise<void> {
   }
 
   await db.bulkAddExercises(
-    defaultExercises.map((exercise) => ({
-      ...(() => {
-        const preferredName = getPreferredExerciseDbName(exercise.nombre) ?? getExerciseDbQueryCandidates(exercise.nombre)[0]
-        const aliases = getExerciseDbAliasesForName(exercise.nombre)
-        return {
-          exerciseDbName: preferredName,
-          exerciseDbAliases: aliases.length > 0 ? aliases : undefined,
-        }
-      })(),
-      id: exercise.id,
-      nombre: exercise.nombre,
-      descripcion: `Ejercicio base para ${exercise.grupoMuscularPrimario}.`,
-      grupoMuscularPrimario: exercise.grupoMuscularPrimario,
-      gruposMuscularesSecundarios: [],
-      nivelDificultad: 'intermedio' as const,
-      equipoNecesario: exercise.equipoNecesario,
-      imagenUrl: exercise.imagenUrl,
-      instrucciones: 'Mantén técnica controlada y progresión gradual de carga.',
-      esPersonalizado: false,
-      createdAt: now,
-      updatedAt: now,
-    })),
+    defaultExercises.map((exercise) => buildDefaultExerciseRecord(exercise, now)),
   )
 
   if (exerciseDbApiKey) {
