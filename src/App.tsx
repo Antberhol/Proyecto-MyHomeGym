@@ -61,6 +61,7 @@ function App() {
   const isAuthReady = useAuthStore((state) => state.isAuthReady)
   const enterAsGuest = useAuthStore((state) => state.enterAsGuest)
   const setUser = useAuthStore((state) => state.setUser)
+  const setAuthError = useAuthStore((state) => state.setAuthError)
   const [hasSelectedLanguage, setHasSelectedLanguage] = useState(() => {
     const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
     return stored === 'es' || stored === 'en'
@@ -81,16 +82,41 @@ function App() {
   useEffect(() => {
     syncService.start()
 
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const redirectUser = await authService.resolveRedirectSignIn()
+
+        if (cancelled) {
+          return
+        }
+
+        if (redirectUser) {
+          setUser(redirectUser)
+          await syncService.setAuthenticatedUser(redirectUser)
+          setAuthError(undefined)
+        }
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setAuthError(error instanceof Error ? error.message : 'No se pudo completar el inicio de sesión con Google')
+      }
+    })()
+
     const unsubscribe = authService.onAuthChanged((authUser) => {
       setUser(authUser)
       void syncService.setAuthenticatedUser(authUser)
     })
 
     return () => {
+      cancelled = true
       unsubscribe()
       syncService.stop()
     }
-  }, [setUser])
+  }, [setAuthError, setUser])
 
   useEffect(() => {
     const root = document.documentElement

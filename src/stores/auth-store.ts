@@ -12,6 +12,7 @@ interface AuthState {
     loginWithGoogle: () => Promise<void>
     logout: () => Promise<void>
     clearAuthError: () => void
+    setAuthError: (message?: string) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -59,4 +60,5 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     },
     clearAuthError: () => set({ authError: undefined }),
+    setAuthError: (message) => set({ authError: message }),
 }))

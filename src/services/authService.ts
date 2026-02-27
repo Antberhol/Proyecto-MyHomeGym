@@ -120,15 +120,22 @@ export const authService = {
         }
     },
 
+    async resolveRedirectSignIn(): Promise<AuthUser | null> {
+        const auth = getFirebaseAuthOrThrow()
+
+        try {
+            const result = await getRedirectResult(auth)
+            return toAuthUser(result?.user ?? null)
+        } catch (error) {
+            throw mapFirebaseAuthError(error)
+        }
+    },
+
     onAuthChanged(callback: (user: AuthUser | null) => void): () => void {
         if (!isFirebaseConfigured || !firebaseAuth) {
             callback(null)
             return () => undefined
         }
-
-        void getRedirectResult(firebaseAuth).catch((error: unknown) => {
-            console.error('Google redirect auth error:', error)
-        })
 
         return onAuthStateChanged(firebaseAuth, (user) => {
             callback(toAuthUser(user))
