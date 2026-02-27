@@ -135,7 +135,7 @@ export function CatalogoPage() {
 
   return (
     <div className="space-y-6">
-      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+      <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
         <h1 className="text-2xl font-bold">Catálogo de ejercicios</h1>
       </header>
 

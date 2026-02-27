@@ -59,7 +59,7 @@ export function EntrenarPage() {
   if (view === 'selection') {
     return (
       <div className="space-y-6">
-        <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
           <h1 className="text-2xl font-bold">Entrenar</h1>
         </header>
         <RoutineSelector
@@ -74,7 +74,7 @@ export function EntrenarPage() {
   if (view === 'summary' && trainingSummary) {
     return (
       <div className="space-y-6">
-        <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
           <h1 className="text-2xl font-bold">Resumen de entrenamiento</h1>
         </header>
 
@@ -157,7 +157,7 @@ export function EntrenarPage() {
 
   return (
     <div className="space-y-6">
-      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+      <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
           <button
