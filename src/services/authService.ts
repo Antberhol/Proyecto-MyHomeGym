@@ -75,29 +75,22 @@ export const authService = {
         provider.setCustomParameters({ prompt: 'select_account' })
 
         try {
-            await signInWithRedirect(auth, provider)
-            return new Promise<AuthUser>(() => undefined)
-        } catch (error) {
-            try {
-                const result = await signInWithPopup(auth, provider)
-                return toAuthUser(result.user) as AuthUser
-            } catch (popupError) {
-                const authErrorCode = (popupError as AuthError | undefined)?.code
+            const result = await signInWithPopup(auth, provider)
+            return toAuthUser(result.user) as AuthUser
+        } catch (popupError) {
+            const authErrorCode = (popupError as AuthError | undefined)?.code
 
-                if (
-                    authErrorCode === 'auth/popup-blocked' ||
-                    authErrorCode === 'auth/popup-closed-by-user' ||
-                    authErrorCode === 'auth/cancelled-popup-request' ||
-                    authErrorCode === 'auth/internal-error'
-                ) {
-                    await signInWithRedirect(auth, provider)
-                    return new Promise<AuthUser>(() => undefined)
-                }
-
-                throw mapFirebaseAuthError(popupError)
+            if (
+                authErrorCode === 'auth/popup-blocked' ||
+                authErrorCode === 'auth/popup-closed-by-user' ||
+                authErrorCode === 'auth/cancelled-popup-request' ||
+                authErrorCode === 'auth/internal-error'
+            ) {
+                await signInWithRedirect(auth, provider)
+                return new Promise<AuthUser>(() => undefined)
             }
 
-            throw mapFirebaseAuthError(error)
+            throw mapFirebaseAuthError(popupError)
         }
     },
 

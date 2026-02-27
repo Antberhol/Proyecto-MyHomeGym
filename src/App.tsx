@@ -83,6 +83,7 @@ function App() {
     syncService.start()
 
     let cancelled = false
+    let hasResolvedRedirectUser = false
 
     void (async () => {
       try {
@@ -93,6 +94,7 @@ function App() {
         }
 
         if (redirectUser) {
+          hasResolvedRedirectUser = true
           setUser(redirectUser)
           await syncService.setAuthenticatedUser(redirectUser)
           setAuthError(undefined)
@@ -107,6 +109,10 @@ function App() {
     })()
 
     const unsubscribe = authService.onAuthChanged((authUser) => {
+      if (!authUser && hasResolvedRedirectUser) {
+        return
+      }
+
       setUser(authUser)
       void syncService.setAuthenticatedUser(authUser)
     })
