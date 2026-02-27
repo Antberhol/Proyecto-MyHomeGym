@@ -115,20 +115,20 @@ function SortableItem({
                                 type="number"
                                 value={editSeries}
                                 onChange={(event) => onEditSeriesChange(Number(event.target.value) || 1)}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                                 placeholder="Series"
                             />
                             <input
                                 value={editRepeticiones}
                                 onChange={(event) => onEditRepeticionesChange(event.target.value)}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                                 placeholder="Reps"
                             />
                             <input
                                 type="number"
                                 value={editDescansoSegundos}
                                 onChange={(event) => onEditDescansoChange(Number(event.target.value) || 15)}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                                 placeholder="Descanso"
                             />
                         </div>
@@ -142,7 +142,7 @@ function SortableItem({
             <div className="flex items-center gap-2">
                 <button
                     type="button"
-                    className="cursor-grab rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                    className="cursor-grab rounded-lg border border-slate-300 px-3 py-2 text-xs"
                     aria-label="Arrastrar ejercicio"
                     {...attributes}
                     {...listeners}
@@ -154,14 +154,14 @@ function SortableItem({
                         <button
                             type="button"
                             onClick={onSaveEdit}
-                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                         >
                             Guardar
                         </button>
                         <button
                             type="button"
                             onClick={onCancelEdit}
-                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                         >
                             Cancelar
                         </button>
@@ -170,7 +170,7 @@ function SortableItem({
                     <button
                         type="button"
                         onClick={() => onStartEdit(item.id)}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                     >
                         Editar
                     </button>
@@ -178,21 +178,21 @@ function SortableItem({
                 <button
                     type="button"
                     onClick={() => onMove(item.id, 'up')}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                 >
                     ↑
                 </button>
                 <button
                     type="button"
                     onClick={() => onMove(item.id, 'down')}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                 >
                     ↓
                 </button>
                 <button
                     type="button"
                     onClick={() => onRemove(item.id)}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-red-600"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-red-600"
                 >
                     Borrar
                 </button>

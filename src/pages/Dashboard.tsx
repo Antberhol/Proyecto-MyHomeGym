@@ -147,14 +147,16 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <StreakBadge
-          dayStreak={streaks.currentDayStreak}
-          weekStreak={streaks.currentWeekStreak}
-          totalTrainings={streaks.totalTrainings}
-        />
-      </div>
+      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <StreakBadge
+            dayStreak={streaks.currentDayStreak}
+            weekStreak={streaks.currentWeekStreak}
+            totalTrainings={streaks.totalTrainings}
+          />
+        </div>
+      </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">

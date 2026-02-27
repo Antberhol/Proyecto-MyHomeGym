@@ -65,8 +65,8 @@ export function AppShell() {
   const toggleSidebar = useUiStore((state) => state.toggleSidebar)
 
   return (
-    <div className="min-h-screen bg-gym-bgLight dark:bg-gym-bgDark dark:text-white">
-      <div className="mx-auto flex min-h-screen max-w-[1400px]">
+    <div className="min-h-[100dvh] bg-gym-bgLight dark:bg-gym-bgDark dark:text-white">
+      <div className="mx-auto flex h-[100dvh] max-w-[1400px] overflow-hidden">
         <aside
           className={`hidden border-r border-slate-200 bg-white p-3 transition-all dark:border-slate-700 dark:bg-gym-cardDark md:block ${sidebarCollapsed ? 'w-[78px]' : 'w-[250px]'
             }`}
@@ -93,7 +93,7 @@ export function AppShell() {
           </nav>
         </aside>
 
-        <main className="flex-1 p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
           <div className="mb-4 flex justify-end">
             <SyncStatusIndicator />
           </div>

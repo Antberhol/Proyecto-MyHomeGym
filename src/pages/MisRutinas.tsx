@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ExerciseSelectorModal } from '../components/exercises/ExerciseSelectorModal'
 import { SortableExerciseList } from '../components/routines/SortableExerciseList'
+import { SwipeToDeleteItem } from '../components/ui/SwipeToDeleteItem'
 import { routineAdminRepository } from '../repositories/routineAdminRepository'
 
 const routineSchema = z.object({
@@ -207,7 +208,9 @@ export function MisRutinasPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Mis rutinas</h1>
+      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <h1 className="text-2xl font-bold">Mis rutinas</h1>
+      </header>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">Nueva rutina</h2>
@@ -215,24 +218,24 @@ export function MisRutinasPage() {
           <input
             {...form.register('nombre')}
             placeholder="Nombre de rutina"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('diasSemana')}
             placeholder="lunes,miercoles,viernes"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('descripcion')}
             placeholder="Descripción"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             type="color"
             {...form.register('color')}
             className="h-10 w-full rounded-lg border border-slate-300"
           />
-          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white md:col-span-2">
+          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
             Crear rutina
           </button>
         </form>
@@ -240,93 +243,92 @@ export function MisRutinasPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {routines.map((routine) => (
-          <article key={routine.id} className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold">{routine.nombre}</h3>
-              <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
-            </div>
-
-            {editingRoutineId === routine.id ? (
-              <div className="space-y-2">
-                <input
-                  value={editRoutineNombre}
-                  onChange={(event) => setEditRoutineNombre(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Nombre"
-                />
-                <input
-                  value={editRoutineDescripcion}
-                  onChange={(event) => setEditRoutineDescripcion(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="Descripción"
-                />
-                <input
-                  value={editRoutineDiasSemana}
-                  onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                  placeholder="lunes,miercoles,viernes"
-                />
-                <input
-                  type="color"
-                  value={editRoutineColor}
-                  onChange={(event) => setEditRoutineColor(event.target.value)}
-                  className="h-8 w-full rounded-lg border border-slate-300"
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void saveRoutineEdits()}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditRoutine}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
-                  >
-                    Cancelar
-                  </button>
-                </div>
+          <SwipeToDeleteItem
+            key={routine.id}
+            onDelete={() => deleteRoutine(routine.id)}
+            disabled={editingRoutineId === routine.id}
+          >
+            <article className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold">{routine.nombre}</h3>
+                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
               </div>
-            ) : (
-              <>
-                <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || 'Sin descripción'}</p>
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
-              </>
-            )}
 
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedRoutineId(routine.id)}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
-              >
-                Gestionar ejercicios
-              </button>
-              <button
-                type="button"
-                onClick={() => startEditRoutine(routine.id)}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
-              >
-                {routine.activa ? 'Desactivar' : 'Activar'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void deleteRoutine(routine.id)}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-red-600"
-              >
-                Borrar
-              </button>
-            </div>
-          </article>
+              {editingRoutineId === routine.id ? (
+                <div className="space-y-2">
+                  <input
+                    value={editRoutineNombre}
+                    onChange={(event) => setEditRoutineNombre(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    placeholder="Nombre"
+                  />
+                  <input
+                    value={editRoutineDescripcion}
+                    onChange={(event) => setEditRoutineDescripcion(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    placeholder="Descripción"
+                  />
+                  <input
+                    value={editRoutineDiasSemana}
+                    onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    placeholder="lunes,miercoles,viernes"
+                  />
+                  <input
+                    type="color"
+                    value={editRoutineColor}
+                    onChange={(event) => setEditRoutineColor(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-slate-300"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveRoutineEdits()}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditRoutine}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || 'Sin descripción'}</p>
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
+                </>
+              )}
+
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRoutineId(routine.id)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                >
+                  Gestionar ejercicios
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startEditRoutine(routine.id)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                >
+                  {routine.activa ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </article>
+          </SwipeToDeleteItem>
         ))}
       </section>
 
@@ -339,7 +341,7 @@ export function MisRutinasPage() {
             <button
               type="button"
               onClick={() => setSelectedRoutineId('')}
-              className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
             >
               Cerrar
             </button>
@@ -358,14 +360,14 @@ export function MisRutinasPage() {
               type="number"
               value={series}
               onChange={(event) => setSeries(Number(event.target.value) || 1)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
               placeholder="Series"
             />
 
             <input
               value={repeticiones}
               onChange={(event) => setRepeticiones(event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
               placeholder="Reps"
             />
 
@@ -373,7 +375,7 @@ export function MisRutinasPage() {
               type="number"
               value={descansoSegundos}
               onChange={(event) => setDescansoSegundos(Number(event.target.value) || 15)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
               placeholder="Descanso (s)"
             />
           </div>

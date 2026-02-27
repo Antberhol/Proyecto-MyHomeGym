@@ -59,7 +59,9 @@ export function EntrenarPage() {
   if (view === 'selection') {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Entrenar</h1>
+        <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+          <h1 className="text-2xl font-bold">Entrenar</h1>
+        </header>
         <RoutineSelector
           routines={routines}
           onStartRoutine={startRoutine}
@@ -72,7 +74,9 @@ export function EntrenarPage() {
   if (view === 'summary' && trainingSummary) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Resumen de entrenamiento</h1>
+        <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+          <h1 className="text-2xl font-bold">Resumen de entrenamiento</h1>
+        </header>
 
         {lastSavedMessage && (
           <p className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow dark:bg-gym-cardDark dark:text-slate-200">{lastSavedMessage}</p>
@@ -86,7 +90,7 @@ export function EntrenarPage() {
               onClick={() => {
                 void onShareSummary()
               }}
-              className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs"
+              className="inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-2 text-xs"
             >
               <Share2 size={14} /> Compartir
             </button>
@@ -153,17 +157,19 @@ export function EntrenarPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
-        <button
-          type="button"
-          onClick={openPlateCalculator}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium dark:border-slate-600"
-        >
-          <Calculator size={16} />
-          Calculadora de discos
-        </button>
-      </div>
+      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">Registrar entrenamiento</h1>
+          <button
+            type="button"
+            onClick={openPlateCalculator}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium dark:border-slate-600"
+          >
+            <Calculator size={16} />
+            Calculadora de discos
+          </button>
+        </div>
+      </header>
 
       <WorkoutControls
         sessionSeconds={sessionSeconds}
@@ -196,7 +202,7 @@ export function EntrenarPage() {
       />
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-2">
-        <select {...form.register('rutinaId')} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900">
+        <select {...form.register('rutinaId')} className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm">
           <option value="">Entreno libre</option>
           {routines.map((routine) => (
             <option key={routine.id} value={routine.id}>
@@ -208,7 +214,7 @@ export function EntrenarPage() {
         <input
           type="number"
           {...form.register('duracionMinutos')}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           placeholder="Duración (min)"
         />
 
@@ -216,14 +222,14 @@ export function EntrenarPage() {
           <input
             type="number"
             {...form.register('volumenTotalManual')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
             placeholder="Volumen total manual (kg)"
           />
         )}
 
         <input
           {...form.register('notas')}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           placeholder="Notas"
         />
 
@@ -262,7 +268,7 @@ export function EntrenarPage() {
               <select
                 value={freeExerciseId}
                 onChange={(event) => setFreeExerciseId(event.target.value)}
-                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900 md:col-span-2"
+                className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:col-span-2 md:text-sm"
               >
                 <option value="">Selecciona ejercicio</option>
                 {exercises.map((exercise) => (
@@ -276,13 +282,13 @@ export function EntrenarPage() {
                 min={1}
                 value={freeSeriesCount}
                 onChange={(event) => setFreeSeriesCount(Math.max(1, Number(event.target.value) || 1))}
-                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                 placeholder="Series"
               />
               <button
                 type="button"
                 onClick={addFreeExerciseDraft}
-                className="rounded border border-slate-300 px-2 py-1 text-xs"
+                className="rounded border border-slate-300 px-3 py-2 text-xs"
               >
                 Añadir ejercicio
               </button>
@@ -299,14 +305,14 @@ export function EntrenarPage() {
                         <button
                           type="button"
                           onClick={() => addFreeSet(draft.id)}
-                          className="rounded border border-slate-300 px-2 py-1 text-[11px]"
+                          className="rounded border border-slate-300 px-3 py-2 text-[11px]"
                         >
                           + Serie
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFreeExerciseDraft(draft.id)}
-                          className="rounded border border-slate-300 px-2 py-1 text-[11px] text-red-600"
+                          className="rounded border border-slate-300 px-3 py-2 text-[11px] text-red-600"
                         >
                           Quitar
                         </button>
@@ -330,7 +336,7 @@ export function EntrenarPage() {
                               type="number"
                               value={set.reps === 0 ? '' : set.reps}
                               onChange={(event) => updateFreeSetData(draft.id, setIndex, 'reps', event.target.value)}
-                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                              className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                               placeholder="Reps"
                             />
                             <input
@@ -338,7 +344,7 @@ export function EntrenarPage() {
                               step="0.5"
                               value={set.peso === 0 ? '' : set.peso}
                               onChange={(event) => updateFreeSetData(draft.id, setIndex, 'peso', event.target.value)}
-                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                              className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                               placeholder="Peso"
                             />
                           </div>
@@ -355,7 +361,7 @@ export function EntrenarPage() {
           </div>
         )}
 
-        <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white md:col-span-2">
+        <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
           Guardar entrenamiento
         </button>
       </form>

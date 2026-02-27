@@ -21,6 +21,7 @@ body {
     sans-serif;
   background-color: #f8f9fa;
   color: #2b2d42;
+  -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
 
@@ -43,4 +44,11 @@ textarea,
 select,
 a {
   touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  button {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

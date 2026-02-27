@@ -135,19 +135,21 @@ export function CatalogoPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Catálogo de ejercicios</h1>
+      <header className="sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <h1 className="text-2xl font-bold">Catálogo de ejercicios</h1>
+      </header>
 
       <div className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-5">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar ejercicio..."
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
         />
         <select
           value={muscleFilter}
           onChange={(event) => setMuscleFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
         >
           {muscles.map((muscle) => (
             <option key={muscle} value={muscle}>
@@ -158,7 +160,7 @@ export function CatalogoPage() {
         <select
           value={equipmentFilter}
           onChange={(event) => setEquipmentFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
         >
           {equipmentOptions.map((equipment) => (
             <option key={equipment} value={equipment}>
@@ -169,7 +171,7 @@ export function CatalogoPage() {
         <select
           value={difficultyFilter}
           onChange={(event) => setDifficultyFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
         >
           <option value="todos">todos los niveles</option>
           <option value="basico">básico</option>
@@ -210,7 +212,7 @@ export function CatalogoPage() {
                           event.stopPropagation()
                           startEditExercise(exercise.id)
                         }}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded-md border border-slate-300 px-3 py-2 text-xs"
                       >
                         Editar
                       </button>
@@ -220,7 +222,7 @@ export function CatalogoPage() {
                           event.stopPropagation()
                           void deleteCustomExercise(exercise.id)
                         }}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs text-red-600"
+                        className="rounded-md border border-slate-300 px-3 py-2 text-xs text-red-600"
                       >
                         Borrar
                       </button>
@@ -234,25 +236,25 @@ export function CatalogoPage() {
                   <input
                     value={editNombre}
                     onChange={(event) => setEditNombre(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                     placeholder="Nombre"
                   />
                   <input
                     value={editGrupoMuscular}
                     onChange={(event) => setEditGrupoMuscular(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                     placeholder="Grupo muscular"
                   />
                   <input
                     value={editEquipo}
                     onChange={(event) => setEditEquipo(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                     placeholder="Equipo"
                   />
                   <select
                     value={editNivel}
                     onChange={(event) => setEditNivel(event.target.value as 'basico' | 'intermedio' | 'avanzado')}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                   >
                     <option value="basico">Básico</option>
                     <option value="intermedio">Intermedio</option>
@@ -261,7 +263,7 @@ export function CatalogoPage() {
                   <textarea
                     value={editInstrucciones}
                     onChange={(event) => setEditInstrucciones(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
                     placeholder="Instrucciones"
                     rows={2}
                   />
@@ -272,7 +274,7 @@ export function CatalogoPage() {
                         event.stopPropagation()
                         void saveExerciseEdits()
                       }}
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                     >
                       Guardar
                     </button>
@@ -282,7 +284,7 @@ export function CatalogoPage() {
                         event.stopPropagation()
                         cancelEditExercise()
                       }}
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium"
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
                     >
                       Cancelar
                     </button>
@@ -300,21 +302,21 @@ export function CatalogoPage() {
           <input
             {...form.register('nombre')}
             placeholder="Nombre"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('grupoMuscularPrimario')}
             placeholder="Grupo muscular"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <input
             {...form.register('equipoNecesario')}
             placeholder="Equipo"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           />
           <select
             {...form.register('nivelDificultad')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
           >
             <option value="basico">Básico</option>
             <option value="intermedio">Intermedio</option>
@@ -323,9 +325,9 @@ export function CatalogoPage() {
           <textarea
             {...form.register('instrucciones')}
             placeholder="Instrucciones"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 md:col-span-2"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:col-span-2 md:text-sm"
           />
-          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-2 text-sm font-semibold text-white md:col-span-2">
+          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
             Guardar ejercicio
           </button>
         </form>
