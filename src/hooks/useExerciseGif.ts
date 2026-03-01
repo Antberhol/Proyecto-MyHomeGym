@@ -79,27 +79,12 @@ async function searchExerciseDbByCandidates(
             continue
         }
 
-        const normalizedCandidate = normalizeExerciseName(candidate)
-        const exact = payload.find(
-            (item) => (item.id || item.gifUrl) && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
+        const best = selectBestMatch(
+            payload.filter((item) => item.id || item.gifUrl),
+            candidate,
         )
-        if (exact) {
-            return exact
-        }
-
-        const partial = payload.find(
-            (item) =>
-                (item.id || item.gifUrl) &&
-                (normalizeExerciseName(item.name ?? '').includes(normalizedCandidate) ||
-                    normalizedCandidate.includes(normalizeExerciseName(item.name ?? ''))),
-        )
-        if (partial) {
-            return partial
-        }
-
-        const firstWithMediaReference = payload.find((item) => item.id || item.gifUrl)
-        if (firstWithMediaReference) {
-            return firstWithMediaReference
+        if (best) {
+            return best
         }
     }
 
@@ -148,40 +133,20 @@ async function searchPublicExerciseDbByCandidates(
             continue
         }
 
-        const normalizedCandidate = normalizeExerciseName(candidate)
-        const exact = items.find(
-            (item) => item.gifUrl && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
-        )
-        if (exact) {
-            return {
-                name: exact.name,
-                gifUrl: normalizeGifUrl(exact.gifUrl ?? ''),
-                target: exact.targetMuscles?.[0] ?? '',
-            }
-        }
+        const mapped = items
+            .filter((item) => item.gifUrl)
+            .map<ExerciseDbItem>((item) => ({
+                name: item.name,
+                gifUrl: normalizeGifUrl(item.gifUrl ?? ''),
+                target: item.targetMuscles?.[0] ?? '',
+            }))
 
-        const partial = items.find((item) => {
-            if (!item.gifUrl) {
-                return false
-            }
-
-            const normalizedItem = normalizeExerciseName(item.name ?? '')
-            return normalizedItem.includes(normalizedCandidate) || normalizedCandidate.includes(normalizedItem)
-        })
-        if (partial) {
+        const best = selectBestMatch(mapped, candidate)
+        if (best) {
             return {
-                name: partial.name,
-                gifUrl: normalizeGifUrl(partial.gifUrl ?? ''),
-                target: partial.targetMuscles?.[0] ?? '',
-            }
-        }
-
-        const firstWithGif = items.find((item) => item.gifUrl)
-        if (firstWithGif) {
-            return {
-                name: firstWithGif.name,
-                gifUrl: normalizeGifUrl(firstWithGif.gifUrl ?? ''),
-                target: firstWithGif.targetMuscles?.[0] ?? '',
+                name: best.name,
+                gifUrl: best.gifUrl,
+                target: best.target,
             }
         }
     }
@@ -240,6 +205,40 @@ function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOpti
     }
 
     return Array.from(candidates)
+}
+
+function tokenizeForMatch(value: string): string[] {
+    return normalizeExerciseName(value)
+        .split(' ')
+        .filter((token) => token.length > 2)
+}
+
+function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDbItem | null {
+    if (items.length === 0) {
+        return null
+    }
+
+    const normalizedCandidate = normalizeExerciseName(candidate)
+    const exact = items.find((item) => normalizeExerciseName(item.name ?? '') === normalizedCandidate)
+    if (exact) {
+        return exact
+    }
+
+    const candidateTokens = tokenizeForMatch(candidate)
+    if (candidateTokens.length === 0) {
+        return null
+    }
+
+    const strongTokenMatch = items.find((item) => {
+        const nameTokens = new Set(tokenizeForMatch(item.name ?? ''))
+        if (nameTokens.size === 0) {
+            return false
+        }
+
+        return candidateTokens.every((token) => nameTokens.has(token))
+    })
+
+    return strongTokenMatch ?? null
 }
 
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {

@@ -190,12 +190,27 @@ function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): Exercis
         return exact
     }
 
-    const partial = items.find((item) => {
-        const normalizedItem = normalizeExerciseName(item.name ?? '')
-        return normalizedItem.includes(normalizedName) || normalizedName.includes(normalizedItem)
+    const candidateTokens = tokenizeForMatch(exerciseName)
+    if (candidateTokens.length === 0) {
+        return null
+    }
+
+    const strongTokenMatch = items.find((item) => {
+        const itemTokens = new Set(tokenizeForMatch(item.name ?? ''))
+        if (itemTokens.size === 0) {
+            return false
+        }
+
+        return candidateTokens.every((token) => itemTokens.has(token))
     })
 
-    return partial ?? items[0]
+    return strongTokenMatch ?? null
+}
+
+function tokenizeForMatch(value: string): string[] {
+    return normalizeExerciseName(value)
+        .split(' ')
+        .filter((token) => token.length > 2)
 }
 
 function buildQueryCandidates(exerciseName: string, options?: UseExerciseDetailOptions): string[] {
