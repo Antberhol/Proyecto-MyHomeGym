@@ -121,6 +121,15 @@ function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
+function normalizeGifUrl(url: string): string {
+    const normalized = url.trim()
+    if (!normalized) {
+        return ''
+    }
+
+    return normalized.replace(/^http:\/\//i, 'https://')
+}
+
 function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string, fallbackExerciseDbId?: string): string {
     if (!item) {
         if (fallbackExerciseDbId?.trim()) {
@@ -130,12 +139,12 @@ function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string, fall
         return EXERCISE_GIF_PLACEHOLDER
     }
 
-    if (item.gifUrl) {
-        return item.gifUrl
-    }
-
     if (item.id) {
         return buildExerciseGifUrl(item.id, apiKey)
+    }
+
+    if (item.gifUrl) {
+        return normalizeGifUrl(item.gifUrl)
     }
 
     return EXERCISE_GIF_PLACEHOLDER
@@ -164,12 +173,13 @@ function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOpti
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
-    const cached = normalizedName ? exerciseGifCache.get(normalizedName) : undefined
-    const shouldFetch = Boolean(normalizedName && apiKey && !cached)
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}`
+    const cached = normalizedName ? exerciseGifCache.get(cacheKey) : undefined
+    const shouldFetch = Boolean(normalizedName && apiKey && !cached)
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: EXERCISE_GIF_PLACEHOLDER,
@@ -221,7 +231,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     resolvedExerciseDbName: firstResult?.name,
                 }
 
-                exerciseGifCache.set(normalizedName, resolved)
+                exerciseGifCache.set(cacheKey, resolved)
                 setState({ ...resolved, isLoading: false })
             } catch {
                 if (!controller.signal.aborted) {
@@ -235,7 +245,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                         resolvedExerciseDbId: undefined,
                         resolvedExerciseDbName: undefined,
                     }
-                    exerciseGifCache.set(normalizedName, fallback)
+                    exerciseGifCache.set(cacheKey, fallback)
                     setState({ ...fallback, isLoading: false })
                 }
             }
@@ -246,7 +256,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         return () => {
             controller.abort()
         }
-    }, [aliasSignature, apiKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
+    }, [aliasSignature, apiKey, cacheKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
     if (!normalizedName || !apiKey) {
         return {

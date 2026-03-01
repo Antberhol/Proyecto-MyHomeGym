@@ -137,23 +137,32 @@ function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey: string): string {
-    if (item.gifUrl?.trim()) {
-        return item.gifUrl
-    }
-
-    if (!item.id) {
+function normalizeGifUrl(url: string): string {
+    const normalized = url.trim()
+    if (!normalized) {
         return ''
     }
 
-    const cached = gifUrlCache.get(item.id)
-    if (cached) {
-        return cached
+    return normalized.replace(/^http:\/\//i, 'https://')
+}
+
+function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey: string): string {
+    if (item.id) {
+        const cached = gifUrlCache.get(item.id)
+        if (cached) {
+            return cached
+        }
+
+        const resolved = buildExerciseGifUrl(item.id, apiKey)
+        gifUrlCache.set(item.id, resolved)
+        return resolved
     }
 
-    const resolved = buildExerciseGifUrl(item.id, apiKey)
-    gifUrlCache.set(item.id, resolved)
-    return resolved
+    if (item.gifUrl?.trim()) {
+        return normalizeGifUrl(item.gifUrl)
+    }
+
+    return ''
 }
 
 function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): ExerciseDbItem | null {
