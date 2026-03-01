@@ -120,6 +120,8 @@ const phraseVariantMap: Record<string, string[]> = {
     ' sentado': [' seated'],
 }
 
+const MAX_QUERY_CANDIDATES = 24
+
 export function normalizeExerciseName(value: string) {
     return value
         .trim()
@@ -134,7 +136,19 @@ export function getExerciseDbQueryCandidates(exerciseName: string) {
     const normalized = normalizeExerciseName(exerciseName)
     const aliasCandidates = exerciseDbAliases[normalized] ?? []
 
-    const seeds = new Set<string>([...aliasCandidates, normalized])
+    const prioritizedSeeds: string[] = []
+    const addSeed = (value: string) => {
+        const normalizedSeed = normalizeExerciseName(value)
+        if (!normalizedSeed || prioritizedSeeds.includes(normalizedSeed)) {
+            return
+        }
+        prioritizedSeeds.push(normalizedSeed)
+    }
+
+    for (const alias of aliasCandidates) {
+        addSeed(alias)
+    }
+    addSeed(normalized)
 
     const noStopWords = normalized
         .replace(/\b(de|con|en|al|del|la|el|los|las)\b/g, ' ')
@@ -142,17 +156,31 @@ export function getExerciseDbQueryCandidates(exerciseName: string) {
         .trim()
 
     if (noStopWords.length >= 4) {
-        seeds.add(noStopWords)
+        addSeed(noStopWords)
     }
 
-    const candidates = new Set<string>()
-    for (const seed of seeds) {
+    const candidates: string[] = []
+    const seen = new Set<string>()
+    const addCandidate = (value: string) => {
+        const normalizedCandidate = normalizeExerciseName(value)
+        if (!normalizedCandidate || seen.has(normalizedCandidate)) {
+            return
+        }
+
+        seen.add(normalizedCandidate)
+        candidates.push(normalizedCandidate)
+    }
+
+    for (const seed of prioritizedSeeds) {
         for (const variant of expandCandidateVariants(seed)) {
-            candidates.add(variant)
+            addCandidate(variant)
+            if (candidates.length >= MAX_QUERY_CANDIDATES) {
+                return candidates
+            }
         }
     }
 
-    return Array.from(candidates).filter((value) => value.length > 0)
+    return candidates
 }
 
 function expandCandidateVariants(value: string) {
