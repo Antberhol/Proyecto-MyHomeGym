@@ -294,10 +294,15 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     exerciseDbName,
                     exerciseDbAliases,
                 })
-                const firstResult = byId
-                    ?? (apiKey
-                        ? await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
-                        : await searchPublicExerciseDbByCandidates(candidates, controller.signal))
+                let firstResult = byId
+
+                if (!firstResult && apiKey) {
+                    firstResult = await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
+                }
+
+                if (!firstResult) {
+                    firstResult = await searchPublicExerciseDbByCandidates(candidates, controller.signal)
+                }
 
                 const resolved: ExerciseGifData = {
                     gifUrl: resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId),

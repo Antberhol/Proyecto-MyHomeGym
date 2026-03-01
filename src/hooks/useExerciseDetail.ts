@@ -356,11 +356,15 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 const byId = apiKey && exerciseDbId?.trim()
                     ? await searchExerciseById(exerciseDbId, apiKey, controller.signal)
                     : null
-                const byCandidate = byId
-                    ? null
-                    : (apiKey
-                        ? await searchExerciseByCandidates(candidates, apiKey, controller.signal)
-                        : await searchPublicExerciseByCandidates(candidates, controller.signal))
+                let byCandidate: { item: ExerciseDbItem; usedCandidate: string } | null = null
+
+                if (!byId && apiKey) {
+                    byCandidate = await searchExerciseByCandidates(candidates, apiKey, controller.signal)
+                }
+
+                if (!byId && !byCandidate) {
+                    byCandidate = await searchPublicExerciseByCandidates(candidates, controller.signal)
+                }
                 const bestMatch = byId ?? byCandidate?.item ?? null
 
                 if (!bestMatch) {
