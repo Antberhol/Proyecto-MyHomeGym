@@ -28,6 +28,17 @@ interface UseExerciseGifOptions {
 const exerciseGifCache = new Map<string, ExerciseGifData>()
 let hasWarnedMissingExerciseDbKey = false
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
+
+interface ExerciseDbPublicItem {
+    name?: string
+    gifUrl?: string
+    targetMuscles?: string[]
+}
+
+interface ExerciseDbPublicResponse {
+    data?: ExerciseDbPublicItem[]
+}
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
     return {
@@ -117,6 +128,67 @@ async function searchExerciseDbById(
     return payload
 }
 
+async function searchPublicExerciseDbByCandidates(
+    candidates: string[],
+    signal: AbortSignal,
+): Promise<ExerciseDbItem | null> {
+    for (const candidate of candidates) {
+        const response = await fetch(
+            `${EXERCISE_DB_PUBLIC_API_BASE}/exercises?search=${encodeURIComponent(candidate)}&limit=24`,
+            { signal },
+        )
+
+        if (!response.ok) {
+            continue
+        }
+
+        const payload = (await response.json()) as ExerciseDbPublicResponse
+        const items = Array.isArray(payload.data) ? payload.data : []
+        if (items.length === 0) {
+            continue
+        }
+
+        const normalizedCandidate = normalizeExerciseName(candidate)
+        const exact = items.find(
+            (item) => item.gifUrl && normalizeExerciseName(item.name ?? '') === normalizedCandidate,
+        )
+        if (exact) {
+            return {
+                name: exact.name,
+                gifUrl: normalizeGifUrl(exact.gifUrl ?? ''),
+                target: exact.targetMuscles?.[0] ?? '',
+            }
+        }
+
+        const partial = items.find((item) => {
+            if (!item.gifUrl) {
+                return false
+            }
+
+            const normalizedItem = normalizeExerciseName(item.name ?? '')
+            return normalizedItem.includes(normalizedCandidate) || normalizedCandidate.includes(normalizedItem)
+        })
+        if (partial) {
+            return {
+                name: partial.name,
+                gifUrl: normalizeGifUrl(partial.gifUrl ?? ''),
+                target: partial.targetMuscles?.[0] ?? '',
+            }
+        }
+
+        const firstWithGif = items.find((item) => item.gifUrl)
+        if (firstWithGif) {
+            return {
+                name: firstWithGif.name,
+                gifUrl: normalizeGifUrl(firstWithGif.gifUrl ?? ''),
+                target: firstWithGif.targetMuscles?.[0] ?? '',
+            }
+        }
+    }
+
+    return null
+}
+
 function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
     return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
 }
@@ -130,16 +202,16 @@ function normalizeGifUrl(url: string): string {
     return normalized.replace(/^http:\/\//i, 'https://')
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey: string, fallbackExerciseDbId?: string): string {
+function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey?: string, fallbackExerciseDbId?: string): string {
     if (!item) {
-        if (fallbackExerciseDbId?.trim()) {
+        if (fallbackExerciseDbId?.trim() && apiKey) {
             return buildExerciseGifUrl(fallbackExerciseDbId, apiKey)
         }
 
         return EXERCISE_GIF_PLACEHOLDER
     }
 
-    if (item.id) {
+    if (item.id && apiKey) {
         return buildExerciseGifUrl(item.id, apiKey)
     }
 
@@ -179,7 +251,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
     const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}`
     const cached = normalizedName ? exerciseGifCache.get(cacheKey) : undefined
-    const shouldFetch = Boolean(normalizedName && apiKey && !cached)
+    const shouldFetch = Boolean(normalizedName && !cached)
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: EXERCISE_GIF_PLACEHOLDER,
@@ -197,7 +269,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     }, [apiKey])
 
     useEffect(() => {
-        if (!shouldFetch || !apiKey) {
+        if (!shouldFetch) {
             return
         }
 
@@ -213,7 +285,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
             })
 
             try {
-                const byId = exerciseDbId?.trim()
+                const byId = apiKey && exerciseDbId?.trim()
                     ? await searchExerciseDbById(exerciseDbId, apiKey, controller.signal)
                     : null
 
@@ -222,7 +294,10 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     exerciseDbName,
                     exerciseDbAliases,
                 })
-                const firstResult = byId ?? (await searchExerciseDbByCandidates(candidates, apiKey, controller.signal))
+                const firstResult = byId
+                    ?? (apiKey
+                        ? await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
+                        : await searchPublicExerciseDbByCandidates(candidates, controller.signal))
 
                 const resolved: ExerciseGifData = {
                     gifUrl: resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId),
@@ -235,7 +310,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 setState({ ...resolved, isLoading: false })
             } catch {
                 if (!controller.signal.aborted) {
-                    const fallbackGifUrl = exerciseDbId?.trim()
+                    const fallbackGifUrl = apiKey && exerciseDbId?.trim()
                         ? buildExerciseGifUrl(exerciseDbId, apiKey)
                         : EXERCISE_GIF_PLACEHOLDER
 
@@ -258,7 +333,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         }
     }, [aliasSignature, apiKey, cacheKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
-    if (!normalizedName || !apiKey) {
+    if (!normalizedName) {
         return {
             gifUrl: EXERCISE_GIF_PLACEHOLDER,
             targetMuscle: '',

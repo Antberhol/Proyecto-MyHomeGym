@@ -54,6 +54,20 @@ const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
+
+interface ExerciseDbPublicItem {
+    name?: string
+    gifUrl?: string
+    targetMuscles?: string[]
+    equipments?: string[]
+    instructions?: string[]
+    secondaryMuscles?: string[]
+}
+
+interface ExerciseDbPublicResponse {
+    data?: ExerciseDbPublicItem[]
+}
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
     return {
@@ -146,8 +160,8 @@ function normalizeGifUrl(url: string): string {
     return normalized.replace(/^http:\/\//i, 'https://')
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey: string): string {
-    if (item.id) {
+function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey?: string): string {
+    if (item.id && apiKey) {
         const cached = gifUrlCache.get(item.id)
         if (cached) {
             return cached
@@ -251,6 +265,44 @@ async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: 
     return payload
 }
 
+async function searchPublicExerciseByCandidates(
+    candidates: string[],
+    signal: AbortSignal,
+): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
+    for (const candidate of candidates) {
+        const response = await fetch(
+            `${EXERCISE_DB_PUBLIC_API_BASE}/exercises?search=${encodeURIComponent(candidate)}&limit=24`,
+            { signal },
+        )
+
+        if (!response.ok) {
+            continue
+        }
+
+        const payload = (await response.json()) as ExerciseDbPublicResponse
+        const items = Array.isArray(payload.data) ? payload.data : []
+        if (items.length === 0) {
+            continue
+        }
+
+        const mapped = items.map<ExerciseDbItem>((item) => ({
+            name: item.name,
+            gifUrl: item.gifUrl,
+            target: item.targetMuscles?.[0] ?? '',
+            equipment: item.equipments?.[0] ?? '',
+            instructions: Array.isArray(item.instructions) ? item.instructions : [],
+            secondaryMuscles: Array.isArray(item.secondaryMuscles) ? item.secondaryMuscles : [],
+        }))
+
+        const best = selectBestMatch(mapped, candidate)
+        if (best?.gifUrl) {
+            return { item: best, usedCandidate: candidate }
+        }
+    }
+
+    return null
+}
+
 export function useExerciseDetail(exerciseName: string, options?: UseExerciseDetailOptions): UseExerciseDetailResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const currentLanguage = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
@@ -261,7 +313,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
     const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}`
     const cached = normalizedName ? detailCache.get(cacheKey) : undefined
-    const shouldFetch = Boolean(normalizedName && apiKey && cached === undefined)
+    const shouldFetch = Boolean(normalizedName && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
         data: null,
         isLoading: false,
@@ -275,7 +327,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
     })
 
     useEffect(() => {
-        if (!shouldFetch || !apiKey) {
+        if (!shouldFetch) {
             return
         }
 
@@ -301,16 +353,18 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             })
 
             try {
-                const byId = exerciseDbId?.trim()
+                const byId = apiKey && exerciseDbId?.trim()
                     ? await searchExerciseById(exerciseDbId, apiKey, controller.signal)
                     : null
                 const byCandidate = byId
                     ? null
-                    : await searchExerciseByCandidates(candidates, apiKey, controller.signal)
+                    : (apiKey
+                        ? await searchExerciseByCandidates(candidates, apiKey, controller.signal)
+                        : await searchPublicExerciseByCandidates(candidates, controller.signal))
                 const bestMatch = byId ?? byCandidate?.item ?? null
 
-                if (!bestMatch?.id) {
-                    if (exerciseDbId?.trim()) {
+                if (!bestMatch) {
+                    if (apiKey && exerciseDbId?.trim()) {
                         const fallbackData: ExerciseDetailData = {
                             gifUrl: buildExerciseGifUrl(exerciseDbId, apiKey),
                             target: '',
@@ -371,7 +425,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         isTranslatingInstructions: true,
                         notFound: false,
                         debug: {
-                            source: byId ? 'id' : 'candidate',
+                            source: byId || bestMatch.id ? 'id' : 'candidate',
                             resolvedExerciseDbId: bestMatch.id,
                             resolvedExerciseDbName: bestMatch.name,
                             usedCandidate: byCandidate?.usedCandidate,
@@ -388,7 +442,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     data: detailData,
                     notFound: false,
                     debug: {
-                        source: byId ? 'id' : 'candidate',
+                        source: byId || bestMatch.id ? 'id' : 'candidate',
                         resolvedExerciseDbId: bestMatch.id,
                         resolvedExerciseDbName: bestMatch.name,
                         usedCandidate: byCandidate?.usedCandidate,
@@ -429,7 +483,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         }
     }, [aliasSignature, apiKey, cacheKey, currentLanguage, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
 
-    if (!normalizedName || !apiKey) {
+    if (!normalizedName) {
         return {
             data: null,
             isLoading: false,
@@ -439,7 +493,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 source: 'none',
                 candidatesTried: [],
                 gifValidated: false,
-                lastError: apiKey ? undefined : 'missing_api_key',
+                lastError: undefined,
             },
         }
     }
