@@ -1,12 +1,29 @@
+import { exerciseDbExpandedExercises } from './exerciseDbExpandedExercises'
+import {
+    buildSpanishExerciseDescription,
+    normalizeEquipmentLabel,
+    normalizeExerciseDisplayName,
+    normalizeExerciseInstructions,
+    normalizePrimaryMuscleLabel,
+    normalizeSecondaryMuscleLabels,
+} from './exerciseCatalogNormalization'
+
 export interface DefaultExerciseSeed {
     id: string
     nombre: string
+    descripcion?: string
     grupoMuscularPrimario: string
+    gruposMuscularesSecundarios?: string[]
+    nivelDificultad?: 'basico' | 'intermedio' | 'avanzado'
     equipoNecesario: string
     imagenUrl?: string
+    exerciseDbId?: string
+    exerciseDbName?: string
+    exerciseDbAliases?: string[]
+    instrucciones?: string
 }
 
-export const defaultExercises: DefaultExerciseSeed[] = [
+const baseDefaultExercises: DefaultExerciseSeed[] = [
     { id: 'pecho-press-banca', nombre: 'Press de banca', grupoMuscularPrimario: 'pecho', equipoNecesario: 'barra' },
     { id: 'pecho-press-inclinado-mancuernas', nombre: 'Press inclinado con mancuernas', grupoMuscularPrimario: 'pecho', equipoNecesario: 'mancuernas' },
     { id: 'pecho-press-declinado', nombre: 'Press declinado', grupoMuscularPrimario: 'pecho', equipoNecesario: 'barra' },
@@ -68,3 +85,35 @@ export const defaultExercises: DefaultExerciseSeed[] = [
     { id: 'core-hollow-hold', nombre: 'Hollow hold', grupoMuscularPrimario: 'core', equipoNecesario: 'peso corporal' },
     { id: 'core-crunch-cable', nombre: 'Crunch en polea', grupoMuscularPrimario: 'core', equipoNecesario: 'cable' },
 ]
+
+const baseIds = new Set(baseDefaultExercises.map((exercise) => exercise.id))
+const baseNames = new Set(baseDefaultExercises.map((exercise) => exercise.nombre.trim().toLowerCase()))
+
+const normalizedExpandedDefaults: DefaultExerciseSeed[] = exerciseDbExpandedExercises.map((exercise) => {
+    const grupoMuscularPrimario = normalizePrimaryMuscleLabel(exercise.grupoMuscularPrimario)
+    const gruposMuscularesSecundarios = normalizeSecondaryMuscleLabels(exercise.gruposMuscularesSecundarios)
+    const equipoNecesario = normalizeEquipmentLabel(exercise.equipoNecesario)
+
+    return {
+        id: exercise.id,
+        nombre: normalizeExerciseDisplayName(exercise.nombre),
+        descripcion: buildSpanishExerciseDescription(grupoMuscularPrimario),
+        grupoMuscularPrimario,
+        gruposMuscularesSecundarios,
+        nivelDificultad: exercise.nivelDificultad,
+        equipoNecesario,
+        imagenUrl: exercise.imagenUrl,
+        exerciseDbId: exercise.exerciseDbId,
+        exerciseDbName: exercise.exerciseDbName,
+        exerciseDbAliases: exercise.exerciseDbAliases,
+        instrucciones:
+            normalizeExerciseInstructions(exercise.instrucciones) ??
+            'Mantén técnica controlada y progresión gradual de carga.',
+    }
+})
+
+const expandedUniqueDefaults: DefaultExerciseSeed[] = normalizedExpandedDefaults.filter(
+    (exercise) => !baseIds.has(exercise.id) && !baseNames.has(exercise.nombre.trim().toLowerCase()),
+)
+
+export const defaultExercises: DefaultExerciseSeed[] = [...baseDefaultExercises, ...expandedUniqueDefaults]

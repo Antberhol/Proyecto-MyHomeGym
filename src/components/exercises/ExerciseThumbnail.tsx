@@ -16,7 +16,7 @@ export function ExerciseThumbnail({
     nombre,
     grupoMuscularPrimario: _grupoMuscularPrimario,
     equipoNecesario: _equipoNecesario,
-    imagenUrl: _imagenUrl,
+    imagenUrl,
     exerciseDbId,
     exerciseDbName,
     exerciseDbAliases,
@@ -26,6 +26,7 @@ export function ExerciseThumbnail({
         exerciseDbId,
         exerciseDbName,
         exerciseDbAliases,
+        fallbackGifUrl: imagenUrl,
     })
     const [gifLoaded, setGifLoaded] = useState(false)
 

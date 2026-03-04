@@ -23,6 +23,7 @@ interface UseExerciseGifOptions {
     exerciseDbId?: string
     exerciseDbName?: string
     exerciseDbAliases?: string[]
+    fallbackGifUrl?: string
 }
 
 const exerciseGifCache = new Map<string, ExerciseGifData>()
@@ -247,13 +248,14 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
+    const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
-    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}`
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${fallbackGifUrl}`
     const cached = normalizedName ? exerciseGifCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && !cached)
 
     const [state, setState] = useState<UseExerciseGifResult>({
-        gifUrl: EXERCISE_GIF_PLACEHOLDER,
+        gifUrl: fallbackGifUrl || EXERCISE_GIF_PLACEHOLDER,
         targetMuscle: '',
         resolvedExerciseDbId: undefined,
         resolvedExerciseDbName: undefined,
@@ -276,7 +278,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
 
         const run = async () => {
             setState({
-                gifUrl: EXERCISE_GIF_PLACEHOLDER,
+                gifUrl: fallbackGifUrl || EXERCISE_GIF_PLACEHOLDER,
                 targetMuscle: '',
                 resolvedExerciseDbId: undefined,
                 resolvedExerciseDbName: undefined,
@@ -304,7 +306,10 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 }
 
                 const resolved: ExerciseGifData = {
-                    gifUrl: resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId),
+                    gifUrl:
+                        resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId) ||
+                        fallbackGifUrl ||
+                        EXERCISE_GIF_PLACEHOLDER,
                     targetMuscle: firstResult?.target || '',
                     resolvedExerciseDbId: firstResult?.id,
                     resolvedExerciseDbName: firstResult?.name,
@@ -316,7 +321,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 if (!controller.signal.aborted) {
                     const fallbackGifUrl = apiKey && exerciseDbId?.trim()
                         ? buildExerciseGifUrl(exerciseDbId, apiKey)
-                        : EXERCISE_GIF_PLACEHOLDER
+                        : (options?.fallbackGifUrl ? normalizeGifUrl(options.fallbackGifUrl) : EXERCISE_GIF_PLACEHOLDER)
 
                     const fallback = {
                         gifUrl: fallbackGifUrl,
@@ -335,11 +340,23 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         return () => {
             controller.abort()
         }
-    }, [aliasSignature, apiKey, cacheKey, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
+    }, [
+        aliasSignature,
+        apiKey,
+        cacheKey,
+        exerciseDbAliases,
+        exerciseDbId,
+        exerciseDbName,
+        exerciseName,
+        fallbackGifUrl,
+        normalizedName,
+        options?.fallbackGifUrl,
+        shouldFetch,
+    ])
 
     if (!normalizedName) {
         return {
-            gifUrl: EXERCISE_GIF_PLACEHOLDER,
+            gifUrl: fallbackGifUrl || EXERCISE_GIF_PLACEHOLDER,
             targetMuscle: '',
             resolvedExerciseDbId: undefined,
             resolvedExerciseDbName: undefined,

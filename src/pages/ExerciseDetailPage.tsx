@@ -84,6 +84,8 @@ export function ExerciseDetailPage() {
         exerciseDbId: exercise?.exerciseDbId,
         exerciseDbName: englishAlias,
         exerciseDbAliases: exercise?.exerciseDbAliases,
+        fallbackInstructions: exercise?.instrucciones,
+        fallbackGifUrl: exercise?.imagenUrl,
     })
 
     if (isCatalogLoading || (exercise && detail.isLoading)) {

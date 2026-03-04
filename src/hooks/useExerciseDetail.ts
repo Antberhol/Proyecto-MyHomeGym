@@ -42,6 +42,8 @@ interface UseExerciseDetailOptions {
     exerciseDbId?: string
     exerciseDbName?: string
     exerciseDbAliases?: string[]
+    fallbackInstructions?: string
+    fallbackGifUrl?: string
 }
 
 interface CachedDetailEntry {
@@ -53,6 +55,7 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
+const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-fallback-v2'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
 
@@ -79,17 +82,193 @@ function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): Reque
     }
 }
 
-async function translateInstructionToSpanish(text: string, signal: AbortSignal): Promise<string> {
+function stripStepPrefix(step: string) {
+    return step
+        .replace(/^step\s*:?\s*\d+\s*/i, '')
+        .replace(/^\d+[).:-]?\s*/, '')
+        .trim()
+}
+
+function parseFallbackInstructions(value?: string): string[] {
+    const normalized = value?.trim()
+    if (!normalized) {
+        return []
+    }
+
+    const byLine = normalized
+        .split(/\r?\n/)
+        .map((line) => stripStepPrefix(line.trim()))
+        .filter(Boolean)
+
+    if (byLine.length > 1) {
+        return byLine
+    }
+
+    return [stripStepPrefix(normalized)]
+}
+
+function detectInstructionLanguage(text: string): 'es' | 'en' {
+    const normalized = text.toLowerCase()
+
+    if (/[áéíóúñ¿¡]/i.test(text)) {
+        return 'es'
+    }
+
+    if (
+        /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas)\b/i.test(
+            normalized,
+        )
+    ) {
+        return 'es'
+    }
+
+    return 'en'
+}
+
+function hasEnglishResidue(text: string): boolean {
+    return /\b(the|and|with|your|you|keep|pull|push|lower|raise|repeat|for|number|repetitions|starting|position|body|feet|bench|grip|shoulder|shoulders|elbow|elbows|arm|arms|back|chest|slowly|pause)\b/i.test(
+        text,
+    )
+}
+
+const spanishLeadReplacements: Array<[RegExp, string]> = [
+    [/^set up\b/i, 'Prepara'],
+    [/^stand with\b/i, 'Colócate de pie con'],
+    [/^stand facing\b/i, 'Colócate frente a'],
+    [/^stand\b/i, 'Colócate de pie'],
+    [/^sit on\b/i, 'Siéntate en'],
+    [/^sit\b/i, 'Siéntate'],
+    [/^lie\b/i, 'Túmbate'],
+    [/^start in\b/i, 'Comienza en'],
+    [/^start by\b/i, 'Comienza'],
+    [/^attach\b/i, 'Coloca'],
+    [/^adjust\b/i, 'Ajusta'],
+    [/^grasp\b/i, 'Sujeta'],
+    [/^grab\b/i, 'Agarra'],
+    [/^keep\b/i, 'Mantén'],
+    [/^engage\b/i, 'Activa'],
+    [/^pull\b/i, 'Tira'],
+    [/^push\b/i, 'Empuja'],
+    [/^lower\b/i, 'Baja'],
+    [/^raise\b/i, 'Eleva'],
+    [/^pause\b/i, 'Haz una pausa'],
+    [/^repeat\b/i, 'Repite'],
+    [/^continue\b/i, 'Continúa'],
+    [/^switch\b/i, 'Cambia'],
+    [/^hold\b/i, 'Mantén'],
+    [/^inhale\b/i, 'Inhala'],
+    [/^exhale\b/i, 'Exhala'],
+]
+
+const spanishInlineReplacements: Array<[RegExp, string]> = [
+    [/\bshoulder-width apart\b/gi, 'a la anchura de los hombros'],
+    [/\bhip-width apart\b/gi, 'a la anchura de la cadera'],
+    [/\bfeet flat on the ground\b/gi, 'pies apoyados en el suelo'],
+    [/\bfeet flat on the floor\b/gi, 'pies apoyados en el suelo'],
+    [/\bpalms facing down\b/gi, 'palmas hacia abajo'],
+    [/\bpalms facing up\b/gi, 'palmas hacia arriba'],
+    [/\bpalms facing each other\b/gi, 'palmas enfrentadas'],
+    [/\boverhand grip\b/gi, 'agarre prono'],
+    [/\bunderhand grip\b/gi, 'agarre supino'],
+    [/\bneutral grip\b/gi, 'agarre neutro'],
+    [/\bshoulder blades\b/gi, 'escápulas'],
+    [/\bcore\b/gi, 'core'],
+    [/\bstarting position\b/gi, 'posición inicial'],
+    [/\bdesired number of repetitions\b/gi, 'número de repeticiones deseado'],
+    [/\bfor the desired number of repetitions\b/gi, 'durante el número de repeticiones deseado'],
+    [/\bslowly\b/gi, 'lentamente'],
+    [/\bmoment\b/gi, 'instante'],
+    [/\bbench\b/gi, 'banco'],
+    [/\bbarbell\b/gi, 'barra'],
+    [/\bdumbbell\b/gi, 'mancuerna'],
+    [/\bcable machine\b/gi, 'máquina de poleas'],
+    [/\bcable\b/gi, 'cable'],
+    [/\brow\b/gi, 'remo'],
+    [/\bpull-up bar\b/gi, 'barra de dominadas'],
+    [/\bbodyweight\b/gi, 'peso corporal'],
+    [/\bbody weight\b/gi, 'peso corporal'],
+    [/\belbows\b/gi, 'codos'],
+    [/\bshoulders\b/gi, 'hombros'],
+    [/\bchest\b/gi, 'pecho'],
+    [/\bback\b/gi, 'espalda'],
+]
+
+function fallbackTranslateInstructionToSpanish(text: string): string {
+    const trimmed = text.trim()
+    if (!trimmed) {
+        return text
+    }
+
+    if (detectInstructionLanguage(trimmed) === 'es') {
+        return trimmed
+    }
+
+    let translated = trimmed
+
+    for (const [pattern, replacement] of spanishLeadReplacements) {
+        if (pattern.test(translated)) {
+            translated = translated.replace(pattern, replacement)
+            break
+        }
+    }
+
+    for (const [pattern, replacement] of spanishInlineReplacements) {
+        translated = translated.replace(pattern, replacement)
+    }
+
+    translated = translated
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .trim()
+
+    if (detectInstructionLanguage(translated) !== 'es' || hasEnglishResidue(translated)) {
+        return 'Ejecuta la repetición con técnica controlada y rango completo.'
+    }
+
+    return translated || trimmed
+}
+
+function normalizeTranslatedInstruction(
+    originalText: string,
+    translatedText: string,
+    targetLanguage: 'es' | 'en',
+): string {
+    const candidate = translatedText.trim() || originalText.trim()
+
+    if (targetLanguage === 'es' && (detectInstructionLanguage(candidate) !== 'es' || hasEnglishResidue(candidate))) {
+        return fallbackTranslateInstructionToSpanish(originalText)
+    }
+
+    return candidate
+}
+
+function shouldTranslateInstructions(instructions: string[], language: 'es' | 'en') {
+    return instructions.some((instruction) => detectInstructionLanguage(instruction) !== language)
+}
+
+async function translateInstruction(
+    text: string,
+    sourceLanguage: 'es' | 'en',
+    targetLanguage: 'es' | 'en',
+    signal: AbortSignal,
+): Promise<string> {
     const normalizedText = text.trim()
     if (!normalizedText) {
         return text
     }
 
-    const cacheKey = `es|${normalizedText}`
+    if (sourceLanguage === targetLanguage) {
+        return normalizedText
+    }
+
+    const cacheKey = `${sourceLanguage}|${targetLanguage}|${normalizedText}`
     const cached = translatedInstructionCache.get(cacheKey)
     if (cached) {
         return cached
     }
+
+    const fallbackTranslation =
+        targetLanguage === 'es' ? fallbackTranslateInstructionToSpanish(normalizedText) : normalizedText
 
     const timeoutController = new AbortController()
     const abortTimeout = window.setTimeout(() => timeoutController.abort(), 5000)
@@ -104,27 +283,29 @@ async function translateInstructionToSpanish(text: string, signal: AbortSignal):
             },
             body: JSON.stringify({
                 q: normalizedText,
-                source: 'en',
-                target: 'es',
+                source: sourceLanguage,
+                target: targetLanguage,
                 format: 'text',
             }),
             signal: timeoutController.signal,
         })
 
         if (!response.ok) {
-            return text
+            return fallbackTranslation
         }
 
         const payload = (await response.json()) as { translatedText?: string }
         const translated = payload.translatedText?.trim()
         if (!translated) {
-            return text
+            return fallbackTranslation
         }
 
-        translatedInstructionCache.set(cacheKey, translated)
-        return translated
+        const normalizedTranslated = normalizeTranslatedInstruction(normalizedText, translated, targetLanguage)
+
+        translatedInstructionCache.set(cacheKey, normalizedTranslated)
+        return normalizedTranslated
     } catch {
-        return text
+        return fallbackTranslation
     } finally {
         clearTimeout(abortTimeout)
         signal.removeEventListener('abort', relayAbort)
@@ -136,12 +317,19 @@ async function maybeTranslateInstructions(
     language: 'es' | 'en',
     signal: AbortSignal,
 ): Promise<string[]> {
-    if (language !== 'es' || instructions.length === 0) {
+    if (instructions.length === 0) {
         return instructions
     }
 
     const translated = await Promise.all(
-        instructions.map((instruction) => translateInstructionToSpanish(instruction, signal)),
+        instructions.map((instruction) =>
+            translateInstruction(
+                instruction,
+                detectInstructionLanguage(instruction),
+                language,
+                signal,
+            ),
+        ),
     )
 
     return translated
@@ -325,8 +513,11 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
+    const fallbackInstructionsValue = options?.fallbackInstructions
+    const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
+    const fallbackInstructionSignature = normalizeExerciseName(fallbackInstructionsValue ?? '')
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
-    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}`
+    const cacheKey = `${INSTRUCTION_TRANSLATION_CACHE_VERSION}|${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}|${fallbackGifUrl}|${fallbackInstructionSignature}`
     const cached = normalizedName ? detailCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
@@ -354,6 +545,11 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 exerciseDbName,
                 exerciseDbAliases,
             })
+            const fallbackInstructions = parseFallbackInstructions(fallbackInstructionsValue)
+                .map((instruction) => stripStepPrefix(instruction))
+                .filter(Boolean)
+            const resolvedFallbackGifUrl =
+                fallbackGifUrl || (apiKey && exerciseDbId?.trim() ? buildExerciseGifUrl(exerciseDbId, apiKey) : '')
 
             setState({
                 data: null,
@@ -383,12 +579,41 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 const bestMatch = byId ?? byCandidate?.item ?? null
 
                 if (!bestMatch) {
-                    if (apiKey && exerciseDbId?.trim()) {
+                    if (resolvedFallbackGifUrl || fallbackInstructions.length > 0) {
+                        const needsFallbackTranslation =
+                            fallbackInstructions.length > 0 &&
+                            shouldTranslateInstructions(fallbackInstructions, currentLanguage)
+
+                        if (needsFallbackTranslation) {
+                            setState({
+                                data: {
+                                    gifUrl: resolvedFallbackGifUrl,
+                                    target: '',
+                                    equipment: '',
+                                    instructions: fallbackInstructions,
+                                    secondaryMuscles: [],
+                                },
+                                isLoading: false,
+                                isTranslatingInstructions: true,
+                                notFound: false,
+                                debug: {
+                                    source: exerciseDbId ? 'id' : 'none',
+                                    resolvedExerciseDbId: exerciseDbId,
+                                    candidatesTried: candidates,
+                                    gifValidated: Boolean(resolvedFallbackGifUrl),
+                                },
+                            })
+                        }
+
+                        const translatedFallbackInstructions = needsFallbackTranslation
+                            ? await maybeTranslateInstructions(fallbackInstructions, currentLanguage, controller.signal)
+                            : fallbackInstructions
+
                         const fallbackData: ExerciseDetailData = {
-                            gifUrl: buildExerciseGifUrl(exerciseDbId, apiKey),
+                            gifUrl: resolvedFallbackGifUrl,
                             target: '',
                             equipment: '',
-                            instructions: [],
+                            instructions: translatedFallbackInstructions,
                             secondaryMuscles: [],
                         }
 
@@ -396,10 +621,10 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                             data: fallbackData,
                             notFound: false,
                             debug: {
-                                source: 'id',
+                                source: exerciseDbId ? 'id' : 'none',
                                 resolvedExerciseDbId: exerciseDbId,
                                 candidatesTried: candidates,
-                                gifValidated: true,
+                                gifValidated: Boolean(resolvedFallbackGifUrl),
                             },
                         }
 
@@ -428,16 +653,23 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     return
                 }
 
-                const rawInstructions = Array.isArray(bestMatch.instructions) ? bestMatch.instructions : []
+                const rawInstructions = Array.isArray(bestMatch.instructions)
+                    ? bestMatch.instructions.map((instruction) => stripStepPrefix(instruction)).filter(Boolean)
+                    : []
+                const instructionSource = rawInstructions.length > 0 ? rawInstructions : fallbackInstructions
                 const detailData: ExerciseDetailData = {
-                    gifUrl: resolveExerciseGifUrl(bestMatch, apiKey),
+                    gifUrl: resolveExerciseGifUrl(bestMatch, apiKey) || resolvedFallbackGifUrl,
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
-                    instructions: rawInstructions,
+                    instructions: instructionSource,
                     secondaryMuscles: Array.isArray(bestMatch.secondaryMuscles) ? bestMatch.secondaryMuscles : [],
                 }
 
-                if (currentLanguage === 'es' && rawInstructions.length > 0) {
+                const needsTranslation =
+                    instructionSource.length > 0 &&
+                    shouldTranslateInstructions(instructionSource, currentLanguage)
+
+                if (needsTranslation) {
                     setState({
                         data: detailData,
                         isLoading: false,
@@ -454,7 +686,11 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         },
                     })
 
-                    detailData.instructions = await maybeTranslateInstructions(rawInstructions, currentLanguage, controller.signal)
+                    detailData.instructions = await maybeTranslateInstructions(
+                        instructionSource,
+                        currentLanguage,
+                        controller.signal,
+                    )
                 }
 
                 const successEntry: CachedDetailEntry = {
@@ -475,6 +711,37 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 setState({ data: detailData, isLoading: false, isTranslatingInstructions: false, notFound: false, debug: successEntry.debug })
             } catch {
                 if (!controller.signal.aborted) {
+                    if (resolvedFallbackGifUrl || fallbackInstructions.length > 0) {
+                        const translatedFallbackInstructions = await maybeTranslateInstructions(
+                            fallbackInstructions,
+                            currentLanguage,
+                            controller.signal,
+                        )
+                        const fallbackData: ExerciseDetailData = {
+                            gifUrl: resolvedFallbackGifUrl,
+                            target: '',
+                            equipment: '',
+                            instructions: translatedFallbackInstructions,
+                            secondaryMuscles: [],
+                        }
+
+                        const fallbackEntry: CachedDetailEntry = {
+                            data: fallbackData,
+                            notFound: false,
+                            debug: {
+                                source: exerciseDbId ? 'id' : 'none',
+                                resolvedExerciseDbId: exerciseDbId,
+                                candidatesTried: candidates,
+                                gifValidated: Boolean(resolvedFallbackGifUrl),
+                                lastError: 'request_failed',
+                            },
+                        }
+
+                        detailCache.set(cacheKey, fallbackEntry)
+                        setState({ data: fallbackData, isLoading: false, isTranslatingInstructions: false, notFound: false, debug: fallbackEntry.debug })
+                        return
+                    }
+
                     const errorEntry: CachedDetailEntry = {
                         data: null,
                         notFound: true,
@@ -500,7 +767,20 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         return () => {
             controller.abort()
         }
-    }, [aliasSignature, apiKey, cacheKey, currentLanguage, exerciseDbAliases, exerciseDbId, exerciseDbName, exerciseName, normalizedName, shouldFetch])
+    }, [
+        aliasSignature,
+        apiKey,
+        cacheKey,
+        currentLanguage,
+        exerciseDbAliases,
+        exerciseDbId,
+        exerciseDbName,
+        exerciseName,
+        fallbackGifUrl,
+        fallbackInstructionsValue,
+        normalizedName,
+        shouldFetch,
+    ])
 
     if (!normalizedName) {
         return {
