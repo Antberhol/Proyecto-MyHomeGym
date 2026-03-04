@@ -55,7 +55,7 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
-const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-fallback-v2'
+const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v3'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
 
@@ -115,7 +115,7 @@ function detectInstructionLanguage(text: string): 'es' | 'en' {
     }
 
     if (
-        /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas)\b/i.test(
+        /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas|agarra|sujeta|colócate|colocate|siéntate|sientate|túmbate|tumbate|posición|posicion|inicial|pausa|luego|hacia|pecho|cuerpo|brazos|codos)\b/i.test(
             normalized,
         )
     ) {
@@ -125,19 +125,30 @@ function detectInstructionLanguage(text: string): 'es' | 'en' {
     return 'en'
 }
 
-function hasEnglishResidue(text: string): boolean {
-    return /\b(the|and|with|your|you|keep|pull|push|lower|raise|repeat|for|number|repetitions|starting|position|body|feet|bench|grip|shoulder|shoulders|elbow|elbows|arm|arms|back|chest|slowly|pause)\b/i.test(
-        text,
-    )
+function applyTextReplacements(value: string, replacements: Array<[RegExp, string]>): string {
+    let translated = value
+
+    for (const [pattern, replacement] of replacements) {
+        translated = translated.replace(pattern, replacement)
+    }
+
+    return translated
+}
+
+function applyWordTranslations(value: string, dictionary: Record<string, string>): string {
+    return value.replace(/\b[a-z][a-z'-]*\b/gi, (word) => dictionary[word.toLowerCase()] ?? word)
 }
 
 const spanishLeadReplacements: Array<[RegExp, string]> = [
     [/^set up\b/i, 'Prepara'],
-    [/^stand with\b/i, 'Colócate de pie con'],
-    [/^stand facing\b/i, 'Colócate frente a'],
-    [/^stand\b/i, 'Colócate de pie'],
+    [/^stand with\b/i, 'Ponte de pie con'],
+    [/^stand facing\b/i, 'Ponte frente a'],
+    [/^stand\b/i, 'Ponte de pie'],
     [/^sit on\b/i, 'Siéntate en'],
     [/^sit\b/i, 'Siéntate'],
+    [/^lie face down\b/i, 'Túmbate boca abajo'],
+    [/^lie face up\b/i, 'Túmbate boca arriba'],
+    [/^lie flat\b/i, 'Túmbate'],
     [/^lie\b/i, 'Túmbate'],
     [/^start in\b/i, 'Comienza en'],
     [/^start by\b/i, 'Comienza'],
@@ -160,32 +171,111 @@ const spanishLeadReplacements: Array<[RegExp, string]> = [
     [/^exhale\b/i, 'Exhala'],
 ]
 
-const spanishInlineReplacements: Array<[RegExp, string]> = [
+const englishToSpanishFragmentReplacements: Array<[RegExp, string]> = [
+    [/\blie underneath it\b/gi, 'colócate debajo de ella'],
+    [/\bwalk your feet forward\b/gi, 'camina con los pies hacia delante'],
+    [/\bstep back\b/gi, 'da un paso atrás'],
+    [/\bsit back on your heels\b/gi, 'siéntate sobre los talones'],
+    [/\blean slightly forward\b/gi, 'inclínate ligeramente hacia delante'],
+    [/\blean slightly back\b/gi, 'inclínate ligeramente hacia atrás'],
+    [/\bbend your knees slightly\b/gi, 'flexiona ligeramente las rodillas'],
+    [/\bbend forward at the hips\b/gi, 'inclínate hacia delante desde la cadera'],
+    [/\bkeeping your elbows close to your body\b/gi, 'manteniendo los codos cerca del cuerpo'],
+    [/\bkeeping your elbows close to your sides\b/gi, 'manteniendo los codos pegados al costado'],
+    [/\bkeeping your elbows close to your head\b/gi, 'manteniendo los codos cerca de la cabeza'],
+    [/\bkeeping your upper arms stationary\b/gi, 'manteniendo los brazos superiores estables'],
+    [/\bkeeping your upper arm stationary\b/gi, 'manteniendo el brazo superior estable'],
+    [/\bkeeping your body straight\b/gi, 'manteniendo el cuerpo recto'],
+    [/\bkeeping your body in a straight line from head to heels\b/gi, 'manteniendo el cuerpo en línea recta de cabeza a talones'],
+    [/\bthroughout the exercise\b/gi, 'durante todo el ejercicio'],
+    [/\bcontinue alternating sides\b/gi, 'continúa alternando lados'],
+    [/\bfor each rep\b/gi, 'en cada repetición'],
+    [/\bslightly wider than shoulder-width apart\b/gi, 'ligeramente más abierto que la anchura de los hombros'],
+    [/\bslightly narrower than shoulder-width apart\b/gi, 'ligeramente más cerrado que la anchura de los hombros'],
     [/\bshoulder-width apart\b/gi, 'a la anchura de los hombros'],
     [/\bhip-width apart\b/gi, 'a la anchura de la cadera'],
+    [/\bfeet shoulder-width apart\b/gi, 'pies a la anchura de los hombros'],
     [/\bfeet flat on the ground\b/gi, 'pies apoyados en el suelo'],
     [/\bfeet flat on the floor\b/gi, 'pies apoyados en el suelo'],
+    [/\bkeeping your back straight\b/gi, 'manteniendo la espalda recta'],
+    [/\bkeep your back straight\b/gi, 'mantén la espalda recta'],
+    [/\bkeeping your core engaged\b/gi, 'manteniendo el core activado'],
+    [/\bkeep your core engaged\b/gi, 'mantén el core activado'],
+    [/\bknees slightly bent\b/gi, 'rodillas ligeramente flexionadas'],
+    [/\bslight bend in your knees\b/gi, 'ligera flexión de rodillas'],
     [/\bpalms facing down\b/gi, 'palmas hacia abajo'],
     [/\bpalms facing up\b/gi, 'palmas hacia arriba'],
     [/\bpalms facing each other\b/gi, 'palmas enfrentadas'],
+    [/\bslightly bent\b/gi, 'ligeramente flexionados'],
+    [/\bfully extended\b/gi, 'completamente extendidos'],
     [/\boverhand grip\b/gi, 'agarre prono'],
     [/\bunderhand grip\b/gi, 'agarre supino'],
     [/\bneutral grip\b/gi, 'agarre neutro'],
+    [/\bsqueeze your shoulder blades together\b/gi, 'junta las escápulas al final'],
+    [/\bshoulder blades together\b/gi, 'escápulas juntas'],
     [/\bshoulder blades\b/gi, 'escápulas'],
     [/\bcore\b/gi, 'core'],
+    [/\bto create tension\b/gi, 'para crear tensión'],
+    [/\bat waist height\b/gi, 'a la altura de la cintura'],
+    [/\bat chest height\b/gi, 'a la altura del pecho'],
+    [/\bat shoulder height\b/gi, 'a la altura de los hombros'],
+    [/\b45-degree angle\b/gi, 'ángulo de 45 grados'],
+    [/\b90-degree angle\b/gi, 'ángulo de 90 grados'],
+    [/\btowards your chest\b/gi, 'hacia el pecho'],
+    [/\btowards your body\b/gi, 'hacia el cuerpo'],
+    [/\btowards your torso\b/gi, 'hacia el torso'],
+    [/\btowards your waist\b/gi, 'hacia la cintura'],
+    [/\btowards your upper abdomen\b/gi, 'hacia el abdomen superior'],
+    [/\btowards your lower chest\b/gi, 'hacia el pecho bajo'],
+    [/\bback to the starting position\b/gi, 'de vuelta a la posición inicial'],
+    [/\bto the starting position\b/gi, 'a la posición inicial'],
     [/\bstarting position\b/gi, 'posición inicial'],
-    [/\bdesired number of repetitions\b/gi, 'número de repeticiones deseado'],
     [/\bfor the desired number of repetitions\b/gi, 'durante el número de repeticiones deseado'],
+    [/\bdesired number of repetitions\b/gi, 'número de repeticiones deseado'],
+    [/\bpause for a moment at the top\b/gi, 'haz una pausa breve arriba'],
+    [/\bpause for a moment at the bottom\b/gi, 'haz una pausa breve abajo'],
+    [/\bpause for a moment\b/gi, 'haz una pausa breve'],
+    [/\bfor a moment\b/gi, 'brevemente'],
+    [/\bslowly lower\b/gi, 'baja lentamente'],
+    [/\bslowly return\b/gi, 'vuelve lentamente'],
+    [/\bslowly release\b/gi, 'libera lentamente'],
+    [/\bslowly extend\b/gi, 'extiende lentamente'],
+    [/\bslowly bend\b/gi, 'flexiona lentamente'],
     [/\bslowly\b/gi, 'lentamente'],
-    [/\bmoment\b/gi, 'instante'],
+    [/\bwhile keeping\b/gi, 'manteniendo'],
+    [/\bkeeping\b/gi, 'manteniendo'],
+    [/\bby bending\b/gi, 'flexionando'],
+    [/\bby extending\b/gi, 'extendiendo'],
+    [/\bswitch sides\b/gi, 'cambia de lado'],
+    [/\bthen switch sides\b/gi, 'luego cambia de lado'],
+    [/\brepeat with the other arm\b/gi, 'repite con el otro brazo'],
+    [/\bthen switch to the other arm\b/gi, 'luego cambia al otro brazo'],
+    [/\bupper arms\b/gi, 'brazos superiores'],
+    [/\blower arms\b/gi, 'antebrazos'],
+    [/\bexercise ball\b/gi, 'fitball'],
+    [/\bstability ball\b/gi, 'fitball'],
+    [/\bcable machine\b/gi, 'máquina de poleas'],
+    [/\bsmith machine\b/gi, 'máquina Smith'],
+    [/\bpull-up bar\b/gi, 'barra de dominadas'],
+    [/\bbodyweight\b/gi, 'peso corporal'],
     [/\bbench\b/gi, 'banco'],
     [/\bbarbell\b/gi, 'barra'],
     [/\bdumbbell\b/gi, 'mancuerna'],
-    [/\bcable machine\b/gi, 'máquina de poleas'],
+    [/\bdumbbells\b/gi, 'mancuernas'],
+    [/\bv-bar\b/gi, 'barra en V'],
+    [/\bhigh pulley\b/gi, 'polea alta'],
+    [/\blow pulley\b/gi, 'polea baja'],
+    [/\boverhead\b/gi, 'por encima de la cabeza'],
+    [/\bsuspension trainer\b/gi, 'entrenador en suspensión'],
+    [/\banchor point\b/gi, 'punto de anclaje'],
+    [/\bfootrests\b/gi, 'apoyapiés'],
+    [/\bfootplate\b/gi, 'plataforma para los pies'],
+    [/\bseat height\b/gi, 'altura del asiento'],
+    [/\bstraight line\b/gi, 'línea recta'],
+    [/\bparallel to the ground\b/gi, 'paralelo al suelo'],
+    [/\bparallel to the floor\b/gi, 'paralelo al suelo'],
     [/\bcable\b/gi, 'cable'],
     [/\brow\b/gi, 'remo'],
-    [/\bpull-up bar\b/gi, 'barra de dominadas'],
-    [/\bbodyweight\b/gi, 'peso corporal'],
     [/\bbody weight\b/gi, 'peso corporal'],
     [/\belbows\b/gi, 'codos'],
     [/\bshoulders\b/gi, 'hombros'],
@@ -193,7 +283,84 @@ const spanishInlineReplacements: Array<[RegExp, string]> = [
     [/\bback\b/gi, 'espalda'],
 ]
 
-function fallbackTranslateInstructionToSpanish(text: string): string {
+const englishToSpanishWordMap: Record<string, string> = {
+    the: 'el',
+    a: 'un',
+    an: 'un',
+    and: 'y',
+    with: 'con',
+    without: 'sin',
+    your: 'tus',
+    you: 'tú',
+    to: 'a',
+    from: 'desde',
+    of: 'de',
+    on: 'sobre',
+    in: 'en',
+    at: 'a',
+    for: 'para',
+    by: 'mediante',
+    then: 'luego',
+    while: 'mientras',
+    towards: 'hacia',
+    stand: 'ponte',
+    sit: 'siéntate',
+    lie: 'túmbate',
+    start: 'comienza',
+    attach: 'coloca',
+    adjust: 'ajusta',
+    grab: 'agarra',
+    grasp: 'sujeta',
+    keep: 'mantén',
+    engage: 'activa',
+    pull: 'tira',
+    push: 'empuja',
+    lower: 'baja',
+    raise: 'eleva',
+    pause: 'pausa',
+    repeat: 'repite',
+    continue: 'continúa',
+    switch: 'cambia',
+    hold: 'mantén',
+    inhale: 'inhala',
+    exhale: 'exhala',
+    feet: 'pies',
+    foot: 'pie',
+    knee: 'rodilla',
+    knees: 'rodillas',
+    hip: 'cadera',
+    hips: 'caderas',
+    waist: 'cintura',
+    chest: 'pecho',
+    shoulder: 'hombro',
+    shoulders: 'hombros',
+    elbow: 'codo',
+    elbows: 'codos',
+    arm: 'brazo',
+    arms: 'brazos',
+    head: 'cabeza',
+    body: 'cuerpo',
+    heels: 'talones',
+    toes: 'punta de los pies',
+    machine: 'máquina',
+    handle: 'agarre',
+    handles: 'agarres',
+    rope: 'cuerda',
+    floor: 'suelo',
+    ground: 'suelo',
+    straight: 'recta',
+    slightly: 'ligeramente',
+    slowly: 'lentamente',
+    fully: 'completamente',
+    extended: 'extendidos',
+    desired: 'deseado',
+    number: 'número',
+    repetitions: 'repeticiones',
+    position: 'posición',
+    starting: 'inicial',
+}
+
+function translateEnglishInstructionToSpanish(text: string): string {
     const trimmed = text.trim()
     if (!trimmed) {
         return text
@@ -212,34 +379,21 @@ function fallbackTranslateInstructionToSpanish(text: string): string {
         }
     }
 
-    for (const [pattern, replacement] of spanishInlineReplacements) {
-        translated = translated.replace(pattern, replacement)
-    }
+    translated = applyTextReplacements(translated, englishToSpanishFragmentReplacements)
+    translated = applyWordTranslations(translated, englishToSpanishWordMap)
 
     translated = translated
         .replace(/\s{2,}/g, ' ')
         .replace(/\s+([,.;:!?])/g, '$1')
+        .replace(/\(\s+/g, '(')
+        .replace(/\s+\)/g, ')')
         .trim()
 
-    if (detectInstructionLanguage(translated) !== 'es' || hasEnglishResidue(translated)) {
-        return 'Ejecuta la repetición con técnica controlada y rango completo.'
+    if (!translated) {
+        return trimmed
     }
 
-    return translated || trimmed
-}
-
-function normalizeTranslatedInstruction(
-    originalText: string,
-    translatedText: string,
-    targetLanguage: 'es' | 'en',
-): string {
-    const candidate = translatedText.trim() || originalText.trim()
-
-    if (targetLanguage === 'es' && (detectInstructionLanguage(candidate) !== 'es' || hasEnglishResidue(candidate))) {
-        return fallbackTranslateInstructionToSpanish(originalText)
-    }
-
-    return candidate
+    return translated.charAt(0).toUpperCase() + translated.slice(1)
 }
 
 function shouldTranslateInstructions(instructions: string[], language: 'es' | 'en') {
@@ -257,6 +411,10 @@ async function translateInstruction(
         return text
     }
 
+    if (signal.aborted) {
+        return normalizedText
+    }
+
     if (sourceLanguage === targetLanguage) {
         return normalizedText
     }
@@ -267,49 +425,14 @@ async function translateInstruction(
         return cached
     }
 
-    const fallbackTranslation =
-        targetLanguage === 'es' ? fallbackTranslateInstructionToSpanish(normalizedText) : normalizedText
+    let translated = normalizedText
 
-    const timeoutController = new AbortController()
-    const abortTimeout = window.setTimeout(() => timeoutController.abort(), 5000)
-    const relayAbort = () => timeoutController.abort()
-    signal.addEventListener('abort', relayAbort, { once: true })
-
-    try {
-        const response = await fetch('https://libretranslate.com/translate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                q: normalizedText,
-                source: sourceLanguage,
-                target: targetLanguage,
-                format: 'text',
-            }),
-            signal: timeoutController.signal,
-        })
-
-        if (!response.ok) {
-            return fallbackTranslation
-        }
-
-        const payload = (await response.json()) as { translatedText?: string }
-        const translated = payload.translatedText?.trim()
-        if (!translated) {
-            return fallbackTranslation
-        }
-
-        const normalizedTranslated = normalizeTranslatedInstruction(normalizedText, translated, targetLanguage)
-
-        translatedInstructionCache.set(cacheKey, normalizedTranslated)
-        return normalizedTranslated
-    } catch {
-        return fallbackTranslation
-    } finally {
-        clearTimeout(abortTimeout)
-        signal.removeEventListener('abort', relayAbort)
+    if (sourceLanguage === 'en' && targetLanguage === 'es') {
+        translated = translateEnglishInstructionToSpanish(normalizedText)
     }
+
+    translatedInstructionCache.set(cacheKey, translated)
+    return translated
 }
 
 async function maybeTranslateInstructions(
