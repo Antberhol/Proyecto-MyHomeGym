@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BodyDiagramSvg } from '../components/body/BodyDiagramSvg'
 import type { MuscleLevel } from '../components/body/types'
@@ -162,6 +163,7 @@ function heatmapColor(count: number): string {
 }
 
 export function ProgresoPage() {
+  const { t, i18n } = useTranslation()
   const measurements = useLiveQuery(() => progressRepository.listBodyMeasurements(), []) ?? []
   const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
   const performedExercises = useLiveQuery(() => progressRepository.listPerformedExercises(), []) ?? []
@@ -179,6 +181,7 @@ export function ProgresoPage() {
   const [calMinutes, setCalMinutes] = useState(60)
   const [calMet, setCalMet] = useState(6)
   const [volumeRange, setVolumeRange] = useState<'weekly' | 'monthly'>('weekly')
+  const numberLocale = i18n.language.toLowerCase().startsWith('es') ? 'es-ES' : 'en-US'
 
   const bodyData = measurements
     .slice()
@@ -343,8 +346,14 @@ export function ProgresoPage() {
   }, [prs])
 
   const resolvePrExerciseName = (exerciseId: string) => {
-    if (exerciseId === 'GLOBAL') return 'Sesión global'
-    return exerciseNameById.get(exerciseId) ?? 'Ejercicio'
+    if (exerciseId === 'GLOBAL') return t('dashboard.prs.globalSession')
+    return exerciseNameById.get(exerciseId) ?? t('dashboard.common.exercise')
+  }
+
+  const groupLabel = (group: string) => {
+    return t(`progress.muscleLabels.${group}`, {
+      defaultValue: GROUP_LABELS[group] ?? group,
+    })
   }
 
   const levelByMuscle = useMemo(() => {
@@ -357,10 +366,10 @@ export function ProgresoPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Progreso</h1>
+      <h1 className="text-2xl font-bold">{t('progress.title')}</h1>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Peso e IMC</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.weightImc')}</h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={bodyData}>
@@ -377,21 +386,21 @@ export function ProgresoPage() {
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Volumen por sesión</h2>
+          <h2 className="text-lg font-semibold">{t('progress.sections.volumePerSession')}</h2>
           <div className="inline-flex rounded-lg border border-slate-300 p-1 dark:border-slate-600">
             <button
               type="button"
               onClick={() => setVolumeRange('weekly')}
               className={`rounded-md px-2.5 py-1 text-xs font-medium ${volumeRange === 'weekly' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
             >
-              Semanal
+              {t('progress.range.weekly')}
             </button>
             <button
               type="button"
               onClick={() => setVolumeRange('monthly')}
               className={`rounded-md px-2.5 py-1 text-xs font-medium ${volumeRange === 'monthly' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
             >
-              Mensual
+              {t('progress.range.monthly')}
             </button>
           </div>
         </div>
@@ -407,102 +416,102 @@ export function ProgresoPage() {
               />
               <YAxis
                 domain={[0, volumeAxisMax]}
-                tickFormatter={(value) => `${Number(value).toLocaleString('es-ES')}`}
+                tickFormatter={(value) => `${Number(value).toLocaleString(numberLocale)}`}
               />
-              <Tooltip formatter={(value) => [`${Number(value).toLocaleString('es-ES')} kg`, 'Volumen']} />
+              <Tooltip formatter={(value) => [`${Number(value).toLocaleString(numberLocale)} kg`, t('progress.tooltip.volumeLabel')]} />
               <Bar dataKey="volumen" fill="#06D6A0" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
-          Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.
+          {t('progress.scaleNote')}
         </p>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Heatmap de frecuencia (10 semanas)</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.heatmapFrequency')}</h2>
         <div className="grid grid-cols-10 gap-1 sm:grid-cols-14">
           {heatmapData.map((cell) => (
             <div
               key={cell.key}
-              title={`${cell.label}: ${cell.count} entrenamiento(s)`}
+              title={t('progress.heatmap.cellTitle', { date: cell.label, count: cell.count })}
               className={`h-4 w-4 rounded ${heatmapColor(cell.count)}`}
             />
           ))}
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">Más oscuro = más entrenamientos ese día.</p>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">{t('progress.heatmap.darkerLegend')}</p>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Calculadora 1RM (Epley)</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.oneRmCalculator')}</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <input
             type="number"
             value={oneRmPeso}
             onChange={(event) => setOneRmPeso(Number(event.target.value) || 0)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            placeholder="Peso (kg)"
+            placeholder={t('progress.placeholders.weightKg')}
           />
           <input
             type="number"
             value={oneRmReps}
             onChange={(event) => setOneRmReps(Number(event.target.value) || 1)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            placeholder="Repeticiones"
+            placeholder={t('progress.placeholders.repetitions')}
           />
           <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
-            1RM estimado: <span className="font-semibold">{oneRm.toFixed(1)} kg</span>
+            {t('progress.oneRmEstimated')}: <span className="font-semibold">{oneRm.toFixed(1)} kg</span>
           </div>
         </div>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Calculadoras de sesión</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.sessionCalculators')}</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="text-sm font-semibold">Volumen estimado</p>
+            <p className="text-sm font-semibold">{t('progress.estimatedVolume')}</p>
             <div className="grid grid-cols-3 gap-2">
               <input
                 type="number"
                 value={volSeries}
                 onChange={(event) => setVolSeries(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="Series"
+                placeholder={t('training.setsPlaceholder')}
               />
               <input
                 type="number"
                 value={volReps}
                 onChange={(event) => setVolReps(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="Reps"
+                placeholder={t('training.repsPlaceholder')}
               />
               <input
                 type="number"
                 value={volPeso}
                 onChange={(event) => setVolPeso(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="Peso"
+                placeholder={t('training.weightPlaceholder')}
               />
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Volumen: <span className="font-semibold">{volumeEstimate.toFixed(1)} kg</span></p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{t('progress.labels.volume')}: <span className="font-semibold">{volumeEstimate.toFixed(1)} kg</span></p>
           </div>
 
           <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="text-sm font-semibold">Calorías estimadas</p>
+            <p className="text-sm font-semibold">{t('progress.estimatedCalories')}</p>
             <div className="grid grid-cols-3 gap-2">
               <input
                 type="number"
                 value={calWeight}
                 onChange={(event) => setCalWeight(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="Peso kg"
+                placeholder={t('progress.placeholders.weightKgCompact')}
               />
               <input
                 type="number"
                 value={calMinutes}
                 onChange={(event) => setCalMinutes(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="Min"
+                placeholder={t('progress.placeholders.minutes')}
               />
               <input
                 type="number"
@@ -510,52 +519,52 @@ export function ProgresoPage() {
                 value={calMet}
                 onChange={(event) => setCalMet(Number(event.target.value) || 0)}
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
-                placeholder="MET"
+                placeholder={t('progress.placeholders.met')}
               />
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Calorías: <span className="font-semibold">{caloriesEstimate.toFixed(1)} kcal</span></p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{t('progress.labels.calories')}: <span className="font-semibold">{caloriesEstimate.toFixed(1)} kcal</span></p>
           </div>
         </div>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Consistencia y recomendaciones</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.consistencyRecommendations')}</h2>
 
         <div className="mb-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <p className="text-sm text-slate-500 dark:text-slate-300">Racha actual</p>
-          <p className="text-2xl font-bold">{currentStreak} día(s)</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('progress.currentStreak')}</p>
+          <p className="text-2xl font-bold">{t('progress.dayCount', { count: currentStreak })}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Grupos a priorizar (30d)</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.groupsToPrioritize30d')}</p>
             {muscleRecommendations.low.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {muscleRecommendations.low.map(([muscle, volume]) => (
                   <li key={muscle} className="flex items-center justify-between">
-                    <span className="capitalize">{muscle}</span>
+                    <span className="capitalize">{groupLabel(muscle)}</span>
                     <span>{volume.toFixed(0)} kg</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-300">Sin datos suficientes.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-300">{t('progress.insufficientData')}</p>
             )}
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Grupos más trabajados (30d)</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.mostWorked30d')}</p>
             {muscleRecommendations.high.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {muscleRecommendations.high.map(([muscle, volume]) => (
                   <li key={muscle} className="flex items-center justify-between">
-                    <span className="capitalize">{muscle}</span>
+                    <span className="capitalize">{groupLabel(muscle)}</span>
                     <span>{volume.toFixed(0)} kg</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-300">Sin datos suficientes.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-300">{t('progress.insufficientData')}</p>
             )}
           </div>
         </div>
@@ -563,16 +572,16 @@ export function ProgresoPage() {
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Diagrama corporal</h2>
+          <h2 className="text-lg font-semibold">{t('progress.sections.bodyDiagram')}</h2>
         </div>
 
         <p className="mb-3 text-xs text-slate-500 dark:text-slate-300">
-          Fuente de colores: {hasRecentTrainingData ? 'entrenamientos reales de los últimos 30 días' : 'estimación basada en tus rutinas'}.
+          {t('progress.bodyDiagram.sourceLabel')}: {hasRecentTrainingData ? t('progress.bodyDiagram.sourceReal') : t('progress.bodyDiagram.sourceEstimated')}.
         </p>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-            <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">Frontal</p>
+            <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">{t('progress.bodyDiagram.front')}</p>
             <BodyDiagramSvg
               view="frontal"
               levelByMuscle={levelByMuscle}
@@ -582,7 +591,7 @@ export function ProgresoPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-            <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">Posterior</p>
+            <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">{t('progress.bodyDiagram.back')}</p>
             <BodyDiagramSvg
               view="posterior"
               levelByMuscle={levelByMuscle}
@@ -592,39 +601,39 @@ export function ProgresoPage() {
           </div>
 
           <div className="space-y-3 xl:col-span-2">
-            <h3 className="text-base font-semibold">Detalle por grupo</h3>
+            <h3 className="text-base font-semibold">{t('progress.bodyDiagram.detailByGroup')}</h3>
             {selectedGroup ? (
               <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                <p className="font-medium">{GROUP_LABELS[selectedGroup] ?? selectedGroup}</p>
+                <p className="font-medium">{groupLabel(selectedGroup)}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Volumen: {(levelByMuscle[selectedGroup]?.volume ?? 0).toFixed(0)} kg
+                  {t('progress.labels.volume')}: {(levelByMuscle[selectedGroup]?.volume ?? 0).toFixed(0)} kg
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Nivel: {levelByMuscle[selectedGroup]?.level ?? 'basico'}
+                  {t('progress.bodyDiagram.levelLabel')}: {t(`progress.bodyDiagram.levelValues.${levelByMuscle[selectedGroup]?.level ?? 'basico'}`)}
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-300">Selecciona un grupo en cualquiera de las dos figuras para ver detalles.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t('progress.bodyDiagram.selectPrompt')}</p>
             )}
 
             <div className="flex flex-wrap gap-3 text-xs">
-              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#dbeafe' }} /> Básico</span>
-              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#93c5fd' }} /> Medio</span>
-              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#3b82f6' }} /> Avanzado</span>
-              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#1d4ed8' }} /> Experto</span>
+              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#dbeafe' }} /> {t('progress.bodyDiagram.levelValues.basico')}</span>
+              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#93c5fd' }} /> {t('progress.bodyDiagram.levelValues.medio')}</span>
+              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#3b82f6' }} /> {t('progress.bodyDiagram.levelValues.avanzado')}</span>
+              <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#1d4ed8' }} /> {t('progress.bodyDiagram.levelValues.experto')}</span>
             </div>
           </div>
         </div>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Panel de PRs</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.prPanel')}</h2>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Top peso máximo</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.pr.topMaxWeight')}</p>
             {prByType.peso_maximo.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de peso máximo.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyMaxWeight')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
                 {prByType.peso_maximo.map((pr) => (
@@ -638,9 +647,9 @@ export function ProgresoPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Top volumen por serie</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.pr.topVolumePerSet')}</p>
             {prByType.volumen_serie.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de volumen por serie.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyVolumePerSet')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
                 {prByType.volumen_serie.map((pr) => (
@@ -654,15 +663,15 @@ export function ProgresoPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Top reps al mismo peso</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.pr.topRepsSameWeight')}</p>
             {prByType.reps_mismo_peso.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de repeticiones.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyRepetitions')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
                 {prByType.reps_mismo_peso.map((pr) => (
                   <li key={pr.id} className="flex items-center justify-between">
                     <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
-                    <span>{pr.valor.toFixed(0)} reps</span>
+                    <span>{pr.valor.toFixed(0)} {t('training.repsPlaceholder').toLowerCase()}</span>
                   </li>
                 ))}
               </ul>
@@ -670,9 +679,9 @@ export function ProgresoPage() {
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-sm font-semibold">Top volumen total sesión</p>
+            <p className="mb-2 text-sm font-semibold">{t('progress.pr.topTotalSessionVolume')}</p>
             {prByType.volumen_total.length === 0 ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">Sin PRs de volumen total.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyTotalVolume')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
                 {prByType.volumen_total.map((pr) => (
@@ -687,9 +696,9 @@ export function ProgresoPage() {
         </div>
 
         <div className="mt-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <p className="mb-2 text-sm font-semibold">Historial reciente de PRs</p>
+          <p className="mb-2 text-sm font-semibold">{t('progress.pr.recentHistory')}</p>
           {recentPrs.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-300">Aún no hay PRs registrados.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyRecent')}</p>
           ) : (
             <ul className="space-y-2 text-xs">
               {recentPrs.map((pr) => (

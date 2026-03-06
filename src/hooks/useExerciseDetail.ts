@@ -111,7 +111,7 @@ const spanishInstructionSignalPattern =
     /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas|agarra|sujeta|colócate|colocate|siéntate|sientate|túmbate|tumbate|posición|posicion|inicial|pausa|luego|hacia|pecho|cuerpo|brazos|codos)\b/i
 
 const englishInstructionSignalPattern =
-    /\b(the|and|with|your|for|from|to|of|in|on|at|by|then|while|when|keep|pull|push|lower|raise|pause|repeat|stand|sit|lie|bench|grip|starting|position|shoulder|body|chest|feet|knee|floor|ground|back)\b/i
+    /\b(the|a|an|and|or|with|without|your|you|for|from|to|of|in|on|at|by|then|while|when|this|that|these|those|keep|maintain|perform|pull|push|lower|raise|pause|repeat|continue|switch|stand|sit|lie|walk|step|grab|grasp|bench|grip|starting|position|shoulder|body|chest|feet|knee|floor|ground|back|arms|elbows)\b/i
 
 function hasSpanishInstructionSignals(text: string): boolean {
     if (/[áéíóúñ¿¡]/i.test(text)) {
@@ -122,11 +122,16 @@ function hasSpanishInstructionSignals(text: string): boolean {
 }
 
 function hasEnglishInstructionSignals(text: string): boolean {
-    return englishInstructionSignalPattern.test(text.toLowerCase())
+    const normalized = text.toLowerCase()
+    return englishInstructionSignalPattern.test(normalized) || countLikelyEnglishWords(normalized) > 0
 }
 
 function isMixedInstruction(text: string): boolean {
     return hasSpanishInstructionSignals(text) && hasEnglishInstructionSignals(text)
+}
+
+function shouldRetryMixedInstruction(text: string): boolean {
+    return isMixedInstruction(text) && countLikelyEnglishWords(text) > 2
 }
 
 function detectInstructionLanguage(text: string): 'es' | 'en' {
@@ -537,7 +542,7 @@ const englishResidualWordMap: Record<string, string> = {
     directly: 'directamente',
     pad: 'almohadilla',
     muscles: 'músculos',
-    press: 'press',
+    press: 'empuje',
     chair: 'silla',
     proper: 'correcta',
     seconds: 'segundos',
@@ -751,22 +756,62 @@ const englishResidualWordMap: Record<string, string> = {
     formed: 'formado',
 }
 
-const unresolvedEnglishConnectorPattern =
-    /\b(the|and|with|your|for|from|to|of|in|on|at|by|then|while|when|that|this|those|these)\b/i
+const nonEnglishLoanwordSet = new Set(['core', 'smith', 'ez'])
 
-function cleanSpanishInstructionText(value: string): string {
-    const normalized = value
+const englishInstructionLexicon = new Set([
+    ...Object.keys(englishToSpanishWordMap),
+    ...Object.keys(englishResidualWordMap),
+])
+
+function normalizeInstructionText(value: string): string {
+    return value
         .replace(/\s{2,}/g, ' ')
         .replace(/\s+([,.;:!?])/g, '$1')
         .replace(/\(\s+/g, '(')
         .replace(/\s+\)/g, ')')
         .trim()
+}
+
+function countLikelyEnglishWords(value: string): number {
+    const tokens = value.toLowerCase().match(/\b[a-z][a-z'-]*\b/g) ?? []
+
+    return tokens.reduce((count, token) => {
+        if (token === 'a' || nonEnglishLoanwordSet.has(token)) {
+            return count
+        }
+
+        if (englishInstructionLexicon.has(token) || englishInstructionSignalPattern.test(token)) {
+            return count + 1
+        }
+
+        return count
+    }, 0)
+}
+
+function applySpanishDictionaryPass(value: string): string {
+    let translated = applyTextReplacements(value, englishToSpanishFragmentReplacements)
+    translated = applyWordTranslations(translated, englishToSpanishWordMap)
+    translated = applyWordTranslations(translated, englishResidualWordMap)
+    return translated
+}
+
+function cleanSpanishInstructionText(value: string): string {
+    let normalized = normalizeInstructionText(value)
 
     if (!normalized) {
         return ''
     }
 
-    if (isMixedInstruction(normalized) && unresolvedEnglishConnectorPattern.test(normalized)) {
+    if (hasEnglishInstructionSignals(normalized)) {
+        normalized = normalizeInstructionText(applySpanishDictionaryPass(normalized))
+    }
+
+    // Retry once when there is still substantial English residue after the first pass.
+    if (shouldRetryMixedInstruction(normalized)) {
+        normalized = normalizeInstructionText(applySpanishDictionaryPass(normalized))
+    }
+
+    if (hasEnglishInstructionSignals(normalized)) {
         return 'Mantén técnica controlada durante todo el movimiento.'
     }
 
@@ -792,9 +837,7 @@ function translateEnglishInstructionToSpanish(text: string): string {
         }
     }
 
-    translated = applyTextReplacements(translated, englishToSpanishFragmentReplacements)
-    translated = applyWordTranslations(translated, englishToSpanishWordMap)
-    translated = applyWordTranslations(translated, englishResidualWordMap)
+    translated = applySpanishDictionaryPass(translated)
 
     translated = cleanSpanishInstructionText(translated)
 
@@ -841,6 +884,13 @@ async function translateInstruction(
 
     if (targetLanguage === 'es') {
         translated = translateEnglishInstructionToSpanish(normalizedText)
+    }
+
+    if (targetLanguage === 'en') {
+        translated =
+            sourceLanguage === 'en' && !isMixedInstruction(normalizedText)
+                ? normalizedText
+                : 'Maintain controlled form throughout the movement.'
     }
 
     translatedInstructionCache.set(cacheKey, translated)

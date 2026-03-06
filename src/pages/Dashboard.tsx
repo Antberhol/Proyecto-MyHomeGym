@@ -35,11 +35,11 @@ export function DashboardPage() {
   const totalVolumeAllTime = trainings.reduce((acc, item) => acc + item.volumenTotal, 0)
 
   const achievements = [
-    { id: 'first', label: 'Primera sesión completada', unlocked: totalTrainings >= 1 },
-    { id: 'streak5', label: '5 entrenamientos totales', unlocked: totalTrainings >= 5 },
-    { id: 'streak20', label: '20 entrenamientos totales', unlocked: totalTrainings >= 20 },
-    { id: 'vol10k', label: '10.000 kg acumulados', unlocked: totalVolumeAllTime >= 10_000 },
-    { id: 'vol50k', label: '50.000 kg acumulados', unlocked: totalVolumeAllTime >= 50_000 },
+    { id: 'first', label: t('dashboard.achievements.firstSession'), unlocked: totalTrainings >= 1 },
+    { id: 'streak5', label: t('dashboard.achievements.totalTrainings5'), unlocked: totalTrainings >= 5 },
+    { id: 'streak20', label: t('dashboard.achievements.totalTrainings20'), unlocked: totalTrainings >= 20 },
+    { id: 'vol10k', label: t('dashboard.achievements.totalVolume10k'), unlocked: totalVolumeAllTime >= 10_000 },
+    { id: 'vol50k', label: t('dashboard.achievements.totalVolume50k'), unlocked: totalVolumeAllTime >= 50_000 },
   ]
   const recentPrs = prs
     .slice()
@@ -58,7 +58,7 @@ export function DashboardPage() {
     const grouped = new Map<string, { name: string; sets: Array<{ reps: number; weight: number }> }>()
 
     for (const entry of sets) {
-      const name = exerciseById.get(entry.ejercicioId) ?? 'Ejercicio'
+      const name = exerciseById.get(entry.ejercicioId) ?? t('dashboard.common.exercise')
       const current = grouped.get(entry.ejercicioId)
       const setData = { reps: entry.repeticionesRealizadas, weight: entry.pesoUtilizado }
 
@@ -88,12 +88,13 @@ export function DashboardPage() {
   }
 
   const resolvePrExerciseName = (exerciseId: string) => {
-    if (exerciseId === 'GLOBAL') return 'Sesión global'
-    return exercises.find((item) => item.id === exerciseId)?.nombre || 'Ejercicio'
+    if (exerciseId === 'GLOBAL') return t('dashboard.prs.globalSession')
+    return exercises.find((item) => item.id === exerciseId)?.nombre || t('dashboard.common.exercise')
   }
 
   const today = new Date()
   const todayName = weekDaysEs[today.getDay()]
+  const todayLabel = t(`dashboard.weekdays.${todayName}`)
 
   const weakMuscles = (() => {
     const monthAgo = new Date()
@@ -121,6 +122,11 @@ export function DashboardPage() {
   const todayActiveRoutines = routines.filter(
     (routine) => routine.activa && routine.diasSemana.map((day) => day.toLowerCase()).includes(todayName),
   )
+
+  const weakMusclesLabel =
+    weakMuscles.length > 0
+      ? weakMuscles.map((muscle) => t(`muscleGroups.${muscle}`, { defaultValue: muscle })).join(` ${t('dashboard.common.and')} `)
+      : t('dashboard.smartPlan.insufficientData')
 
   const recommendedRoutine = (() => {
     if (todayActiveRoutines.length === 0) return null
@@ -162,27 +168,27 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">Entrenamientos (7d)</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.trainings7d')}</p>
           <p className="text-2xl font-bold">{weekTrainings.length}</p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">Minutos entrenados</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.trainedMinutes')}</p>
           <p className="text-2xl font-bold">{totalMinutes}</p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">Volumen total (7d)</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.totalVolume7d')}</p>
           <p className="text-2xl font-bold">{totalVolume.toFixed(0)} kg</p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">Rutinas</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.routines')}</p>
           <p className="text-2xl font-bold">{routines.length}</p>
         </div>
       </div>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Sesiones recientes</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('dashboard.recentSessions.title')}</h2>
         {trainings.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-300">Aún no hay entrenamientos registrados.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.recentSessions.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {trainings
@@ -193,23 +199,23 @@ export function DashboardPage() {
                 <li key={training.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                   <div className="flex items-center justify-between text-sm">
                     <span>{new Date(training.fecha).toLocaleString()}</span>
-                    <span>{training.duracionMinutos} min</span>
+                    <span>{training.duracionMinutos} {t('dashboard.common.minAbbrev')}</span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Volumen: {training.volumenTotal} kg</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">{t('dashboard.recentSessions.volumeLabel', { volume: training.volumenTotal })}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
                       className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
                       onClick={() => void copyWorkout(training.id, 'text')}
                     >
-                      Copiar para WhatsApp
+                      {t('dashboard.recentSessions.copyWhatsapp')}
                     </button>
                     <button
                       type="button"
                       className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
                       onClick={() => void copyWorkout(training.id, 'csv')}
                     >
-                      Copiar para Excel
+                      {t('dashboard.recentSessions.copyExcel')}
                     </button>
                   </div>
                 </li>
@@ -219,31 +225,31 @@ export function DashboardPage() {
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Plan inteligente de hoy</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('dashboard.smartPlan.title')}</h2>
         <p className="text-sm text-slate-500 dark:text-slate-300">
-          Día actual: <span className="font-medium capitalize">{todayName}</span>
+          {t('dashboard.smartPlan.currentDay')}: <span className="font-medium capitalize">{todayLabel}</span>
         </p>
         {recommendedRoutine ? (
           <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="font-semibold">Rutina recomendada: {recommendedRoutine.routine.nombre}</p>
+            <p className="font-semibold">{t('dashboard.smartPlan.recommendedRoutine', { name: recommendedRoutine.routine.nombre })}</p>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Cobertura de grupos prioritarios: {recommendedRoutine.coverage} ejercicio(s)
+              {t('dashboard.smartPlan.priorityCoverage', { coverage: recommendedRoutine.coverage })}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-300">
-              Grupos a priorizar esta semana: {weakMuscles.length > 0 ? weakMuscles.join(' y ') : 'sin datos suficientes'}
+              {t('dashboard.smartPlan.priorityGroups', { groups: weakMusclesLabel })}
             </p>
           </div>
         ) : (
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
-            No hay rutinas activas planificadas para hoy. Activa o crea una rutina para recibir recomendación automática.
+            {t('dashboard.smartPlan.noRoutineForToday')}
           </p>
         )}
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Récords personales recientes</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('dashboard.prs.title')}</h2>
         {recentPrs.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-300">Aún no hay PRs registrados.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.prs.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {recentPrs.map((pr) => (
@@ -266,13 +272,13 @@ export function DashboardPage() {
       <MuscleHeatmap muscleAnalytics={weeklyMuscleAnalytics} />
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">Logros y medallas</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('dashboard.achievements.title')}</h2>
         <ul className="space-y-2">
           {achievements.map((achievement) => (
             <li key={achievement.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 dark:border-slate-700">
               <span className="text-sm">{achievement.label}</span>
               <span className={`rounded-full px-2 py-1 text-xs font-medium ${achievement.unlocked ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                {achievement.unlocked ? 'Desbloqueado' : 'Pendiente'}
+                {achievement.unlocked ? t('dashboard.achievements.unlocked') : t('dashboard.achievements.pending')}
               </span>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BottomSheet } from '../ui/BottomSheet'
 import { NumberStepper } from '../ui/NumberStepper'
 import { calculatePlateDistribution } from '../../utils/plateCalculator'
@@ -28,6 +29,7 @@ function plateHeight(weight: number): number {
 }
 
 export function PlateCalculatorModal({ isOpen, onClose, initialTargetWeight = 100 }: PlateCalculatorModalProps) {
+    const { t } = useTranslation()
     const [targetWeight, setTargetWeight] = useState(initialTargetWeight)
     const [barWeight, setBarWeight] = useState(20)
 
@@ -40,30 +42,32 @@ export function PlateCalculatorModal({ isOpen, onClose, initialTargetWeight = 10
     const rightSide = result.perSide
 
     return (
-        <BottomSheet isOpen={isOpen} onClose={onClose} title="Calculadora de discos">
+        <BottomSheet isOpen={isOpen} onClose={onClose} title={t('plateCalculator.title')}>
             <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <NumberStepper label="Peso objetivo (kg)" value={targetWeight} onChange={setTargetWeight} step={2.5} min={0} decimals={2} />
-                    <NumberStepper label="Peso barra (kg)" value={barWeight} onChange={setBarWeight} step={2.5} min={0} decimals={2} />
+                    <NumberStepper label={t('plateCalculator.targetWeight')} value={targetWeight} onChange={setTargetWeight} step={2.5} min={0} decimals={2} />
+                    <NumberStepper label={t('plateCalculator.barWeight')} value={barWeight} onChange={setBarWeight} step={2.5} min={0} decimals={2} />
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="text-sm font-semibold">Resultado</p>
+                    <p className="text-sm font-semibold">{t('plateCalculator.resultTitle')}</p>
                     <p className="text-xs text-slate-600 dark:text-slate-300">
-                        Carga total armada: <span className="font-semibold">{result.totalLoaded.toFixed(2)} kg</span>
+                        {t('plateCalculator.totalLoaded', { total: result.totalLoaded.toFixed(2) })}
                     </p>
                     {!result.isExact && (
                         <p className="text-xs text-amber-600 dark:text-amber-300">
-                            Diferencia con objetivo: {result.remainder.toFixed(2)} kg
+                            {t('plateCalculator.difference', { remainder: result.remainder.toFixed(2) })}
                         </p>
                     )}
                     <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-                        Por lado: {result.perSide.length > 0 ? result.perSide.join(' + ') : 'sin discos'}
+                        {t('plateCalculator.perSide', {
+                            value: result.perSide.length > 0 ? result.perSide.join(' + ') : t('plateCalculator.noPlates'),
+                        })}
                     </p>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
-                    <p className="mb-3 text-xs font-semibold text-slate-600 dark:text-slate-300">Visualización de barra</p>
+                    <p className="mb-3 text-xs font-semibold text-slate-600 dark:text-slate-300">{t('plateCalculator.barVisualization')}</p>
                     <div className="flex items-center justify-center gap-1">
                         <div className="flex items-end gap-1">
                             {leftSide.map((plate, index) => (
@@ -71,7 +75,7 @@ export function PlateCalculatorModal({ isOpen, onClose, initialTargetWeight = 10
                                     key={`left-${plate}-${index}`}
                                     className={`w-5 rounded-t-sm ${plateColor(plate)}`}
                                     style={{ height: `${plateHeight(plate)}px` }}
-                                    aria-label={`Disco izquierdo ${plate}kg`}
+                                    aria-label={t('plateCalculator.leftPlateAria', { plate })}
                                 />
                             ))}
                         </div>
@@ -84,7 +88,7 @@ export function PlateCalculatorModal({ isOpen, onClose, initialTargetWeight = 10
                                     key={`right-${plate}-${index}`}
                                     className={`w-5 rounded-t-sm ${plateColor(plate)}`}
                                     style={{ height: `${plateHeight(plate)}px` }}
-                                    aria-label={`Disco derecho ${plate}kg`}
+                                    aria-label={t('plateCalculator.rightPlateAria', { plate })}
                                 />
                             ))}
                         </div>

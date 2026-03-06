@@ -13,6 +13,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useTranslation } from 'react-i18next'
 import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
 
 interface SortableRoutineExercise {
@@ -81,6 +82,7 @@ function SortableItem({
     onMove,
     onRemove,
 }: SortableItemProps) {
+    const { t } = useTranslation()
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
 
     const style = {
@@ -96,7 +98,7 @@ function SortableItem({
         >
             <div className="flex items-center gap-3">
                 <ExerciseThumbnail
-                    nombre={item.ejercicio?.nombre || 'Ejercicio'}
+                    nombre={item.ejercicio?.nombre || t('dashboard.common.exercise')}
                     grupoMuscularPrimario={item.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={item.ejercicio?.equipoNecesario}
                     imagenUrl={item.ejercicio?.imagenUrl}
@@ -107,7 +109,7 @@ function SortableItem({
                 />
                 <div>
                     <p className="font-medium">
-                        {index + 1}. {item.ejercicio?.nombre || 'Ejercicio no encontrado'}
+                        {index + 1}. {item.ejercicio?.nombre || t('sortableExerciseList.exerciseNotFound')}
                     </p>
                     {isEditing ? (
                         <div className="mt-1 grid grid-cols-1 gap-1 md:grid-cols-3">
@@ -116,25 +118,29 @@ function SortableItem({
                                 value={editSeries}
                                 onChange={(event) => onEditSeriesChange(Number(event.target.value) || 1)}
                                 className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                                placeholder="Series"
+                                placeholder={t('training.setsPlaceholder')}
                             />
                             <input
                                 value={editRepeticiones}
                                 onChange={(event) => onEditRepeticionesChange(event.target.value)}
                                 className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                                placeholder="Reps"
+                                placeholder={t('training.repsPlaceholder')}
                             />
                             <input
                                 type="number"
                                 value={editDescansoSegundos}
                                 onChange={(event) => onEditDescansoChange(Number(event.target.value) || 15)}
                                 className="rounded border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                                placeholder="Descanso"
+                                placeholder={t('routines.restPlaceholder')}
                             />
                         </div>
                     ) : (
                         <p className="text-xs text-slate-600 dark:text-slate-300">
-                            {item.series} series · {item.repeticiones} reps · {item.descansoSegundos}s descanso
+                            {t('sortableExerciseList.summary', {
+                                series: item.series,
+                                reps: item.repeticiones,
+                                rest: item.descansoSegundos,
+                            })}
                         </p>
                     )}
                 </div>
@@ -143,7 +149,7 @@ function SortableItem({
                 <button
                     type="button"
                     className="cursor-grab rounded-lg border border-slate-300 px-3 py-2 text-xs"
-                    aria-label="Arrastrar ejercicio"
+                    aria-label={t('sortableExerciseList.dragExerciseAria')}
                     {...attributes}
                     {...listeners}
                 >
@@ -156,14 +162,14 @@ function SortableItem({
                             onClick={onSaveEdit}
                             className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                         >
-                            Guardar
+                            {t('common.save')}
                         </button>
                         <button
                             type="button"
                             onClick={onCancelEdit}
                             className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                         >
-                            Cancelar
+                            {t('common.cancel')}
                         </button>
                     </>
                 ) : (
@@ -172,7 +178,7 @@ function SortableItem({
                         onClick={() => onStartEdit(item.id)}
                         className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
                     >
-                        Editar
+                        {t('common.edit')}
                     </button>
                 )}
                 <button
@@ -194,7 +200,7 @@ function SortableItem({
                     onClick={() => onRemove(item.id)}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-red-600"
                 >
-                    Borrar
+                    {t('catalog.delete')}
                 </button>
             </div>
         </li>

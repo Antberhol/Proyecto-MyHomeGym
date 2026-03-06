@@ -154,7 +154,7 @@ export function ActiveExerciseCard({
                             <div className="grid grid-cols-1 gap-2">
                                 <NumberStepper
                                     id={`${key}-reps`}
-                                    label="Reps"
+                                    label={t('training.repsPlaceholder')}
                                     value={current.reps}
                                     step={1}
                                     min={0}
@@ -164,7 +164,7 @@ export function ActiveExerciseCard({
                                 />
                                 <NumberStepper
                                     id={`${key}-peso`}
-                                    label="Peso (kg)"
+                                    label={t('training.weightPlaceholder')}
                                     value={current.peso}
                                     step={0.5}
                                     min={0}
@@ -175,7 +175,7 @@ export function ActiveExerciseCard({
                                 />
                                 <div className="space-y-1">
                                     <label htmlFor={`${key}-rpe`} className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                                        RPE
+                                        {t('training.exerciseCard.rpeLabel')}
                                     </label>
                                     <select
                                         id={`${key}-rpe`}

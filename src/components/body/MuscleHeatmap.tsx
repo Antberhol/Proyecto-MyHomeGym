@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BodyDiagramSvg } from './BodyDiagramSvg'
 import type { MuscleAnalytics } from '../../hooks/useWeeklyMuscleAnalytics'
 
@@ -29,6 +30,7 @@ function mixedScore(volume: number, daysTrained: number): number {
 }
 
 export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
+    const { t } = useTranslation()
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
 
     const normalizedVolumes = useMemo(() => {
@@ -105,14 +107,14 @@ export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
 
     return (
         <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-            <h2 className="mb-2 text-lg font-semibold">Mapa de calor muscular (7d)</h2>
+            <h2 className="mb-2 text-lg font-semibold">{t('muscleHeatmap.title')}</h2>
             <p className="mb-3 text-xs text-slate-500 dark:text-slate-300">
-                Intensidad por puntuación mixta absoluta (volumen semanal + frecuencia de días), de gris a rojo intenso.
+                {t('muscleHeatmap.subtitle')}
             </p>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">Frontal</p>
+                    <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">{t('muscleHeatmap.views.front')}</p>
                     <BodyDiagramSvg
                         view="frontal"
                         levelByMuscle={levelByMuscle}
@@ -122,7 +124,7 @@ export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
                     />
                 </div>
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">Posterior</p>
+                    <p className="mb-2 text-center text-xs font-medium text-slate-500 dark:text-slate-300">{t('muscleHeatmap.views.back')}</p>
                     <BodyDiagramSvg
                         view="posterior"
                         levelByMuscle={levelByMuscle}
@@ -134,10 +136,10 @@ export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#e5e7eb' }} /> Bajo</span>
-                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#fecaca' }} /> Medio</span>
-                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#f87171' }} /> Alto</span>
-                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#b91c1c' }} /> Muy alto</span>
+                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#e5e7eb' }} /> {t('muscleHeatmap.levels.low')}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#fecaca' }} /> {t('muscleHeatmap.levels.medium')}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#f87171' }} /> {t('muscleHeatmap.levels.high')}</span>
+                <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ backgroundColor: '#b91c1c' }} /> {t('muscleHeatmap.levels.veryHigh')}</span>
             </div>
         </section>
     )

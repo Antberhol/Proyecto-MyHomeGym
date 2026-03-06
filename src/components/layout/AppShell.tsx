@@ -29,10 +29,12 @@ function NavItem({
   icon: Icon,
   isExpanded,
 }: NavEntry & { isExpanded: boolean }) {
+  const { t } = useTranslation()
+
   return (
     <NavLink
       to={to}
-      aria-label={`Ir a ${label}`}
+      aria-label={t('appShell.goToAria', { label })}
       className={({ isActive }) =>
         `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${isExpanded ? 'gap-3' : 'justify-center'} ${isActive
           ? 'bg-gym-primary text-white'
@@ -84,7 +86,7 @@ export function AppShell() {
           <button
             type="button"
             onClick={toggleSidebar}
-            aria-label="Alternar menú lateral"
+            aria-label={t('appShell.toggleSidebarAria')}
             className={`mb-4 inline-flex w-full items-center rounded-lg border border-slate-300 px-3 py-2 text-sm transition-all duration-300 dark:border-slate-600 ${sidebarCollapsed ? 'justify-center' : 'gap-2'
               }`}
           >
@@ -96,7 +98,7 @@ export function AppShell() {
               {t('common.menu')}
             </span>
           </button>
-          <nav aria-label="Navegación principal" className="space-y-2">
+          <nav aria-label={t('appShell.primaryNavAria')} className="space-y-2">
             {navItems.map((item) => (
               <NavItem key={item.to} {...item} isExpanded={!sidebarCollapsed} />
             ))}
@@ -121,7 +123,7 @@ export function AppShell() {
       </div>
 
       <nav
-        aria-label="Navegación móvil"
+        aria-label={t('appShell.mobileNavAria')}
         className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/80 px-2 pt-2 backdrop-blur-md dark:border-slate-700 dark:bg-gym-cardDark/80 md:hidden"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
@@ -130,7 +132,7 @@ export function AppShell() {
             <NavLink
               key={to}
               to={to}
-              aria-label={`Ir a ${label}`}
+              aria-label={t('appShell.goToAria', { label })}
               className={({ isActive }) =>
                 `mobile-bottom-nav-item flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-medium transition ${isActive
                   ? 'text-gym-primary'

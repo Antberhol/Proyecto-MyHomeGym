@@ -41,12 +41,269 @@
         "error": "Error de sincronización",
         "synced": "Sincronizado"
     },
+    "appShell": {
+        "goToAria": "Ir a {{label}}",
+        "toggleSidebarAria": "Alternar menú lateral",
+        "primaryNavAria": "Navegación principal",
+        "mobileNavAria": "Navegación móvil"
+    },
     "exerciseDetail": {
         "alias": "Alias en inglés",
         "target": "Músculo objetivo",
         "equipment": "Equipo",
         "secondaryMuscles": "Músculos secundarios",
-        "instructions": "Instrucciones paso a paso"
+        "instructions": "Instrucciones paso a paso",
+        "invalidExercise": "Ejercicio no válido.",
+        "requestedExerciseNotFound": "No se encontró el ejercicio solicitado.",
+        "exerciseLoadFailed": "No se pudo cargar el ejercicio.",
+        "gifAlt": "GIF de {{name}}"
+    },
+    "dashboard": {
+        "common": {
+            "exercise": "Ejercicio",
+            "and": "y",
+            "minAbbrev": "min"
+        },
+        "weekdays": {
+            "domingo": "domingo",
+            "lunes": "lunes",
+            "martes": "martes",
+            "miercoles": "miércoles",
+            "jueves": "jueves",
+            "viernes": "viernes",
+            "sabado": "sábado"
+        },
+        "stats": {
+            "trainings7d": "Entrenamientos (7d)",
+            "trainedMinutes": "Minutos entrenados",
+            "totalVolume7d": "Volumen total (7d)",
+            "routines": "Rutinas"
+        },
+        "recentSessions": {
+            "title": "Sesiones recientes",
+            "empty": "Aún no hay entrenamientos registrados.",
+            "volumeLabel": "Volumen: {{volume}} kg",
+            "copyWhatsapp": "Copiar para WhatsApp",
+            "copyExcel": "Copiar para Excel"
+        },
+        "smartPlan": {
+            "title": "Plan inteligente de hoy",
+            "currentDay": "Día actual",
+            "recommendedRoutine": "Rutina recomendada: {{name}}",
+            "priorityCoverage": "Cobertura de grupos prioritarios: {{coverage}} ejercicio(s)",
+            "priorityGroups": "Grupos a priorizar esta semana: {{groups}}",
+            "insufficientData": "sin datos suficientes",
+            "noRoutineForToday": "No hay rutinas activas planificadas para hoy. Activa o crea una rutina para recibir recomendación automática."
+        },
+        "prs": {
+            "title": "Récords personales recientes",
+            "empty": "Aún no hay PRs registrados.",
+            "globalSession": "Sesión global"
+        },
+        "achievements": {
+            "title": "Logros y medallas",
+            "firstSession": "Primera sesión completada",
+            "totalTrainings5": "5 entrenamientos totales",
+            "totalTrainings20": "20 entrenamientos totales",
+            "totalVolume10k": "10.000 kg acumulados",
+            "totalVolume50k": "50.000 kg acumulados",
+            "unlocked": "Desbloqueado",
+            "pending": "Pendiente"
+        }
+    },
+    "muscleGroups": {
+        "chest": "Pecho",
+        "back": "Espalda",
+        "legs": "Piernas",
+        "core": "Core",
+        "arms": "Brazos",
+        "shoulders": "Hombros",
+        "pecho": "Pecho",
+        "espalda": "Espalda",
+        "piernas": "Piernas",
+        "hombros": "Hombros",
+        "brazos": "Brazos",
+        "biceps": "Bíceps",
+        "triceps": "Tríceps"
+    },
+    "exerciseSelector": {
+        "title": "Seleccionar ejercicios",
+        "searchPlaceholder": "Buscar ejercicio...",
+        "allGroup": "Todos",
+        "add": "Añadir",
+        "added": "Añadido",
+        "emptyWithFilters": "No hay ejercicios con esos filtros.",
+        "selectedCount": "Seleccionados: {{count}}",
+        "confirm": "Confirmar"
+    },
+    "sortableExerciseList": {
+        "exerciseNotFound": "Ejercicio no encontrado",
+        "summary": "{{series}} series · {{reps}} reps · {{rest}}s descanso",
+        "dragExerciseAria": "Arrastrar ejercicio"
+    },
+    "onboarding": {
+        "title": "Bienvenido a proyecto MyHomeGym",
+        "subtitle": "Configuración inicial offline",
+        "nameLabel": "Nombre (opcional)",
+        "namePlaceholder": "¿Cómo quieres que te llamemos?",
+        "weightLabel": "Peso corporal (kg)",
+        "heightLabel": "Altura (cm)",
+        "waistLabel": "Cintura (cm, opcional)",
+        "chestLabel": "Pecho (cm, opcional)",
+        "legLabel": "Pierna (cm, opcional)",
+        "estimatedImcTitle": "Tu IMC estimado",
+        "back": "Atrás",
+        "next": "Siguiente",
+        "start": "Empezar"
+    },
+    "imcStatus": {
+        "underweight": "Bajo peso",
+        "normal": "Normal",
+        "overweight": "Sobrepeso",
+        "obesity": "Obesidad"
+    },
+    "muscleDistribution": {
+        "title": "Distribución muscular",
+        "empty": "Aún no hay series registradas para calcular la distribución."
+    },
+    "muscleHeatmap": {
+        "title": "Mapa de calor muscular (7d)",
+        "subtitle": "Intensidad por puntuación mixta absoluta (volumen semanal + frecuencia de días), de gris a rojo intenso.",
+        "views": {
+            "front": "Frontal",
+            "back": "Posterior"
+        },
+        "levels": {
+            "low": "Bajo",
+            "medium": "Medio",
+            "high": "Alto",
+            "veryHigh": "Muy alto"
+        }
+    },
+    "workoutShare": {
+        "titleLine1": "ENTRENO",
+        "titleLine2": "COMPLETADO",
+        "totalVolume": "Volumen total",
+        "time": "Tiempo",
+        "sets": "Series",
+        "prs": "PRs",
+        "footer": "Entrena inteligente. Progresa cada semana."
+    },
+    "pwa": {
+        "reloadPrompt": {
+            "title": "Nueva versión disponible",
+            "update": "Actualizar"
+        }
+    },
+    "plateCalculator": {
+        "title": "Calculadora de discos",
+        "targetWeight": "Peso objetivo (kg)",
+        "barWeight": "Peso barra (kg)",
+        "resultTitle": "Resultado",
+        "totalLoaded": "Carga total armada: {{total}} kg",
+        "difference": "Diferencia con objetivo: {{remainder}} kg",
+        "perSide": "Por lado: {{value}}",
+        "noPlates": "sin discos",
+        "barVisualization": "Visualización de barra",
+        "leftPlateAria": "Disco izquierdo {{plate}}kg",
+        "rightPlateAria": "Disco derecho {{plate}}kg"
+    },
+    "oneRepMax": {
+        "estimatedLabel": "1RM Est",
+        "estimatedEmpty": "1RM Est: —"
+    },
+    "restTimerOverlay": {
+        "label": "Descanso"
+    },
+    "progress": {
+        "title": "Progreso",
+        "sections": {
+            "weightImc": "Peso e IMC",
+            "volumePerSession": "Volumen por sesión",
+            "heatmapFrequency": "Heatmap de frecuencia (10 semanas)",
+            "oneRmCalculator": "Calculadora 1RM (Epley)",
+            "sessionCalculators": "Calculadoras de sesión",
+            "consistencyRecommendations": "Consistencia y recomendaciones",
+            "bodyDiagram": "Diagrama corporal",
+            "prPanel": "Panel de PRs"
+        },
+        "range": {
+            "weekly": "Semanal",
+            "monthly": "Mensual"
+        },
+        "tooltip": {
+            "volumeLabel": "Volumen"
+        },
+        "scaleNote": "Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.",
+        "heatmap": {
+            "cellTitle": "{{date}}: {{count}} entrenamiento(s)",
+            "darkerLegend": "Más oscuro = más entrenamientos ese día."
+        },
+        "placeholders": {
+            "weightKg": "Peso (kg)",
+            "repetitions": "Repeticiones",
+            "weightKgCompact": "Peso kg",
+            "minutes": "Min",
+            "met": "MET"
+        },
+        "oneRmEstimated": "1RM estimado",
+        "estimatedVolume": "Volumen estimado",
+        "estimatedCalories": "Calorías estimadas",
+        "labels": {
+            "volume": "Volumen",
+            "calories": "Calorías"
+        },
+        "currentStreak": "Racha actual",
+        "dayCount": "{{count}} día(s)",
+        "groupsToPrioritize30d": "Grupos a priorizar (30d)",
+        "mostWorked30d": "Grupos más trabajados (30d)",
+        "insufficientData": "Sin datos suficientes.",
+        "bodyDiagram": {
+            "sourceLabel": "Fuente de colores",
+            "sourceReal": "entrenamientos reales de los últimos 30 días",
+            "sourceEstimated": "estimación basada en tus rutinas",
+            "front": "Frontal",
+            "back": "Posterior",
+            "detailByGroup": "Detalle por grupo",
+            "levelLabel": "Nivel",
+            "selectPrompt": "Selecciona un grupo en cualquiera de las dos figuras para ver detalles.",
+            "levelValues": {
+                "basico": "Básico",
+                "medio": "Medio",
+                "avanzado": "Avanzado",
+                "experto": "Experto"
+            }
+        },
+        "pr": {
+            "topMaxWeight": "Top peso máximo",
+            "emptyMaxWeight": "Sin PRs de peso máximo.",
+            "topVolumePerSet": "Top volumen por serie",
+            "emptyVolumePerSet": "Sin PRs de volumen por serie.",
+            "topRepsSameWeight": "Top reps al mismo peso",
+            "emptyRepetitions": "Sin PRs de repeticiones.",
+            "topTotalSessionVolume": "Top volumen total sesión",
+            "emptyTotalVolume": "Sin PRs de volumen total.",
+            "recentHistory": "Historial reciente de PRs",
+            "emptyRecent": "Aún no hay PRs registrados."
+        },
+        "muscleLabels": {
+            "pecho": "Pecho",
+            "hombros": "Hombros",
+            "biceps": "Bíceps",
+            "triceps": "Tríceps",
+            "antebrazo": "Antebrazo",
+            "core": "Core",
+            "oblicuos": "Oblicuos",
+            "trapecio": "Trapecio",
+            "espalda-alta": "Espalda alta",
+            "espalda-baja": "Espalda baja",
+            "cuadriceps": "Cuádriceps",
+            "isquiotibial": "Isquiotibial",
+            "gluteo": "Glúteo",
+            "gemelo": "Gemelo",
+            "aductor": "Aductor",
+            "abductor": "Abductor"
+        }
     },
     "settings": {
         "title": "Configuración",
@@ -153,6 +410,7 @@
             "setNumber": "Serie {{number}}",
             "previousSet": "Anterior",
             "repsShort": "reps",
+            "rpeLabel": "RPE",
             "rpePlaceholder": "RPE (1-10)",
             "startRest": "Iniciar descanso ({{seconds}}s)",
             "recentHistory": "Historial reciente del ejercicio",

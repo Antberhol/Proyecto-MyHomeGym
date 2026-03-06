@@ -1,5 +1,6 @@
 import { Dumbbell, Search, Settings2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { BottomSheet } from '../ui/BottomSheet'
 
@@ -39,6 +40,7 @@ export function ExerciseSelectorModal({
     selectedIds = [],
     onConfirm,
 }: ExerciseSelectorModalProps) {
+    const { t } = useTranslation()
     const [search, setSearch] = useState('')
     const [group, setGroup] = useState('todos')
     const [localSelected, setLocalSelected] = useState<string[]>(selectedIds)
@@ -67,14 +69,14 @@ export function ExerciseSelectorModal({
     }
 
     return (
-        <BottomSheet isOpen={isOpen} onClose={onClose} title="Seleccionar ejercicios">
+        <BottomSheet isOpen={isOpen} onClose={onClose} title={t('exerciseSelector.title')}>
             <div className="max-h-[75vh] space-y-3 overflow-y-auto pb-2">
                 <div className="relative">
                     <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Buscar ejercicio..."
+                        placeholder={t('exerciseSelector.searchPlaceholder')}
                         className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                     />
                 </div>
@@ -92,7 +94,11 @@ export function ExerciseSelectorModal({
                                     : 'border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
                                     }`}
                             >
-                                {item === 'todos' ? 'Todos' : item.charAt(0).toUpperCase() + item.slice(1)}
+                                {item === 'todos'
+                                    ? t('exerciseSelector.allGroup')
+                                    : t(`muscleGroups.${item}`, {
+                                        defaultValue: item.charAt(0).toUpperCase() + item.slice(1),
+                                    })}
                             </button>
                         )
                     })}
@@ -137,25 +143,25 @@ export function ExerciseSelectorModal({
                                         : 'border border-slate-300 dark:border-slate-600'
                                         }`}
                                 >
-                                    {checked ? 'Añadido' : 'Añadir'}
+                                    {checked ? t('exerciseSelector.added') : t('exerciseSelector.add')}
                                 </button>
                             </div>
                         )
                     })}
                     {filtered.length === 0 && (
-                        <p className="text-sm text-slate-500 dark:text-slate-300">No hay ejercicios con esos filtros.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-300">{t('exerciseSelector.emptyWithFilters')}</p>
                     )}
                 </div>
 
                 <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t border-slate-200 bg-white pt-3 dark:border-slate-700 dark:bg-gym-cardDark">
-                    <p className="text-xs text-slate-500 dark:text-slate-300">Seleccionados: {localSelected.length}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">{t('exerciseSelector.selectedCount', { count: localSelected.length })}</p>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
                             onClick={onClose}
                             className="h-11 rounded-lg border border-slate-300 px-3 text-xs dark:border-slate-600"
                         >
-                            Cancelar
+                            {t('common.cancel')}
                         </button>
                         <button
                             type="button"
@@ -165,7 +171,7 @@ export function ExerciseSelectorModal({
                             }}
                             className="h-11 rounded-lg bg-gym-primary px-3 text-xs font-semibold text-white"
                         >
-                            Confirmar
+                            {t('exerciseSelector.confirm')}
                         </button>
                     </div>
                 </div>

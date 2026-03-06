@@ -5,10 +5,12 @@ from pathlib import Path
 hook = Path(r"src/hooks/useExerciseDetail.ts").read_text(encoding="utf-8")
 seed = Path(r"src/constants/exerciseDbExpandedExercises.ts").read_text(encoding="utf-8")
 
-# Parse dictionary keys from englishToSpanishWordMap block
-m = re.search(r"const englishToSpanishWordMap: Record<string, string> = \{(.*?)\n\}", hook, re.S)
 keys = set()
-if m:
+for block_name in ("englishToSpanishWordMap", "englishResidualWordMap"):
+    m = re.search(rf"const {block_name}: Record<string, string> = \{{(.*?)\n\}}", hook, re.S)
+    if not m:
+        continue
+
     block = m.group(1)
     for k in re.findall(r"^\s*(?:'([^']+)'|([a-zA-Z][a-zA-Z0-9_-]*))\s*:", block, re.M):
         key = k[0] or k[1]

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { Button } from '../design-system/Button'
 import { Card } from '../design-system/Card'
@@ -26,6 +27,7 @@ type ProfileFormInput = z.input<typeof profileSchema>
 type ProfileFormOutput = z.output<typeof profileSchema>
 
 export function OnboardingWizard() {
+  const { t } = useTranslation()
   const [step, setStep] = useState(1)
   const form = useForm<ProfileFormInput, undefined, ProfileFormOutput>({
     resolver: zodResolver(profileSchema),
@@ -41,6 +43,15 @@ export function OnboardingWizard() {
   const altura = Number(values.altura ?? 0)
   const imc = calculateImc(pesoCorporal, altura)
   const imcStatus = classifyImc(imc)
+  const imcStatusKey =
+    imcStatus.label === 'Bajo peso'
+      ? 'underweight'
+      : imcStatus.label === 'Normal'
+        ? 'normal'
+        : imcStatus.label === 'Sobrepeso'
+          ? 'overweight'
+          : 'obesity'
+  const localizedImcStatus = t(`imcStatus.${imcStatusKey}`, { defaultValue: imcStatus.label })
   const errors = form.formState.errors
 
   const onSubmit = form.handleSubmit(async (data) => {
@@ -76,15 +87,15 @@ export function OnboardingWizard() {
     <div className="flex min-h-screen items-center justify-center bg-gym-bgLight p-4 dark:bg-gym-bgDark">
       <form onSubmit={onSubmit} className="w-full max-w-xl">
         <Card className="space-y-4">
-          <h1 className="text-2xl font-bold">Bienvenido a proyecto MyHomeGym</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-300">Configuración inicial offline</p>
+          <h1 className="text-2xl font-bold">{t('onboarding.title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('onboarding.subtitle')}</p>
 
           {step === 1 && (
             <>
               <Input
                 {...form.register('nombre')}
-                label="Nombre (opcional)"
-                placeholder="¿Cómo quieres que te llamemos?"
+                label={t('onboarding.nameLabel')}
+                placeholder={t('onboarding.namePlaceholder')}
                 error={errors.nombre?.message}
               />
 
@@ -92,14 +103,14 @@ export function OnboardingWizard() {
                 type="number"
                 step="0.1"
                 {...form.register('pesoCorporal')}
-                label="Peso corporal (kg)"
+                label={t('onboarding.weightLabel')}
                 error={errors.pesoCorporal?.message}
               />
 
               <Input
                 type="number"
                 {...form.register('altura')}
-                label="Altura (cm)"
+                label={t('onboarding.heightLabel')}
                 error={errors.altura?.message}
               />
             </>
@@ -110,21 +121,21 @@ export function OnboardingWizard() {
               <Input
                 type="number"
                 {...form.register('cintura')}
-                label="Cintura (cm, opcional)"
+                label={t('onboarding.waistLabel')}
                 error={errors.cintura?.message}
               />
 
               <Input
                 type="number"
                 {...form.register('pecho')}
-                label="Pecho (cm, opcional)"
+                label={t('onboarding.chestLabel')}
                 error={errors.pecho?.message}
               />
 
               <Input
                 type="number"
                 {...form.register('diametroPierna')}
-                label="Pierna (cm, opcional)"
+                label={t('onboarding.legLabel')}
                 error={errors.diametroPierna?.message}
               />
             </>
@@ -132,9 +143,9 @@ export function OnboardingWizard() {
 
           {step === 3 && (
             <Card className="rounded-lg p-4">
-              <h2 className="text-lg font-semibold">Tu IMC estimado</h2>
+              <h2 className="text-lg font-semibold">{t('onboarding.estimatedImcTitle')}</h2>
               <p className="text-3xl font-bold">{imc}</p>
-              <p className={`text-sm font-medium ${imcStatus.color}`}>{imcStatus.label}</p>
+              <p className={`text-sm font-medium ${imcStatus.color}`}>{localizedImcStatus}</p>
             </Card>
           )}
 
@@ -144,15 +155,15 @@ export function OnboardingWizard() {
               variant="secondary"
               onClick={() => setStep((current) => Math.max(1, current - 1))}
             >
-              Atrás
+              {t('onboarding.back')}
             </Button>
 
             {step < 3 ? (
               <Button type="button" onClick={() => setStep((current) => Math.min(3, current + 1))}>
-                Siguiente
+                {t('onboarding.next')}
               </Button>
             ) : (
-              <Button type="submit">Empezar</Button>
+              <Button type="submit">{t('onboarding.start')}</Button>
             )}
           </div>
         </Card>

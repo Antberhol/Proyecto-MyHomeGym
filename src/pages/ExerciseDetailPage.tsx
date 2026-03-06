@@ -38,7 +38,7 @@ export function ExerciseDetailPage() {
     useEffect(() => {
         const run = async () => {
             if (!id) {
-                setCatalogError('Ejercicio no válido.')
+                setCatalogError(t('exerciseDetail.invalidExercise'))
                 setIsCatalogLoading(false)
                 return
             }
@@ -51,7 +51,7 @@ export function ExerciseDetailPage() {
                 }
 
                 if (!isFirebaseConfigured || !firebaseFirestore) {
-                    setCatalogError('No se encontró el ejercicio solicitado.')
+                    setCatalogError(t('exerciseDetail.requestedExerciseNotFound'))
                     return
                 }
 
@@ -59,21 +59,21 @@ export function ExerciseDetailPage() {
                 const snapshot = await getDoc(exerciseRef)
 
                 if (!snapshot.exists()) {
-                    setCatalogError('No se encontró el ejercicio solicitado.')
+                    setCatalogError(t('exerciseDetail.requestedExerciseNotFound'))
                     return
                 }
 
                 const rawData = snapshot.data() as Omit<Exercise, 'id'>
                 setExercise({ id: snapshot.id, ...rawData })
             } catch {
-                setCatalogError('No se pudo cargar el ejercicio.')
+                setCatalogError(t('exerciseDetail.exerciseLoadFailed'))
             } finally {
                 setIsCatalogLoading(false)
             }
         }
 
         void run()
-    }, [id])
+    }, [id, t])
 
     const englishAlias =
         exercise?.exerciseDbName ??
@@ -118,7 +118,7 @@ export function ExerciseDetailPage() {
             <Card className="space-y-4">
                 <img
                     src={detail.data?.gifUrl || EXERCISE_GIF_PLACEHOLDER}
-                    alt={`GIF de ${exercise.nombre}`}
+                    alt={t('exerciseDetail.gifAlt', { name: exercise.nombre })}
                     className="h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 dark:border-slate-700 dark:bg-slate-800 md:h-96"
                     loading="lazy"
                     onError={(event) => {
