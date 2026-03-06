@@ -19,6 +19,7 @@ import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
 interface SortableRoutineExercise {
     id: string
     ejercicio?: {
+        id?: string
         nombre: string
         grupoMuscularPrimario?: string
         equipoNecesario?: string
@@ -98,6 +99,7 @@ function SortableItem({
         >
             <div className="flex items-center gap-3">
                 <ExerciseThumbnail
+                    exerciseId={item.ejercicio?.id}
                     nombre={item.ejercicio?.nombre || t('dashboard.common.exercise')}
                     grupoMuscularPrimario={item.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={item.ejercicio?.equipoNecesario}

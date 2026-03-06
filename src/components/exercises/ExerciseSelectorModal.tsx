@@ -114,6 +114,7 @@ export function ExerciseSelectorModal({
                             >
                                 <div className="flex items-center gap-3">
                                     <ExerciseThumbnail
+                                        exerciseId={exercise.id}
                                         nombre={exercise.nombre}
                                         grupoMuscularPrimario={exercise.grupoMuscularPrimario}
                                         equipoNecesario={exercise.equipoNecesario}

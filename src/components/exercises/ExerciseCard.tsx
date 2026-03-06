@@ -3,11 +3,12 @@ import type { Exercise } from '../../types/models'
 import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseCardProps {
-    exercise: Pick<Exercise, 'nombre' | 'grupoMuscularPrimario' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
+    exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
     const { gifUrl, targetMuscle, isLoading } = useExerciseGif(exercise.nombre, {
+        exerciseId: exercise.id,
         exerciseDbId: exercise.exerciseDbId,
         exerciseDbName: exercise.exerciseDbName,
         exerciseDbAliases: exercise.exerciseDbAliases,

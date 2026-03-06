@@ -81,6 +81,7 @@ export function ExerciseDetailPage() {
         (exercise ? getPreferredExerciseDbName(exercise.nombre) : undefined)
 
     const detail = useExerciseDetail(exercise?.nombre ?? '', {
+        exerciseId: exercise?.id,
         exerciseDbId: exercise?.exerciseDbId,
         exerciseDbName: englishAlias,
         exerciseDbAliases: exercise?.exerciseDbAliases,

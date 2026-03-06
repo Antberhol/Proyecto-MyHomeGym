@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseThumbnailProps {
+    exerciseId?: string
     nombre: string
     grupoMuscularPrimario?: string
     equipoNecesario?: string
@@ -13,6 +14,7 @@ interface ExerciseThumbnailProps {
 }
 
 export function ExerciseThumbnail({
+    exerciseId,
     nombre,
     grupoMuscularPrimario: _grupoMuscularPrimario,
     equipoNecesario: _equipoNecesario,
@@ -23,6 +25,7 @@ export function ExerciseThumbnail({
     className = 'h-16 w-24',
 }: ExerciseThumbnailProps) {
     const { gifUrl, isLoading } = useExerciseGif(nombre, {
+        exerciseId,
         exerciseDbId,
         exerciseDbName,
         exerciseDbAliases,

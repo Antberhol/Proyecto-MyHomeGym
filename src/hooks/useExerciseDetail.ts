@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
 import i18n from '../i18n'
+import { exerciseRepository } from '../repositories/exerciseRepository'
 
 export interface ExerciseDetailData {
     gifUrl: string
@@ -39,6 +40,7 @@ interface UseExerciseDetailResult {
 }
 
 interface UseExerciseDetailOptions {
+    exerciseId?: string
     exerciseDbId?: string
     exerciseDbName?: string
     exerciseDbAliases?: string[]
@@ -57,20 +59,6 @@ const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v4'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
-const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
-
-interface ExerciseDbPublicItem {
-    name?: string
-    gifUrl?: string
-    targetMuscles?: string[]
-    equipments?: string[]
-    instructions?: string[]
-    secondaryMuscles?: string[]
-}
-
-interface ExerciseDbPublicResponse {
-    data?: ExerciseDbPublicItem[]
-}
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
     return {
@@ -79,6 +67,43 @@ function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): Reque
             'X-RapidAPI-Key': apiKey,
             'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
         },
+    }
+}
+
+async function persistResolvedExerciseDbLink(input: {
+    exerciseId?: string
+    currentExerciseDbId?: string
+    currentExerciseDbName?: string
+    resolvedExerciseDbId?: string
+    resolvedExerciseDbName?: string
+    resolvedByCandidate: boolean
+}): Promise<void> {
+    if (!input.resolvedByCandidate) {
+        return
+    }
+
+    const exerciseId = input.exerciseId?.trim()
+    if (!exerciseId) {
+        return
+    }
+
+    if (input.currentExerciseDbId?.trim() && input.currentExerciseDbName?.trim()) {
+        return
+    }
+
+    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    const resolvedExerciseDbName = input.resolvedExerciseDbName?.trim()
+    if (!resolvedExerciseDbId || !resolvedExerciseDbName) {
+        return
+    }
+
+    try {
+        await exerciseRepository.updateExercise(exerciseId, {
+            exerciseDbId: resolvedExerciseDbId,
+            exerciseDbName: resolvedExerciseDbName,
+        })
+    } catch {
+        // Keep detail rendering resilient when local persistence fails.
     }
 }
 
@@ -1053,48 +1078,11 @@ async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: 
     return payload
 }
 
-async function searchPublicExerciseByCandidates(
-    candidates: string[],
-    signal: AbortSignal,
-): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
-    for (const candidate of candidates) {
-        const response = await fetch(
-            `${EXERCISE_DB_PUBLIC_API_BASE}/exercises?search=${encodeURIComponent(candidate)}&limit=24`,
-            { signal },
-        )
-
-        if (!response.ok) {
-            continue
-        }
-
-        const payload = (await response.json()) as ExerciseDbPublicResponse
-        const items = Array.isArray(payload.data) ? payload.data : []
-        if (items.length === 0) {
-            continue
-        }
-
-        const mapped = items.map<ExerciseDbItem>((item) => ({
-            name: item.name,
-            gifUrl: item.gifUrl,
-            target: item.targetMuscles?.[0] ?? '',
-            equipment: item.equipments?.[0] ?? '',
-            instructions: Array.isArray(item.instructions) ? item.instructions : [],
-            secondaryMuscles: Array.isArray(item.secondaryMuscles) ? item.secondaryMuscles : [],
-        }))
-
-        const best = selectBestMatch(mapped, candidate)
-        if (best?.gifUrl) {
-            return { item: best, usedCandidate: candidate }
-        }
-    }
-
-    return null
-}
-
 export function useExerciseDetail(exerciseName: string, options?: UseExerciseDetailOptions): UseExerciseDetailResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const currentLanguage = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
+    const exerciseId = options?.exerciseId
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
@@ -1158,10 +1146,17 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     byCandidate = await searchExerciseByCandidates(candidates, apiKey, controller.signal)
                 }
 
-                if (!byId && !byCandidate) {
-                    byCandidate = await searchPublicExerciseByCandidates(candidates, controller.signal)
-                }
                 const bestMatch = byId ?? byCandidate?.item ?? null
+                const resolvedByCandidate = !byId && Boolean(byCandidate?.item.id)
+
+                await persistResolvedExerciseDbLink({
+                    exerciseId,
+                    currentExerciseDbId: exerciseDbId,
+                    currentExerciseDbName: exerciseDbName,
+                    resolvedExerciseDbId: byCandidate?.item.id,
+                    resolvedExerciseDbName: byCandidate?.item.name,
+                    resolvedByCandidate,
+                })
 
                 if (!bestMatch) {
                     if (resolvedFallbackGifUrl || fallbackInstructions.length > 0) {
@@ -1357,6 +1352,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         apiKey,
         cacheKey,
         currentLanguage,
+        exerciseId,
         exerciseDbAliases,
         exerciseDbId,
         exerciseDbName,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
+import { exerciseRepository } from '../repositories/exerciseRepository'
 
 interface ExerciseDbItem {
     id?: string
@@ -20,25 +21,20 @@ interface UseExerciseGifResult extends ExerciseGifData {
 }
 
 interface UseExerciseGifOptions {
+    exerciseId?: string
     exerciseDbId?: string
     exerciseDbName?: string
     exerciseDbAliases?: string[]
     fallbackGifUrl?: string
 }
 
-const exerciseGifCache = new Map<string, ExerciseGifData>()
 let hasWarnedMissingExerciseDbKey = false
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
-const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
+const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
+const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
-interface ExerciseDbPublicItem {
-    name?: string
-    gifUrl?: string
-    targetMuscles?: string[]
-}
-
-interface ExerciseDbPublicResponse {
-    data?: ExerciseDbPublicItem[]
+interface ExerciseGifCacheEntry extends ExerciseGifData {
+    cachedAt: number
 }
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
@@ -48,6 +44,108 @@ function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): Reque
             'X-RapidAPI-Key': apiKey,
             'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
         },
+    }
+}
+
+function buildGifCacheStorageKey(cacheKey: string): string {
+    return `${EXERCISE_GIF_CACHE_KEY_PREFIX}${cacheKey}`
+}
+
+function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
+    const storage = globalThis.localStorage
+    if (!storage) {
+        return undefined
+    }
+
+    const storageKey = buildGifCacheStorageKey(cacheKey)
+
+    try {
+        const rawValue = storage.getItem(storageKey)
+        if (!rawValue) {
+            return undefined
+        }
+
+        const parsed = JSON.parse(rawValue) as Partial<ExerciseGifCacheEntry>
+        if (!parsed || typeof parsed !== 'object') {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
+        if (typeof parsed.cachedAt !== 'number' || Date.now() - parsed.cachedAt > EXERCISE_GIF_CACHE_TTL_MS) {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
+        if (typeof parsed.gifUrl !== 'string' || typeof parsed.targetMuscle !== 'string') {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
+        return {
+            gifUrl: parsed.gifUrl,
+            targetMuscle: parsed.targetMuscle,
+            resolvedExerciseDbId: typeof parsed.resolvedExerciseDbId === 'string' ? parsed.resolvedExerciseDbId : undefined,
+            resolvedExerciseDbName: typeof parsed.resolvedExerciseDbName === 'string' ? parsed.resolvedExerciseDbName : undefined,
+        }
+    } catch {
+        storage.removeItem(storageKey)
+        return undefined
+    }
+}
+
+function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
+    const storage = globalThis.localStorage
+    if (!storage) {
+        return
+    }
+
+    const storageKey = buildGifCacheStorageKey(cacheKey)
+    const payload: ExerciseGifCacheEntry = {
+        ...value,
+        cachedAt: Date.now(),
+    }
+
+    try {
+        storage.setItem(storageKey, JSON.stringify(payload))
+    } catch {
+        // Ignore quota and serialization errors to keep GIF resolution resilient.
+    }
+}
+
+async function persistResolvedExerciseDbLink(input: {
+    exerciseId?: string
+    currentExerciseDbId?: string
+    currentExerciseDbName?: string
+    resolvedExerciseDbId?: string
+    resolvedExerciseDbName?: string
+    resolvedByCandidate: boolean
+}): Promise<void> {
+    if (!input.resolvedByCandidate) {
+        return
+    }
+
+    const exerciseId = input.exerciseId?.trim()
+    if (!exerciseId) {
+        return
+    }
+
+    if (input.currentExerciseDbId?.trim() && input.currentExerciseDbName?.trim()) {
+        return
+    }
+
+    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    const resolvedExerciseDbName = input.resolvedExerciseDbName?.trim()
+    if (!resolvedExerciseDbId || !resolvedExerciseDbName) {
+        return
+    }
+
+    try {
+        await exerciseRepository.updateExercise(exerciseId, {
+            exerciseDbId: resolvedExerciseDbId,
+            exerciseDbName: resolvedExerciseDbName,
+        })
+    } catch {
+        // Ignore persistence failures so GIF rendering is not blocked.
     }
 }
 
@@ -112,47 +210,6 @@ async function searchExerciseDbById(
     }
 
     return payload
-}
-
-async function searchPublicExerciseDbByCandidates(
-    candidates: string[],
-    signal: AbortSignal,
-): Promise<ExerciseDbItem | null> {
-    for (const candidate of candidates) {
-        const response = await fetch(
-            `${EXERCISE_DB_PUBLIC_API_BASE}/exercises?search=${encodeURIComponent(candidate)}&limit=24`,
-            { signal },
-        )
-
-        if (!response.ok) {
-            continue
-        }
-
-        const payload = (await response.json()) as ExerciseDbPublicResponse
-        const items = Array.isArray(payload.data) ? payload.data : []
-        if (items.length === 0) {
-            continue
-        }
-
-        const mapped = items
-            .filter((item) => item.gifUrl)
-            .map<ExerciseDbItem>((item) => ({
-                name: item.name,
-                gifUrl: normalizeGifUrl(item.gifUrl ?? ''),
-                target: item.targetMuscles?.[0] ?? '',
-            }))
-
-        const best = selectBestMatch(mapped, candidate)
-        if (best) {
-            return {
-                name: best.name,
-                gifUrl: best.gifUrl,
-                target: best.target,
-            }
-        }
-    }
-
-    return null
 }
 
 function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
@@ -245,13 +302,17 @@ function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDb
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
+    const exerciseId = options?.exerciseId
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
     const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
     const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${fallbackGifUrl}`
-    const cached = normalizedName ? exerciseGifCache.get(cacheKey) : undefined
+    const cached = useMemo(
+        () => (normalizedName ? readExerciseGifCache(cacheKey) : undefined),
+        [cacheKey, normalizedName],
+    )
     const shouldFetch = Boolean(normalizedName && !cached)
 
     const [state, setState] = useState<UseExerciseGifResult>({
@@ -301,9 +362,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     firstResult = await searchExerciseDbByCandidates(candidates, apiKey, controller.signal)
                 }
 
-                if (!firstResult) {
-                    firstResult = await searchPublicExerciseDbByCandidates(candidates, controller.signal)
-                }
+                const resolvedByCandidate = !byId && Boolean(firstResult?.id)
 
                 const resolved: ExerciseGifData = {
                     gifUrl:
@@ -315,21 +374,30 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     resolvedExerciseDbName: firstResult?.name,
                 }
 
-                exerciseGifCache.set(cacheKey, resolved)
+                await persistResolvedExerciseDbLink({
+                    exerciseId,
+                    currentExerciseDbId: exerciseDbId,
+                    currentExerciseDbName: exerciseDbName,
+                    resolvedExerciseDbId: resolved.resolvedExerciseDbId,
+                    resolvedExerciseDbName: resolved.resolvedExerciseDbName,
+                    resolvedByCandidate,
+                })
+
+                writeExerciseGifCache(cacheKey, resolved)
                 setState({ ...resolved, isLoading: false })
             } catch {
                 if (!controller.signal.aborted) {
-                    const fallbackGifUrl = apiKey && exerciseDbId?.trim()
+                    const resolvedFallbackGifUrl = apiKey && exerciseDbId?.trim()
                         ? buildExerciseGifUrl(exerciseDbId, apiKey)
                         : (options?.fallbackGifUrl ? normalizeGifUrl(options.fallbackGifUrl) : EXERCISE_GIF_PLACEHOLDER)
 
                     const fallback = {
-                        gifUrl: fallbackGifUrl,
+                        gifUrl: resolvedFallbackGifUrl,
                         targetMuscle: '',
                         resolvedExerciseDbId: undefined,
                         resolvedExerciseDbName: undefined,
                     }
-                    exerciseGifCache.set(cacheKey, fallback)
+                    writeExerciseGifCache(cacheKey, fallback)
                     setState({ ...fallback, isLoading: false })
                 }
             }
@@ -344,6 +412,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         aliasSignature,
         apiKey,
         cacheKey,
+        exerciseId,
         exerciseDbAliases,
         exerciseDbId,
         exerciseDbName,

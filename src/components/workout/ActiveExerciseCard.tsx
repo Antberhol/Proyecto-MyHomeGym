@@ -73,6 +73,7 @@ export function ActiveExerciseCard({
 
             <div className="flex items-center gap-3">
                 <ExerciseThumbnail
+                    exerciseId={activeRoutineExercise.ejercicio?.id}
                     nombre={activeRoutineExercise.ejercicio?.nombre || t('training.exerciseCard.exercise')}
                     grupoMuscularPrimario={activeRoutineExercise.ejercicio?.grupoMuscularPrimario}
                     equipoNecesario={activeRoutineExercise.ejercicio?.equipoNecesario}
