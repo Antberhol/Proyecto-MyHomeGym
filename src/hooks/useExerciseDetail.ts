@@ -55,7 +55,7 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
-const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v3'
+const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v4'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 const EXERCISE_DB_PUBLIC_API_BASE = 'https://exercisedb-api.vercel.app/api/v1'
 
@@ -107,22 +107,41 @@ function parseFallbackInstructions(value?: string): string[] {
     return [stripStepPrefix(normalized)]
 }
 
-function detectInstructionLanguage(text: string): 'es' | 'en' {
-    const normalized = text.toLowerCase()
+const spanishInstructionSignalPattern =
+    /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas|agarra|sujeta|colócate|colocate|siéntate|sientate|túmbate|tumbate|posición|posicion|inicial|pausa|luego|hacia|pecho|cuerpo|brazos|codos)\b/i
 
+const englishInstructionSignalPattern =
+    /\b(the|and|with|your|for|from|to|of|in|on|at|by|then|while|when|keep|pull|push|lower|raise|pause|repeat|stand|sit|lie|bench|grip|starting|position|shoulder|body|chest|feet|knee|floor|ground|back)\b/i
+
+function hasSpanishInstructionSignals(text: string): boolean {
     if (/[áéíóúñ¿¡]/i.test(text)) {
+        return true
+    }
+
+    return spanishInstructionSignalPattern.test(text.toLowerCase())
+}
+
+function hasEnglishInstructionSignals(text: string): boolean {
+    return englishInstructionSignalPattern.test(text.toLowerCase())
+}
+
+function isMixedInstruction(text: string): boolean {
+    return hasSpanishInstructionSignals(text) && hasEnglishInstructionSignals(text)
+}
+
+function detectInstructionLanguage(text: string): 'es' | 'en' {
+    const hasSpanishSignals = hasSpanishInstructionSignals(text)
+    const hasEnglishSignals = hasEnglishInstructionSignals(text)
+
+    if (hasSpanishSignals && !hasEnglishSignals) {
         return 'es'
     }
 
-    if (
-        /\b(el|la|los|las|de|del|con|manten|mantén|evita|controla|sube|baja|repite|sin|hombros|cadera|espalda|rodillas|agarra|sujeta|colócate|colocate|siéntate|sientate|túmbate|tumbate|posición|posicion|inicial|pausa|luego|hacia|pecho|cuerpo|brazos|codos)\b/i.test(
-            normalized,
-        )
-    ) {
-        return 'es'
+    if (hasEnglishSignals && !hasSpanishSignals) {
+        return 'en'
     }
 
-    return 'en'
+    return hasSpanishSignals ? 'es' : 'en'
 }
 
 function applyTextReplacements(value: string, replacements: Array<[RegExp, string]>): string {
@@ -288,9 +307,12 @@ const englishToSpanishWordMap: Record<string, string> = {
     a: 'un',
     an: 'un',
     and: 'y',
+    or: 'o',
+    as: 'como',
     with: 'con',
     without: 'sin',
     your: 'tus',
+    yourself: 'tu cuerpo',
     you: 'tú',
     to: 'a',
     from: 'desde',
@@ -302,62 +324,453 @@ const englishToSpanishWordMap: Record<string, string> = {
     by: 'mediante',
     then: 'luego',
     while: 'mientras',
+    when: 'cuando',
+    until: 'hasta',
+    into: 'en',
+    out: 'hacia fuera',
+    over: 'sobre',
+    under: 'debajo',
+    above: 'arriba',
+    behind: 'detrás',
+    through: 'a través de',
+    throughout: 'durante todo',
+    than: 'que',
+    are: 'están',
+    is: 'está',
+    it: 'ello',
+    them: 'ellos',
+    that: 'que',
+    both: 'ambos',
+    each: 'cada',
+    one: 'un',
+    two: 'dos',
+    other: 'otro',
+    right: 'derecho',
+    left: 'izquierdo',
+    set: 'ajusta',
     towards: 'hacia',
     stand: 'ponte',
     sit: 'siéntate',
     lie: 'túmbate',
+    walk: 'camina',
+    step: 'paso',
     start: 'comienza',
     attach: 'coloca',
     adjust: 'ajusta',
     grab: 'agarra',
     grasp: 'sujeta',
+    place: 'coloca',
     keep: 'mantén',
     engage: 'activa',
     pull: 'tira',
     push: 'empuja',
     lower: 'baja',
     raise: 'eleva',
+    lift: 'eleva',
     pause: 'pausa',
     repeat: 'repite',
     continue: 'continúa',
     switch: 'cambia',
+    return: 'vuelve',
+    release: 'libera',
+    extend: 'extiende',
+    extending: 'extendiendo',
+    bend: 'flexiona',
+    bending: 'flexionando',
+    straighten: 'estira',
+    straightening: 'estirando',
+    lean: 'inclina',
+    hinge: 'inclina',
+    rotate: 'rota',
+    bring: 'lleva',
+    create: 'crea',
+    use: 'usa',
+    using: 'usando',
+    ensure: 'asegura',
+    maintaining: 'manteniendo',
+    retracting: 'retrayendo',
+    squeezing: 'apretando',
+    squeeze: 'aprieta',
+    keeping: 'manteniendo',
+    holding: 'sujetando',
+    gripping: 'agarrando',
+    facing: 'frente a',
+    apart: 'separados',
+    pointing: 'apuntando',
+    pressed: 'presionada',
+    slide: 'desliza',
     hold: 'mantén',
     inhale: 'inhala',
     exhale: 'exhala',
     feet: 'pies',
     foot: 'pie',
+    footrests: 'apoyapiés',
+    footplate: 'plataforma para los pies',
     knee: 'rodilla',
     knees: 'rodillas',
     hip: 'cadera',
     hips: 'caderas',
     waist: 'cintura',
+    torso: 'torso',
+    core: 'core',
     chest: 'pecho',
     shoulder: 'hombro',
     shoulders: 'hombros',
+    'shoulder-width': 'anchura de hombros',
     elbow: 'codo',
     elbows: 'codos',
     arm: 'brazo',
     arms: 'brazos',
+    hand: 'mano',
+    hands: 'manos',
+    palm: 'palma',
+    palms: 'palmas',
+    blades: 'escápulas',
+    triceps: 'tríceps',
+    biceps: 'bíceps',
+    forearms: 'antebrazos',
     head: 'cabeza',
     body: 'cuerpo',
     heels: 'talones',
     toes: 'punta de los pies',
     machine: 'máquina',
+    smith: 'smith',
+    seat: 'asiento',
     handle: 'agarre',
     handles: 'agarres',
+    grip: 'agarre',
+    overhand: 'prono',
+    underhand: 'supino',
+    neutral: 'neutro',
+    close: 'cerca',
+    wider: 'más ancho',
+    together: 'juntas',
     rope: 'cuerda',
+    cable: 'cable',
+    pulley: 'polea',
+    bar: 'barra',
+    barbell: 'barra',
+    dumbbell: 'mancuerna',
+    dumbbells: 'mancuernas',
+    kettlebell: 'pesa rusa',
+    medicine: 'medicinal',
+    ball: 'balón',
+    exercise: 'ejercicio',
+    suspension: 'suspensión',
+    trainer: 'entrenador',
+    band: 'banda',
+    towel: 'toalla',
+    attachment: 'acople',
+    'v-bar': 'barra en v',
+    incline: 'inclinado',
+    overhead: 'sobre la cabeza',
+    reverse: 'invertido',
+    weight: 'peso',
+    ez: 'ez',
+    plank: 'plancha',
+    abdomen: 'abdomen',
+    forehead: 'frente',
+    ceiling: 'techo',
+    against: 'contra',
+    away: 'alejándote',
+    off: 'desde',
+    just: 'justo',
+    up: 'arriba',
+    down: 'abajo',
     floor: 'suelo',
     ground: 'suelo',
     straight: 'recta',
+    parallel: 'paralelo',
+    flat: 'apoyados',
+    bent: 'flexionados',
     slightly: 'ligeramente',
+    slight: 'ligera',
     slowly: 'lentamente',
     fully: 'completamente',
     extended: 'extendidos',
+    top: 'arriba',
+    bottom: 'abajo',
+    side: 'lado',
+    sides: 'lados',
+    front: 'frente',
+    line: 'línea',
+    angle: 'ángulo',
+    degree: 'grados',
+    height: 'altura',
+    peak: 'pico',
+    tension: 'tensión',
+    control: 'control',
+    form: 'forma',
+    movement: 'movimiento',
+    stationary: 'estables',
+    upper: 'superiores',
+    face: 'cara',
+    high: 'alto',
+    low: 'bajo',
+    anchor: 'anclaje',
+    point: 'punto',
+    squat: 'sentadilla',
+    alternating: 'alternando',
+    stretch: 'estiramiento',
+    inwards: 'hacia dentro',
+    let: 'deja',
+    legs: 'piernas',
+    butt: 'glúteos',
     desired: 'deseado',
     number: 'número',
     repetitions: 'repeticiones',
     position: 'posición',
     starting: 'inicial',
+}
+
+const englishResidualWordMap: Record<string, string> = {
+    back: 'espalda',
+    moment: 'momento',
+    bench: 'banco',
+    forward: 'hacia delante',
+    engaged: 'activado',
+    edge: 'borde',
+    so: 'así',
+    hang: 'cuelga',
+    fingers: 'dedos',
+    end: 'final',
+    directly: 'directamente',
+    pad: 'almohadilla',
+    muscles: 'músculos',
+    press: 'press',
+    chair: 'silla',
+    proper: 'correcta',
+    seconds: 'segundos',
+    maintain: 'mantén',
+    perform: 'realiza',
+    wrists: 'muñecas',
+    rack: 'soporte',
+    narrower: 'más estrecho',
+    narrow: 'estrecho',
+    kettlebells: 'pesas rusas',
+    kneel: 'arrodíllate',
+    inward: 'hacia dentro',
+    contraction: 'contracción',
+    next: 'siguiente',
+    once: 'una vez',
+    decline: 'declinado',
+    stability: 'estabilidad',
+    supporting: 'apoyando',
+    ears: 'orejas',
+    lowering: 'bajando',
+    ropes: 'cuerdas',
+    allowing: 'permitiendo',
+    engaging: 'activando',
+    rotating: 'rotando',
+    upwards: 'hacia arriba',
+    lying: 'tumbado',
+    pulling: 'tirando',
+    this: 'este',
+    reach: 'alcanza',
+    twist: 'gira',
+    level: 'nivel',
+    they: 'ellos',
+    comfortable: 'cómodo',
+    row: 'remo',
+    hanging: 'colgando',
+    placed: 'colocado',
+    emphasize: 'enfatiza',
+    intensity: 'intensidad',
+    supported: 'apoyado',
+    resting: 'apoyando',
+    thighs: 'muslos',
+    touches: 'toca',
+    tucked: 'metidos',
+    underneath: 'debajo',
+    alignment: 'alineación',
+    elevated: 'elevado',
+    'hip-width': 'anchura de cadera',
+    forearm: 'antebrazo',
+    below: 'debajo',
+    'pull-up': 'dominada',
+    time: 'tiempo',
+    feeling: 'sensación',
+    wide: 'ancho',
+    relaxed: 'relajado',
+    support: 'soporte',
+    controlled: 'controlado',
+    can: 'puede',
+    shape: 'forma',
+    resistance: 'resistencia',
+    perpendicular: 'perpendicular',
+    handstand: 'parada de manos',
+    neck: 'cuello',
+    forming: 'formando',
+    highest: 'más alto',
+    setting: 'configuración',
+    opposite: 'opuesto',
+    surface: 'superficie',
+    'push-up': 'flexión',
+    toe: 'punta',
+    bars: 'barras',
+    unrack: 'desencaja',
+    backrest: 'respaldo',
+    rowing: 'remo',
+    contracted: 'contraído',
+    stable: 'estable',
+    do: 'haz',
+    simultaneously: 'simultáneamente',
+    stacked: 'apilados',
+    creating: 'creando',
+    motion: 'movimiento',
+    almost: 'casi',
+    take: 'toma',
+    object: 'objeto',
+    leaning: 'inclinando',
+    platform: 'plataforma',
+    blade: 'escápula',
+    between: 'entre',
+    few: 'pocos',
+    manner: 'manera',
+    long: 'largo',
+    begin: 'empieza',
+    'hand-over-hand': 'mano sobre mano',
+    upward: 'hacia arriba',
+    appropriate: 'adecuado',
+    pass: 'pasa',
+    slam: 'golpea',
+    power: 'potencia',
+    catch: 'atrapa',
+    reaches: 'alcanza',
+    around: 'alrededor',
+    focus: 'enfoca',
+    balance: 'equilibrio',
+    backward: 'hacia atrás',
+    roll: 'rueda',
+    width: 'anchura',
+    about: 'aproximadamente',
+    upright: 'erguido',
+    gently: 'suavemente',
+    such: 'tal',
+    standing: 'de pie',
+    sliding: 'deslizando',
+    lifting: 'levantando',
+    diamond: 'diamante',
+    chin: 'barbilla',
+    toward: 'hacia',
+    returning: 'volviendo',
+    downward: 'hacia abajo',
+    flex: 'flexiona',
+    backwards: 'hacia atrás',
+    placing: 'colocando',
+    raised: 'elevado',
+    inside: 'dentro',
+    ear: 'oreja',
+    lunge: 'zancada',
+    repetition: 'repetición',
+    firmly: 'firmemente',
+    cross: 'cruza',
+    mimicking: 'imitando',
+    drawing: 'dibujando',
+    bowstring: 'cuerda de arco',
+    untwisting: 'desenroscando',
+    twisting: 'girando',
+    direction: 'dirección',
+    rep: 'repetición',
+    onto: 'sobre',
+    sturdy: 'firme',
+    leverage: 'apalancamiento',
+    lifted: 'elevado',
+    alternate: 'alterna',
+    tuck: 'recoge',
+    interlace: 'entrelaza',
+    pick: 'toma',
+    aiming: 'apuntando',
+    movements: 'movimientos',
+    assist: 'asiste',
+    climbing: 'trepando',
+    descend: 'desciende',
+    controlling: 'controlando',
+    descent: 'descenso',
+    bringing: 'llevando',
+    allow: 'permite',
+    again: 'de nuevo',
+    allows: 'permite',
+    freely: 'libremente',
+    securely: 'con seguridad',
+    forcefully: 'con fuerza',
+    entire: 'completo',
+    generate: 'genera',
+    including: 'incluyendo',
+    bounce: 'rebota',
+    straps: 'correas',
+    loop: 'bucle',
+    ends: 'extremos',
+    same: 'mismo',
+    intense: 'intenso',
+    precision: 'precisión',
+    lateral: 'lateral',
+    elite: 'élite',
+    pointed: 'apuntado',
+    linear: 'lineal',
+    declined: 'declinado',
+    strength: 'fuerza',
+    still: 'aún',
+    find: 'encuentra',
+    open: 'abre',
+    space: 'espacio',
+    enough: 'suficiente',
+    room: 'espacio',
+    kick: 'patea',
+    wall: 'pared',
+    come: 'ven',
+    lowest: 'más bajo',
+    accordingly: 'en consecuencia',
+    balancing: 'equilibrando',
+    pressing: 'presionando',
+    help: 'ayuda',
+    will: 'va a',
+    be: 'estar',
+    breathe: 'respira',
+    gentle: 'suave',
+    arc: 'arco',
+    contract: 'contrae',
+    balls: 'balones',
+    raising: 'elevando',
+    getting: 'obteniendo',
+    secure: 'asegura',
+    secured: 'asegurado',
+    assume: 'adopta',
+    rings: 'anillas',
+    touch: 'toca',
+    explosively: 'de forma explosiva',
+    throwing: 'lanzando',
+    possible: 'posible',
+    beside: 'junto a',
+    little: 'poco',
+    joints: 'articulaciones',
+    planted: 'apoyados',
+    thumbs: 'pulgares',
+    index: 'índice',
+    glutes: 'glúteos',
+    formed: 'formado',
+}
+
+const unresolvedEnglishConnectorPattern =
+    /\b(the|and|with|your|for|from|to|of|in|on|at|by|then|while|when|that|this|those|these)\b/i
+
+function cleanSpanishInstructionText(value: string): string {
+    const normalized = value
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .replace(/\(\s+/g, '(')
+        .replace(/\s+\)/g, ')')
+        .trim()
+
+    if (!normalized) {
+        return ''
+    }
+
+    if (isMixedInstruction(normalized) && unresolvedEnglishConnectorPattern.test(normalized)) {
+        return 'Mantén técnica controlada durante todo el movimiento.'
+    }
+
+    return normalized
 }
 
 function translateEnglishInstructionToSpanish(text: string): string {
@@ -366,7 +779,7 @@ function translateEnglishInstructionToSpanish(text: string): string {
         return text
     }
 
-    if (detectInstructionLanguage(trimmed) === 'es') {
+    if (detectInstructionLanguage(trimmed) === 'es' && !isMixedInstruction(trimmed)) {
         return trimmed
     }
 
@@ -381,13 +794,9 @@ function translateEnglishInstructionToSpanish(text: string): string {
 
     translated = applyTextReplacements(translated, englishToSpanishFragmentReplacements)
     translated = applyWordTranslations(translated, englishToSpanishWordMap)
+    translated = applyWordTranslations(translated, englishResidualWordMap)
 
-    translated = translated
-        .replace(/\s{2,}/g, ' ')
-        .replace(/\s+([,.;:!?])/g, '$1')
-        .replace(/\(\s+/g, '(')
-        .replace(/\s+\)/g, ')')
-        .trim()
+    translated = cleanSpanishInstructionText(translated)
 
     if (!translated) {
         return trimmed
@@ -397,7 +806,10 @@ function translateEnglishInstructionToSpanish(text: string): string {
 }
 
 function shouldTranslateInstructions(instructions: string[], language: 'es' | 'en') {
-    return instructions.some((instruction) => detectInstructionLanguage(instruction) !== language)
+    return instructions.some(
+        (instruction) =>
+            detectInstructionLanguage(instruction) !== language || isMixedInstruction(instruction),
+    )
 }
 
 async function translateInstruction(
@@ -415,7 +827,7 @@ async function translateInstruction(
         return normalizedText
     }
 
-    if (sourceLanguage === targetLanguage) {
+    if (sourceLanguage === targetLanguage && !isMixedInstruction(normalizedText)) {
         return normalizedText
     }
 
@@ -427,7 +839,7 @@ async function translateInstruction(
 
     let translated = normalizedText
 
-    if (sourceLanguage === 'en' && targetLanguage === 'es') {
+    if (targetLanguage === 'es') {
         translated = translateEnglishInstructionToSpanish(normalizedText)
     }
 
