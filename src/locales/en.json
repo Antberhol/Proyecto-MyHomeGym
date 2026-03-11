@@ -22,7 +22,8 @@
         "save": "Save",
         "cancel": "Cancel",
         "close": "Close",
-        "edit": "Edit"
+        "edit": "Edit",
+        "retry": "Retry"
     },
     "nav": {
         "dashboard": "Dashboard",

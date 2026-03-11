@@ -36,6 +36,8 @@ export function ExerciseDetailPage() {
     const [catalogError, setCatalogError] = useState('')
     const [personalNote, setPersonalNote] = useState('')
     const [noteSaved, setNoteSaved] = useState(false)
+    const [gifLoaded, setGifLoaded] = useState(false)
+    const [retryCount, setRetryCount] = useState(0)
 
     useEffect(() => {
         const run = async () => {
@@ -84,6 +86,7 @@ export function ExerciseDetailPage() {
         const storedNote = window.localStorage.getItem(storageKey)
         setPersonalNote(storedNote ?? '')
         setNoteSaved(false)
+        setGifLoaded(false)
     }, [exercise])
 
     const englishAlias =
@@ -98,6 +101,7 @@ export function ExerciseDetailPage() {
         exerciseDbAliases: exercise?.exerciseDbAliases,
         fallbackInstructions: exercise?.instrucciones,
         fallbackGifUrl: exercise?.imagenUrl,
+        retryKey: retryCount,
     })
 
     if (isCatalogLoading || (exercise && detail.isLoading)) {
@@ -131,6 +135,26 @@ export function ExerciseDetailPage() {
         }, 1200)
     }
 
+    if (detail.notFound && !detail.isLoading) {
+        return (
+            <div className="space-y-4">
+                <Button variant="secondary" size="sm" onClick={() => navigate('/catalogo')}>
+                    {t('common.backToCatalog')}
+                </Button>
+                <Card>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{t('common.notFoundDetailedInfo')}</p>
+                    <button
+                        type="button"
+                        onClick={() => setRetryCount((c) => c + 1)}
+                        className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+                    >
+                        {t('common.retry')}
+                    </button>
+                </Card>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-4">
             <Button variant="secondary" size="sm" onClick={() => navigate('/catalogo')}>
@@ -138,15 +162,23 @@ export function ExerciseDetailPage() {
             </Button>
 
             <Card className="space-y-4">
-                <img
-                    src={detail.data?.gifUrl || EXERCISE_GIF_PLACEHOLDER}
-                    alt={t('exerciseDetail.gifAlt', { name: exercise.nombre })}
-                    className="h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 dark:border-slate-700 dark:bg-slate-800 md:h-96"
-                    loading="lazy"
-                    onError={(event) => {
-                        event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
-                    }}
-                />
+                <div className="relative h-80 w-full md:h-96">
+                    {!gifLoaded && (
+                        <div className="absolute inset-0 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+                    )}
+                    <img
+                        src={detail.data?.gifUrl || EXERCISE_GIF_PLACEHOLDER}
+                        alt={t('exerciseDetail.gifAlt', { name: exercise.nombre })}
+                        className={`h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 md:h-96 ${gifLoaded ? 'opacity-100' : 'opacity-0'
+                            }`}
+                        loading="lazy"
+                        onLoad={() => setGifLoaded(true)}
+                        onError={(event) => {
+                            event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                            setGifLoaded(true)
+                        }}
+                    />
+                </div>
 
                 <div>
                     <h1 className="text-2xl font-bold">{exercise.nombre}</h1>
@@ -219,6 +251,30 @@ export function ExerciseDetailPage() {
                         {noteSaved ? <span className="text-xs text-emerald-600 dark:text-emerald-300">{t('exerciseDetail.notes.saved')}</span> : null}
                     </div>
                 </section>
+
+                {import.meta.env.DEV && (
+                    <details className="mt-2 rounded-lg border border-dashed border-slate-300 p-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                        <summary className="cursor-pointer font-semibold">⚙ Debug: GIF resolution</summary>
+                        <dl className="mt-2 space-y-1">
+                            <dt className="font-medium">source</dt>
+                            <dd className="pl-4">{detail.debug.source}</dd>
+                            <dt className="font-medium">resolvedExerciseDbId</dt>
+                            <dd className="pl-4">{detail.debug.resolvedExerciseDbId ?? '—'}</dd>
+                            <dt className="font-medium">resolvedExerciseDbName</dt>
+                            <dd className="pl-4">{detail.debug.resolvedExerciseDbName ?? '—'}</dd>
+                            <dt className="font-medium">usedCandidate</dt>
+                            <dd className="pl-4">{detail.debug.usedCandidate ?? '—'}</dd>
+                            <dt className="font-medium">candidatesTried</dt>
+                            <dd className="pl-4">{detail.debug.candidatesTried.join(', ') || '—'}</dd>
+                            <dt className="font-medium">gifValidated</dt>
+                            <dd className="pl-4">{String(detail.debug.gifValidated)}</dd>
+                            <dt className="font-medium">lastError</dt>
+                            <dd className="pl-4">{detail.debug.lastError ?? '—'}</dd>
+                            <dt className="font-medium">gifUrl</dt>
+                            <dd className="break-all pl-4">{detail.data?.gifUrl ?? '—'}</dd>
+                        </dl>
+                    </details>
+                )}
             </Card>
         </div>
     )

@@ -26,12 +26,15 @@ interface UseExerciseGifOptions {
     exerciseDbName?: string
     exerciseDbAliases?: string[]
     fallbackGifUrl?: string
+    /** When false, returns placeholder immediately without fetching (IntersectionObserver gate). */
+    enabled?: boolean
 }
 
 let hasWarnedMissingExerciseDbKey = false
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+let hasRunCacheCleanup = false
 
 interface ExerciseGifCacheEntry extends ExerciseGifData {
     cachedAt: number
@@ -129,6 +132,7 @@ function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
     }
 }
 
+// FIX 4: Persist whenever we have a new/better exerciseDbId — no resolvedByCandidate gate.
 async function persistResolvedExerciseDbLink(input: {
     exerciseId?: string
     currentExerciseDbId?: string
@@ -137,22 +141,23 @@ async function persistResolvedExerciseDbLink(input: {
     resolvedExerciseDbName?: string
     resolvedByCandidate: boolean
 }): Promise<void> {
-    if (!input.resolvedByCandidate) {
-        return
-    }
-
     const exerciseId = input.exerciseId?.trim()
     if (!exerciseId) {
         return
     }
 
-    if (input.currentExerciseDbId?.trim() && input.currentExerciseDbName?.trim()) {
+    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    if (!resolvedExerciseDbId) {
         return
     }
 
-    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    // Only persist when the resolved ID differs from what is currently stored.
+    if (resolvedExerciseDbId === input.currentExerciseDbId?.trim()) {
+        return
+    }
+
     const resolvedExerciseDbName = input.resolvedExerciseDbName?.trim()
-    if (!resolvedExerciseDbId || !resolvedExerciseDbName) {
+    if (!resolvedExerciseDbName) {
         return
     }
 
@@ -169,9 +174,12 @@ async function persistResolvedExerciseDbLink(input: {
 export const EXERCISE_GIF_PLACEHOLDER =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Sin gif">' +
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Exercise image">' +
         '<rect width="480" height="320" rx="24" fill="#E2E8F0"/>' +
-        '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#475569" font-size="24" font-family="Inter,Segoe UI,Arial,sans-serif">Sin GIF disponible</text>' +
+        '<rect x="160" y="120" width="160" height="110" rx="14" fill="#94A3B8"/>' +
+        '<circle cx="240" cy="175" r="34" fill="#CBD5E1"/>' +
+        '<circle cx="240" cy="175" r="22" fill="#94A3B8"/>' +
+        '<rect x="197" y="105" width="46" height="22" rx="7" fill="#94A3B8"/>' +
         '</svg>',
     )
 
@@ -229,10 +237,6 @@ async function searchExerciseDbById(
     return payload
 }
 
-function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
-    return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
-}
-
 function normalizeGifUrl(url: string): string {
     const normalized = url.trim()
     if (!normalized) {
@@ -242,24 +246,12 @@ function normalizeGifUrl(url: string): string {
     return normalized.replace(/^http:\/\//i, 'https://')
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey?: string, fallbackExerciseDbId?: string): string {
-    if (!item) {
-        if (fallbackExerciseDbId?.trim() && apiKey) {
-            return buildExerciseGifUrl(fallbackExerciseDbId, apiKey)
-        }
-
+// FIX 1: Use the CDN gifUrl from the API response directly — no key-in-URL.
+function resolveExerciseGifUrl(item: ExerciseDbItem | null): string {
+    if (!item?.gifUrl) {
         return ''
     }
-
-    if (item.id && apiKey) {
-        return buildExerciseGifUrl(item.id, apiKey)
-    }
-
-    if (item.gifUrl) {
-        return normalizeGifUrl(item.gifUrl)
-    }
-
-    return ''
+    return normalizeGifUrl(item.gifUrl)
 }
 
 function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOptions) {
@@ -313,7 +305,16 @@ function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDb
         return candidateTokens.every((token) => nameTokens.has(token))
     })
 
-    return strongTokenMatch ?? null
+    if (strongTokenMatch) {
+        return strongTokenMatch
+    }
+
+    // FIX 3: Loose fallback — single-result list with valid data.
+    if (items.length === 1 && items[0].gifUrl && items[0].id) {
+        return items[0]
+    }
+
+    return null
 }
 
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
@@ -330,7 +331,9 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         () => (normalizedName ? readExerciseGifCache(cacheKey) : undefined),
         [cacheKey, normalizedName],
     )
-    const shouldFetch = Boolean(normalizedName && !cached)
+    // FIX 5: disabled when element not yet visible (IntersectionObserver gate in ExerciseThumbnail).
+    const enabled = options?.enabled !== false
+    const shouldFetch = Boolean(normalizedName && !cached && enabled)
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: fallbackGifUrl || EXERCISE_GIF_PLACEHOLDER,
@@ -346,6 +349,32 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
             console.warn('VITE_EXERCISEDB_API_KEY is missing. Exercise GIFs will use placeholder images.')
         }
     }, [apiKey])
+
+    // VISUAL 3: Clean up expired localStorage cache entries once per app lifecycle.
+    useEffect(() => {
+        if (hasRunCacheCleanup) return
+        hasRunCacheCleanup = true
+        const storage = getLocalStorageSafe()
+        if (!storage) return
+        const keysToRemove: string[] = []
+        for (let i = 0; i < storage.length; i++) {
+            const key = storage.key(i)
+            if (!key?.startsWith(EXERCISE_GIF_CACHE_KEY_PREFIX)) continue
+            try {
+                const raw = storage.getItem(key)
+                if (!raw) { keysToRemove.push(key); continue }
+                const parsed = JSON.parse(raw) as Partial<ExerciseGifCacheEntry>
+                if (typeof parsed.cachedAt !== 'number' || Date.now() - parsed.cachedAt > EXERCISE_GIF_CACHE_TTL_MS) {
+                    keysToRemove.push(key)
+                }
+            } catch {
+                keysToRemove.push(key)
+            }
+        }
+        for (const key of keysToRemove) {
+            storage.removeItem(key)
+        }
+    }, [])
 
     useEffect(() => {
         if (!shouldFetch) {
@@ -383,7 +412,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
 
                 const resolved: ExerciseGifData = {
                     gifUrl:
-                        resolveExerciseGifUrl(firstResult, apiKey, exerciseDbId) ||
+                        resolveExerciseGifUrl(firstResult) ||
                         fallbackGifUrl ||
                         EXERCISE_GIF_PLACEHOLDER,
                     targetMuscle: firstResult?.target || '',
@@ -402,11 +431,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
 
                 writeExerciseGifCache(cacheKey, resolved)
                 setState({ ...resolved, isLoading: false })
-            } catch {
+            } catch (error) {
                 if (!controller.signal.aborted) {
-                    const resolvedFallbackGifUrl = apiKey && exerciseDbId?.trim()
-                        ? buildExerciseGifUrl(exerciseDbId, apiKey)
-                        : (options?.fallbackGifUrl ? normalizeGifUrl(options.fallbackGifUrl) : EXERCISE_GIF_PLACEHOLDER)
+                    console.warn('[GIF]', error)
+                    const resolvedFallbackGifUrl = options?.fallbackGifUrl
+                        ? normalizeGifUrl(options.fallbackGifUrl)
+                        : EXERCISE_GIF_PLACEHOLDER
 
                     const fallback = {
                         gifUrl: resolvedFallbackGifUrl,
@@ -440,7 +470,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         shouldFetch,
     ])
 
-    if (!normalizedName) {
+    if (!normalizedName || !enabled) {
         return {
             gifUrl: fallbackGifUrl || EXERCISE_GIF_PLACEHOLDER,
             targetMuscle: '',

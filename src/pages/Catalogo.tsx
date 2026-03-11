@@ -10,6 +10,7 @@ import {
   getExerciseDbQueryCandidates,
   getPreferredExerciseDbName,
 } from '../constants/exerciseDbAliases'
+import { ExerciseThumbnail } from '../components/exercises/ExerciseThumbnail'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import type { DifficultyLevel } from '../types/models'
 
@@ -219,39 +220,52 @@ export function CatalogoPage() {
                 }
               }}
             >
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">{exercise.nombre}</h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{t('catalog.target')}: {exercise.grupoMuscularPrimario}</p>
-                  <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                    ⓘ {t('catalog.tapForInfo')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          startEditExercise(exercise.id)
-                        }}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-xs"
-                      >
-                        {t('catalog.edit')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          void deleteCustomExercise(exercise.id)
-                        }}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-xs text-red-600"
-                      >
-                        {t('catalog.delete')}
-                      </button>
-                    </>
-                  )}
+              <div className="mb-2 flex items-start gap-3">
+                <ExerciseThumbnail
+                  exerciseId={exercise.id}
+                  nombre={exercise.nombre}
+                  exerciseDbId={exercise.exerciseDbId}
+                  exerciseDbName={exercise.exerciseDbName}
+                  exerciseDbAliases={exercise.exerciseDbAliases}
+                  imagenUrl={exercise.imagenUrl}
+                  className="h-14 w-20 flex-shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold">{exercise.nombre}</h2>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{t('catalog.target')}: {exercise.grupoMuscularPrimario}</p>
+                      <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        ⓘ {t('catalog.tapForInfo')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {exercise.esPersonalizado && editingExerciseId !== exercise.id && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              startEditExercise(exercise.id)
+                            }}
+                            className="rounded-md border border-slate-300 px-3 py-2 text-xs"
+                          >
+                            {t('catalog.edit')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void deleteCustomExercise(exercise.id)
+                            }}
+                            className="rounded-md border border-slate-300 px-3 py-2 text-xs text-red-600"
+                          >
+                            {t('catalog.delete')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

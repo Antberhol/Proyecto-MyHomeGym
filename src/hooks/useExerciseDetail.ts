@@ -46,6 +46,8 @@ interface UseExerciseDetailOptions {
     exerciseDbAliases?: string[]
     fallbackInstructions?: string
     fallbackGifUrl?: string
+    /** Increment to clear the in-memory cache and force a re-fetch. */
+    retryKey?: number | string
 }
 
 interface CachedDetailEntry {
@@ -59,6 +61,37 @@ const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v5'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
+const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+// FIX 2: localStorage helpers for cross-session gifUrl persistence.
+function readGifUrlFromLocalStorage(exerciseDbId: string): string | undefined {
+    try {
+        const raw = localStorage.getItem(`${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`)
+        if (!raw) return undefined
+        const parsed = JSON.parse(raw) as { gifUrl?: string; cachedAt?: number }
+        if (typeof parsed.cachedAt !== 'number' || Date.now() - parsed.cachedAt > EXERCISE_GIF_CACHE_TTL_MS) {
+            localStorage.removeItem(`${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`)
+            return undefined
+        }
+        if (typeof parsed.gifUrl !== 'string' || !parsed.gifUrl) return undefined
+        return parsed.gifUrl
+    } catch {
+        return undefined
+    }
+}
+
+function writeGifUrlToLocalStorage(exerciseDbId: string, gifUrl: string): void {
+    if (!gifUrl) return
+    try {
+        localStorage.setItem(
+            `${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`,
+            JSON.stringify({ gifUrl, cachedAt: Date.now() }),
+        )
+    } catch {
+        // Ignore quota and serialization errors.
+    }
+}
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
     return {
@@ -70,6 +103,7 @@ function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): Reque
     }
 }
 
+// FIX 4: Persist whenever we resolved a new/better exerciseDbId — no resolvedByCandidate gate.
 async function persistResolvedExerciseDbLink(input: {
     exerciseId?: string
     currentExerciseDbId?: string
@@ -78,22 +112,23 @@ async function persistResolvedExerciseDbLink(input: {
     resolvedExerciseDbName?: string
     resolvedByCandidate: boolean
 }): Promise<void> {
-    if (!input.resolvedByCandidate) {
-        return
-    }
-
     const exerciseId = input.exerciseId?.trim()
     if (!exerciseId) {
         return
     }
 
-    if (input.currentExerciseDbId?.trim() && input.currentExerciseDbName?.trim()) {
+    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    if (!resolvedExerciseDbId) {
         return
     }
 
-    const resolvedExerciseDbId = input.resolvedExerciseDbId?.trim()
+    // Only persist when the resolved ID differs from what is currently stored.
+    if (resolvedExerciseDbId === input.currentExerciseDbId?.trim()) {
+        return
+    }
+
     const resolvedExerciseDbName = input.resolvedExerciseDbName?.trim()
-    if (!resolvedExerciseDbId || !resolvedExerciseDbName) {
+    if (!resolvedExerciseDbName) {
         return
     }
 
@@ -1108,10 +1143,6 @@ async function maybeTranslateInstructions(
     return deduped
 }
 
-function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {
-    return `https://exercisedb.p.rapidapi.com/image?resolution=360&exerciseId=${encodeURIComponent(exerciseId)}&rapidapi-key=${encodeURIComponent(apiKey)}`
-}
-
 function normalizeGifUrl(url: string): string {
     const normalized = url.trim()
     if (!normalized) {
@@ -1121,20 +1152,18 @@ function normalizeGifUrl(url: string): string {
     return normalized.replace(/^http:\/\//i, 'https://')
 }
 
-function resolveExerciseGifUrl(item: ExerciseDbItem, apiKey?: string): string {
-    if (item.id && apiKey) {
-        const cached = gifUrlCache.get(item.id)
-        if (cached) {
-            return cached
+// FIX 1: Use the CDN gifUrl from the API response — cache by item.id for in-session reuse.
+function resolveExerciseGifUrl(item: ExerciseDbItem): string {
+    if (item.gifUrl?.trim()) {
+        const normalized = normalizeGifUrl(item.gifUrl)
+        if (item.id && normalized) {
+            gifUrlCache.set(item.id, normalized)
         }
-
-        const resolved = buildExerciseGifUrl(item.id, apiKey)
-        gifUrlCache.set(item.id, resolved)
-        return resolved
+        return normalized
     }
 
-    if (item.gifUrl?.trim()) {
-        return normalizeGifUrl(item.gifUrl)
+    if (item.id) {
+        return gifUrlCache.get(item.id) ?? ''
     }
 
     return ''
@@ -1165,7 +1194,16 @@ function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): Exercis
         return candidateTokens.every((token) => itemTokens.has(token))
     })
 
-    return strongTokenMatch ?? null
+    if (strongTokenMatch) {
+        return strongTokenMatch
+    }
+
+    // FIX 3: Loose fallback — single-result list with valid data.
+    if (items.length === 1 && items[0].gifUrl && items[0].id) {
+        return items[0]
+    }
+
+    return null
 }
 
 function tokenizeForMatch(value: string): string[] {
@@ -1253,7 +1291,8 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
     const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
     const fallbackInstructionSignature = normalizeExerciseName(fallbackInstructionsValue ?? '')
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
-    const cacheKey = `${INSTRUCTION_TRANSLATION_CACHE_VERSION}|${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}|${fallbackGifUrl}|${fallbackInstructionSignature}`
+    const retryKey = options?.retryKey ?? ''
+    const cacheKey = `${INSTRUCTION_TRANSLATION_CACHE_VERSION}|${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}|${fallbackGifUrl}|${fallbackInstructionSignature}|${retryKey}`
     const cached = normalizedName ? detailCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
@@ -1284,8 +1323,15 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             const fallbackInstructions = parseFallbackInstructions(fallbackInstructionsValue)
                 .map((instruction) => stripStepPrefix(instruction))
                 .filter(Boolean)
-            const resolvedFallbackGifUrl =
-                fallbackGifUrl || (apiKey && exerciseDbId?.trim() ? buildExerciseGifUrl(exerciseDbId, apiKey) : '')
+
+            // FIX 1+2: Use localStorage-cached gifUrl to avoid extra latency on return visits.
+            const cachedGifUrl = exerciseDbId?.trim()
+                ? (gifUrlCache.get(exerciseDbId) ?? readGifUrlFromLocalStorage(exerciseDbId))
+                : undefined
+            if (cachedGifUrl && exerciseDbId?.trim()) {
+                gifUrlCache.set(exerciseDbId, cachedGifUrl)
+            }
+            const resolvedFallbackGifUrl = cachedGifUrl || fallbackGifUrl || ''
 
             setState({
                 data: null,
@@ -1400,8 +1446,13 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     ? bestMatch.instructions.map((instruction) => stripStepPrefix(instruction)).filter(Boolean)
                     : []
                 const instructionSource = rawInstructions.length > 0 ? rawInstructions : fallbackInstructions
+                // FIX 1: Get gifUrl from CDN field; FIX 2: write to localStorage for next visit.
+                const resolvedGifUrl = resolveExerciseGifUrl(bestMatch) || resolvedFallbackGifUrl
+                if (bestMatch.id && resolvedGifUrl) {
+                    writeGifUrlToLocalStorage(bestMatch.id, resolvedGifUrl)
+                }
                 const detailData: ExerciseDetailData = {
-                    gifUrl: resolveExerciseGifUrl(bestMatch, apiKey) || resolvedFallbackGifUrl,
+                    gifUrl: resolvedGifUrl,
                     target: bestMatch.target ?? '',
                     equipment: bestMatch.equipment ?? '',
                     instructions: instructionSource,
@@ -1452,8 +1503,9 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
 
                 detailCache.set(cacheKey, successEntry)
                 setState({ data: detailData, isLoading: false, isTranslatingInstructions: false, notFound: false, debug: successEntry.debug })
-            } catch {
+            } catch (error) {
                 if (!controller.signal.aborted) {
+                    console.warn('[GIF]', error)
                     if (resolvedFallbackGifUrl || fallbackInstructions.length > 0) {
                         const translatedFallbackInstructions = await maybeTranslateInstructions(
                             fallbackInstructions,
