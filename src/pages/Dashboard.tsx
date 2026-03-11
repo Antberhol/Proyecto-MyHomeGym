@@ -8,7 +8,7 @@ import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
 import { progressRepository } from '../repositories/progressRepository'
 import { formatWorkoutToCSV, formatWorkoutToText, type TrainingData } from '../utils/clipboard'
 
-const weekDaysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+const WEEKDAY_CODES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -93,7 +93,7 @@ export function DashboardPage() {
   }
 
   const today = new Date()
-  const todayName = weekDaysEs[today.getDay()]
+  const todayName = t(`dashboard.weekdayLookup.${WEEKDAY_CODES[today.getDay()]}`)
   const todayLabel = t(`dashboard.weekdays.${todayName}`)
 
   const weakMuscles = (() => {
@@ -153,6 +153,45 @@ export function DashboardPage() {
     return scored[0]
   })()
 
+  const statsCards = [
+    {
+      id: 'trainings',
+      label: t('dashboard.stats.trainings7d'),
+      value: weekTrainings.length,
+      context: t('dashboard.stats.context.thisWeek'),
+      accentClass: 'border-l-sky-500',
+      iconWrapClass: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+      icon: '🏋️',
+    },
+    {
+      id: 'minutes',
+      label: t('dashboard.stats.trainedMinutes'),
+      value: totalMinutes,
+      context: t('dashboard.stats.context.thisWeek'),
+      accentClass: 'border-l-violet-500',
+      iconWrapClass: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+      icon: '⏱️',
+    },
+    {
+      id: 'volume',
+      label: t('dashboard.stats.totalVolume7d'),
+      value: `${totalVolume.toFixed(0)} kg`,
+      context: t('dashboard.stats.context.thisWeek'),
+      accentClass: 'border-l-emerald-500',
+      iconWrapClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+      icon: '📈',
+    },
+    {
+      id: 'routines',
+      label: t('dashboard.stats.routines'),
+      value: routines.length,
+      context: t('dashboard.stats.context.totalAvailable'),
+      accentClass: 'border-l-orange-500',
+      iconWrapClass: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+      icon: '🗂️',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
@@ -167,22 +206,23 @@ export function DashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.trainings7d')}</p>
-          <p className="text-2xl font-bold">{weekTrainings.length}</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.trainedMinutes')}</p>
-          <p className="text-2xl font-bold">{totalMinutes}</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.totalVolume7d')}</p>
-          <p className="text-2xl font-bold">{totalVolume.toFixed(0)} kg</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.stats.routines')}</p>
-          <p className="text-2xl font-bold">{routines.length}</p>
-        </div>
+        {statsCards.map((card) => (
+          <article
+            key={card.id}
+            className={`rounded-2xl border border-slate-200 border-l-4 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-gym-cardDark ${card.accentClass}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg ${card.iconWrapClass}`}>
+                <span aria-hidden>{card.icon}</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{card.label}</p>
+                <p className="mt-0.5 text-2xl font-bold leading-tight">{card.value}</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{card.context}</p>
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -259,7 +299,7 @@ export function DashboardPage() {
                   <span>{new Date(pr.fecha).toLocaleDateString()}</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-300">
-                  {pr.tipo}: {pr.valor.toFixed(1)} {pr.detalle ? `· ${pr.detalle}` : ''}
+                  {t(`progress.pr.type.${pr.tipo}`, { defaultValue: pr.tipo })}: {pr.valor.toFixed(1)} {pr.detalle ? `· ${pr.detalle}` : ''}
                 </p>
               </li>
             ))}

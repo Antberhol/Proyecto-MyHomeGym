@@ -57,7 +57,7 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
-const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v4'
+const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v5'
 const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
@@ -788,6 +788,40 @@ const englishInstructionLexicon = new Set([
     ...Object.keys(englishResidualWordMap),
 ])
 
+const englishInstructionStopWords = new Set([
+    'a',
+    'an',
+    'the',
+    'and',
+    'or',
+    'to',
+    'of',
+    'in',
+    'on',
+    'at',
+    'for',
+    'from',
+    'by',
+    'with',
+    'without',
+    'your',
+    'you',
+    'then',
+    'while',
+])
+
+const spanishPrecisionReplacements: Array<[RegExp, string]> = [
+    [/\bhaz una pausa breve\b/gi, 'haz una pausa de 1 segundo'],
+    [/\blentamente\b/gi, 'de forma controlada'],
+    [/\bmanteniendo el core activado\b/gi, 'manteniendo el abdomen firme'],
+    [/\bmantén el core activado\b/gi, 'mantén el abdomen firme'],
+    [/\bmanteniendo la espalda recta\b/gi, 'manteniendo la espalda neutra'],
+    [/\bmantén la espalda recta\b/gi, 'mantén la espalda neutra'],
+    [/\bmanteniendo el cuerpo recto\b/gi, 'manteniendo el cuerpo alineado'],
+    [/\bde vuelta a la posición inicial\b/gi, 'vuelve a la posición inicial con control'],
+    [/\bdurante el número de repeticiones deseado\b/gi, 'durante las repeticiones objetivo'],
+]
+
 function normalizeInstructionText(value: string): string {
     return value
         .replace(/\s{2,}/g, ' ')
@@ -820,6 +854,119 @@ function applySpanishDictionaryPass(value: string): string {
     return translated
 }
 
+function removeResidualEnglishWords(value: string): string {
+    const cleaned = value.replace(/\b[a-z][a-z'-]*\b/gi, (word) => {
+        const lower = word.toLowerCase()
+
+        if (nonEnglishLoanwordSet.has(lower)) {
+            return word
+        }
+
+        const translated = englishToSpanishWordMap[lower] ?? englishResidualWordMap[lower]
+        if (translated) {
+            return translated
+        }
+
+        if (englishInstructionLexicon.has(lower) || englishInstructionStopWords.has(lower)) {
+            return ''
+        }
+
+        return word
+    })
+
+    return normalizeInstructionText(cleaned)
+}
+
+function refineSpanishInstructionText(value: string): string {
+    let refined = normalizeInstructionText(value)
+    if (!refined) {
+        return ''
+    }
+
+    refined = applyTextReplacements(refined, spanishPrecisionReplacements)
+    refined = normalizeInstructionText(refined)
+
+    if (!/[.!?]$/.test(refined)) {
+        refined = `${refined}.`
+    }
+
+    return refined.charAt(0).toUpperCase() + refined.slice(1)
+}
+
+function buildSpanishFallbackInstruction(sourceText: string): string {
+    const lower = sourceText.toLowerCase()
+
+    if (/\b(row|remo|pull|curl|pulldown|chin-up|chin up|dominada)\b/.test(lower)) {
+        return 'Tira con control hacia el torso, mantén el pecho alto y junta las escápulas al final.'
+    }
+
+    if (/\b(press|push|empuja|fondo|dip|extensi[oó]n)\b/.test(lower)) {
+        return 'Empuja con control, estabiliza el tronco y extiende sin bloquear bruscamente los codos.'
+    }
+
+    if (/\b(sentadilla|squat|zancada|lunge|deadlift|peso muerto|hinge)\b/.test(lower)) {
+        return 'Desciende con la espalda neutra, mantén la cadera alineada y sube de forma estable.'
+    }
+
+    if (/\b(raise|elevaci[oó]n|fly|apertura|lateral)\b/.test(lower)) {
+        return 'Eleva hasta el rango útil sin balanceo y desciende de forma controlada en cada repetición.'
+    }
+
+    if (/\b(plancha|plank|hold|isom[eé]trico)\b/.test(lower)) {
+        return 'Mantén el abdomen firme, glúteos activos y respiración constante durante todo el esfuerzo.'
+    }
+
+    return 'Realiza cada repetición con control, activa el core y evita balanceos para mantener la técnica.'
+}
+
+function buildEnglishFallbackInstruction(sourceText: string): string {
+    const lower = sourceText.toLowerCase()
+
+    if (/\b(row|remo|pull|curl|pulldown|chin-up|chin up|dominada)\b/.test(lower)) {
+        return 'Pull under control toward your torso, keep your chest up, and squeeze your shoulder blades at the end.'
+    }
+
+    if (/\b(press|push|empuja|fondo|dip|extensi[oó]n)\b/.test(lower)) {
+        return 'Press under control, brace your trunk, and extend without aggressively locking your elbows.'
+    }
+
+    if (/\b(sentadilla|squat|zancada|lunge|deadlift|peso muerto|hinge)\b/.test(lower)) {
+        return 'Lower with a neutral spine, keep your hips aligned, and stand up with stable control.'
+    }
+
+    if (/\b(raise|elevaci[oó]n|fly|apertura|lateral)\b/.test(lower)) {
+        return 'Raise through a useful range without swinging and lower with controlled tempo each rep.'
+    }
+
+    if (/\b(plancha|plank|hold|isom[eé]trico)\b/.test(lower)) {
+        return 'Keep your core braced, glutes active, and breathing steady throughout the hold.'
+    }
+
+    return 'Perform each rep with control, keep your core braced, and avoid momentum.'
+}
+
+function dedupeInstructionSteps(instructions: string[]): string[] {
+    const seen = new Set<string>()
+    const deduped: string[] = []
+
+    for (const instruction of instructions) {
+        const normalized = normalizeInstructionText(instruction)
+        if (!normalized) {
+            continue
+        }
+
+        const key = normalized.toLowerCase()
+        if (seen.has(key)) {
+            continue
+        }
+
+        seen.add(key)
+        deduped.push(normalized)
+    }
+
+    return deduped
+}
+
 function cleanSpanishInstructionText(value: string): string {
     let normalized = normalizeInstructionText(value)
 
@@ -837,7 +984,17 @@ function cleanSpanishInstructionText(value: string): string {
     }
 
     if (hasEnglishInstructionSignals(normalized)) {
-        return 'Mantén técnica controlada durante todo el movimiento.'
+        normalized = removeResidualEnglishWords(normalized)
+    }
+
+    normalized = refineSpanishInstructionText(normalized)
+
+    if (!normalized) {
+        return buildSpanishFallbackInstruction(value)
+    }
+
+    if (countLikelyEnglishWords(normalized) > 4) {
+        return buildSpanishFallbackInstruction(value)
     }
 
     return normalized
@@ -867,10 +1024,10 @@ function translateEnglishInstructionToSpanish(text: string): string {
     translated = cleanSpanishInstructionText(translated)
 
     if (!translated) {
-        return trimmed
+        return buildSpanishFallbackInstruction(trimmed)
     }
 
-    return translated.charAt(0).toUpperCase() + translated.slice(1)
+    return translated
 }
 
 function shouldTranslateInstructions(instructions: string[], language: 'es' | 'en') {
@@ -915,7 +1072,7 @@ async function translateInstruction(
         translated =
             sourceLanguage === 'en' && !isMixedInstruction(normalizedText)
                 ? normalizedText
-                : 'Maintain controlled form throughout the movement.'
+                : buildEnglishFallbackInstruction(normalizedText)
     }
 
     translatedInstructionCache.set(cacheKey, translated)
@@ -942,7 +1099,13 @@ async function maybeTranslateInstructions(
         ),
     )
 
-    return translated
+    const deduped = dedupeInstructionSteps(translated)
+
+    if (language === 'es') {
+        return deduped.map((instruction) => cleanSpanishInstructionText(instruction))
+    }
+
+    return deduped
 }
 
 function buildExerciseGifUrl(exerciseId: string, apiKey: string): string {

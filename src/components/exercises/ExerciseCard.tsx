@@ -3,7 +3,7 @@ import type { Exercise } from '../../types/models'
 import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseCardProps {
-    exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
+    exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'imagenUrl' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases'>
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
@@ -12,6 +12,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         exerciseDbId: exercise.exerciseDbId,
         exerciseDbName: exercise.exerciseDbName,
         exerciseDbAliases: exercise.exerciseDbAliases,
+        fallbackGifUrl: exercise.imagenUrl,
     })
     const [gifLoaded, setGifLoaded] = useState(false)
 

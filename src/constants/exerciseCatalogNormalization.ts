@@ -1,4 +1,4 @@
-function normalizeSpace(value: string): string {
+    function normalizeSpace(value: string): string {
     return value.trim().replace(/\s+/g, ' ')
 }
 

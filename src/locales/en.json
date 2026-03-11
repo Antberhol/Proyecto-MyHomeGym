@@ -73,11 +73,24 @@
             "viernes": "friday",
             "sabado": "saturday"
         },
+        "weekdayLookup": {
+            "sun": "domingo",
+            "mon": "lunes",
+            "tue": "martes",
+            "wed": "miercoles",
+            "thu": "jueves",
+            "fri": "viernes",
+            "sat": "sabado"
+        },
         "stats": {
             "trainings7d": "Workouts (7d)",
             "trainedMinutes": "Trained minutes",
             "totalVolume7d": "Total volume (7d)",
-            "routines": "Routines"
+            "routines": "Routines",
+            "context": {
+                "thisWeek": "this week",
+                "totalAvailable": "available"
+            }
         },
         "recentSessions": {
             "title": "Recent sessions",
@@ -232,12 +245,23 @@
             "monthly": "Monthly"
         },
         "tooltip": {
-            "volumeLabel": "Volume"
+            "volumeLabel": "Volume",
+            "date": "Date"
+        },
+        "legend": {
+            "weight": "Weight",
+            "imc": "BMI"
         },
         "scaleNote": "Auto scale: minimum 10,000 kg, expanded if you exceed that volume in a single session.",
         "heatmap": {
             "cellTitle": "{{date}}: {{count}} workout(s)",
-            "darkerLegend": "Darker means more workouts on that day."
+            "darkerLegend": "Darker means more workouts on that day.",
+            "legend": {
+                "none": "None",
+                "low": "Low",
+                "moderate": "Moderate",
+                "high": "High"
+            }
         },
         "placeholders": {
             "weightKg": "Weight (kg)",
@@ -284,7 +308,14 @@
             "topTotalSessionVolume": "Top total session volume",
             "emptyTotalVolume": "No total volume PRs.",
             "recentHistory": "Recent PR history",
-            "emptyRecent": "No PRs logged yet."
+            "emptyRecent": "No PRs logged yet.",
+            "newBadge": "NEW",
+            "type": {
+                "peso_maximo": "Max weight",
+                "volumen_serie": "Volume per set",
+                "reps_mismo_peso": "Reps at same weight",
+                "volumen_total": "Total volume"
+            }
         },
         "muscleLabels": {
             "pecho": "Chest",
@@ -475,5 +506,52 @@
         "backupExportedAt": "Backup exported ({{date}}).",
         "backupImported": "Backup imported successfully. The app will reload to reflect changes.",
         "backupImportError": "Could not import backup."
+    },
+    "measurements": {
+        "profile": {
+            "editButton": "Edit profile",
+            "formTitle": "Edit profile data",
+            "fields": {
+                "nombre": "Name",
+                "pesoCorporal": "Body weight (kg)",
+                "altura": "Height (cm)"
+            },
+            "saveButton": "Save changes",
+            "cancelButton": "Cancel",
+            "invalidData": "Please review weight and height values.",
+            "savedSuccessfully": "Profile updated successfully.",
+            "saveFailed": "Could not update profile."
+        },
+        "form": {
+            "sectionTitle": "Log new measurement",
+            "fields": {
+                "pesoCorporal": "Body weight (kg)",
+                "cintura": "Waist (cm)",
+                "pecho": "Chest (cm)",
+                "diametroPierna": "Leg diameter (cm)"
+            },
+            "submitButton": "Save measurement",
+            "invalidWeight": "Enter a valid body weight.",
+            "invalidOptionalValues": "Optional fields must contain valid numbers.",
+            "savedSuccessfully": "Measurement logged successfully",
+            "saveFailed": "Could not log measurement."
+        },
+        "history": {
+            "title": "Measurement history",
+            "empty": "No measurements recorded yet.",
+            "columns": {
+                "fecha": "Date",
+                "peso": "Weight",
+                "imc": "BMI",
+                "cintura": "Waist",
+                "pecho": "Chest",
+                "pierna": "Leg",
+                "actions": "Actions"
+            },
+            "deleteButton": "Delete",
+            "emptyValue": "—",
+            "deletedSuccessfully": "Measurement deleted successfully.",
+            "deleteFailed": "Could not delete measurement."
+        }
     }
 }

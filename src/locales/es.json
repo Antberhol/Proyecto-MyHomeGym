@@ -73,11 +73,24 @@
             "viernes": "viernes",
             "sabado": "sábado"
         },
+        "weekdayLookup": {
+            "sun": "domingo",
+            "mon": "lunes",
+            "tue": "martes",
+            "wed": "miercoles",
+            "thu": "jueves",
+            "fri": "viernes",
+            "sat": "sabado"
+        },
         "stats": {
             "trainings7d": "Entrenamientos (7d)",
             "trainedMinutes": "Minutos entrenados",
             "totalVolume7d": "Volumen total (7d)",
-            "routines": "Rutinas"
+            "routines": "Rutinas",
+            "context": {
+                "thisWeek": "esta semana",
+                "totalAvailable": "disponibles"
+            }
         },
         "recentSessions": {
             "title": "Sesiones recientes",
@@ -232,12 +245,23 @@
             "monthly": "Mensual"
         },
         "tooltip": {
-            "volumeLabel": "Volumen"
+            "volumeLabel": "Volumen",
+            "date": "Fecha"
+        },
+        "legend": {
+            "weight": "Peso",
+            "imc": "IMC"
         },
         "scaleNote": "Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.",
         "heatmap": {
             "cellTitle": "{{date}}: {{count}} entrenamiento(s)",
-            "darkerLegend": "Más oscuro = más entrenamientos ese día."
+            "darkerLegend": "Más oscuro = más entrenamientos ese día.",
+            "legend": {
+                "none": "Ninguno",
+                "low": "Poco",
+                "moderate": "Moderado",
+                "high": "Alto"
+            }
         },
         "placeholders": {
             "weightKg": "Peso (kg)",
@@ -284,7 +308,14 @@
             "topTotalSessionVolume": "Top volumen total sesión",
             "emptyTotalVolume": "Sin PRs de volumen total.",
             "recentHistory": "Historial reciente de PRs",
-            "emptyRecent": "Aún no hay PRs registrados."
+            "emptyRecent": "Aún no hay PRs registrados.",
+            "newBadge": "NUEVO",
+            "type": {
+                "peso_maximo": "Peso máximo",
+                "volumen_serie": "Volumen por serie",
+                "reps_mismo_peso": "Reps al mismo peso",
+                "volumen_total": "Volumen total"
+            }
         },
         "muscleLabels": {
             "pecho": "Pecho",
@@ -475,5 +506,52 @@
         "backupExportedAt": "Respaldo exportado ({{date}}).",
         "backupImported": "Respaldo importado correctamente. Se recargará la app para reflejar cambios.",
         "backupImportError": "No se pudo importar el respaldo."
+    },
+    "measurements": {
+        "profile": {
+            "editButton": "Editar perfil",
+            "formTitle": "Editar datos de perfil",
+            "fields": {
+                "nombre": "Nombre",
+                "pesoCorporal": "Peso corporal (kg)",
+                "altura": "Altura (cm)"
+            },
+            "saveButton": "Guardar cambios",
+            "cancelButton": "Cancelar",
+            "invalidData": "Revisa los datos de peso y altura.",
+            "savedSuccessfully": "Perfil actualizado correctamente.",
+            "saveFailed": "No se pudo actualizar el perfil."
+        },
+        "form": {
+            "sectionTitle": "Registrar nueva medición",
+            "fields": {
+                "pesoCorporal": "Peso corporal (kg)",
+                "cintura": "Cintura (cm)",
+                "pecho": "Pecho (cm)",
+                "diametroPierna": "Diámetro pierna (cm)"
+            },
+            "submitButton": "Guardar medición",
+            "invalidWeight": "Ingresa un peso corporal válido.",
+            "invalidOptionalValues": "Los campos opcionales deben ser números válidos.",
+            "savedSuccessfully": "Medición registrada correctamente",
+            "saveFailed": "No se pudo registrar la medición."
+        },
+        "history": {
+            "title": "Historial de mediciones",
+            "empty": "Aún no hay mediciones registradas.",
+            "columns": {
+                "fecha": "Fecha",
+                "peso": "Peso",
+                "imc": "IMC",
+                "cintura": "Cintura",
+                "pecho": "Pecho",
+                "pierna": "Pierna",
+                "actions": "Acciones"
+            },
+            "deleteButton": "Eliminar",
+            "emptyValue": "—",
+            "deletedSuccessfully": "Medición eliminada correctamente.",
+            "deleteFailed": "No se pudo eliminar la medición."
+        }
     }
 }

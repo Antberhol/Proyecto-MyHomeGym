@@ -249,6 +249,10 @@ class GymDatabase extends Dexie {
     return this.medidasCorporalesHistorico.toArray()
   }
 
+  deleteBodyMeasurement(measurementId: string) {
+    return this.medidasCorporalesHistorico.delete(measurementId)
+  }
+
   clearBodyMeasurements() {
     return this.medidasCorporalesHistorico.clear()
   }

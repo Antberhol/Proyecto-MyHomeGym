@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BodyDiagramSvg } from '../components/body/BodyDiagramSvg'
 import type { MuscleLevel } from '../components/body/types'
 import { progressRepository } from '../repositories/progressRepository'
@@ -27,22 +27,30 @@ const TRACKED_GROUPS = [
 ] as const
 
 const GROUP_LABELS: Record<string, string> = {
-  pecho: 'Pecho',
-  hombros: 'Hombros',
-  biceps: 'Bíceps',
-  triceps: 'Tríceps',
-  antebrazo: 'Antebrazo',
+  pecho: 'Chest',
+  hombros: 'Shoulders',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+  antebrazo: 'Forearm',
   core: 'Core',
-  oblicuos: 'Oblicuos',
-  trapecio: 'Trapecio',
-  'espalda-alta': 'Espalda alta',
-  'espalda-baja': 'Espalda baja',
-  cuadriceps: 'Cuádriceps',
-  isquiotibial: 'Isquiotibial',
-  gluteo: 'Glúteo',
-  gemelo: 'Gemelo',
-  aductor: 'Aductor',
+  oblicuos: 'Obliques',
+  trapecio: 'Trapezius',
+  'espalda-alta': 'Upper back',
+  'espalda-baja': 'Lower back',
+  cuadriceps: 'Quadriceps',
+  isquiotibial: 'Hamstring',
+  gluteo: 'Glute',
+  gemelo: 'Calf',
+  aductor: 'Adductor',
   abductor: 'Abductor',
+}
+
+const CHART_AXIS_TICK = { fill: 'currentColor', fontSize: 11 }
+const PR_TYPE_BADGE_CLASSES: Record<string, string> = {
+  peso_maximo: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  volumen_serie: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  reps_mismo_peso: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  volumen_total: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
 }
 
 function levelFromVolume(volume: number): MuscleLevel {
@@ -162,6 +170,40 @@ function heatmapColor(count: number): string {
   return 'bg-green-600 dark:bg-green-500'
 }
 
+function buildHeatmapMonthGroups(cells: Array<{ key: string }>, locale: string) {
+  const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'short' })
+  const groups: Array<{ key: string; label: string; span: number }> = []
+
+  for (const cell of cells) {
+    const date = new Date(`${cell.key}T00:00:00`)
+    const key = `${date.getFullYear()}-${date.getMonth()}`
+    const label = monthFormatter.format(date)
+    const last = groups[groups.length - 1]
+
+    if (last && last.key === key) {
+      last.span += 1
+      continue
+    }
+
+    groups.push({ key, label, span: 1 })
+  }
+
+  return groups
+}
+
+function podiumEmoji(index: number): string {
+  if (index === 0) return '🥇'
+  if (index === 1) return '🥈'
+  if (index === 2) return '🥉'
+  return '🏅'
+}
+
+function isRecentPrEntry(dateIso: string): boolean {
+  const now = Date.now()
+  const entryTime = new Date(dateIso).getTime()
+  return Number.isFinite(entryTime) && now - entryTime <= 7 * 24 * 60 * 60 * 1000
+}
+
 export function ProgresoPage() {
   const { t, i18n } = useTranslation()
   const measurements = useLiveQuery(() => progressRepository.listBodyMeasurements(), []) ?? []
@@ -216,6 +258,7 @@ export function ProgresoPage() {
   }, [volumeData])
 
   const heatmapData = useMemo(() => buildHeatmapData(trainings.map((item) => item.fecha)), [trainings])
+  const heatmapMonthGroups = useMemo(() => buildHeatmapMonthGroups(heatmapData, numberLocale), [heatmapData, numberLocale])
   const oneRm = estimateOneRmEpley(oneRmPeso, oneRmReps)
   const volumeEstimate = calculateWorkoutVolume(volSeries, volReps, volPeso)
   const caloriesEstimate = estimateCaloriesBurned(calWeight, calMinutes, calMet)
@@ -364,6 +407,42 @@ export function ProgresoPage() {
     }, {})
   }, [diagramMuscleVolume])
 
+  const formatKg = (value: number, digits = 0) => `${Number(value).toLocaleString(numberLocale, { minimumFractionDigits: digits, maximumFractionDigits: digits })} kg`
+
+  const renderLineTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null
+
+    return (
+      <div className="rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 text-xs text-slate-100 shadow-xl">
+        <p className="mb-2 font-semibold text-slate-200">{label}</p>
+        <ul className="space-y-1">
+          {payload.map((entry: any) => (
+            <li key={entry.name} className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span>{entry.name}</span>
+              </span>
+              <span className="font-semibold">{Number(entry.value ?? 0).toLocaleString(numberLocale, { maximumFractionDigits: 1 })}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  const renderVolumeTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null
+
+    return (
+      <div className="rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 text-xs text-slate-100 shadow-xl">
+        <p className="font-semibold text-slate-200">{t('progress.tooltip.date')}: {label}</p>
+        <p className="mt-1 text-slate-100">
+          {t('progress.tooltip.volumeLabel')}: <span className="font-semibold">{formatKg(Number(payload[0].value ?? 0), 0)}</span>
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t('progress.title')}</h1>
@@ -373,12 +452,44 @@ export function ProgresoPage() {
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={bodyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="fecha" />
-              <YAxis />
-              <Tooltip />
-              <Line dataKey="peso" stroke="#E63946" strokeWidth={2} dot={false} />
-              <Line dataKey="imc" stroke="#1D3557" strokeWidth={2} dot={false} />
+              <defs>
+                <linearGradient id="weightAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.03} />
+                </linearGradient>
+                <linearGradient id="imcAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.03} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" />
+              <XAxis dataKey="fecha" tick={CHART_AXIS_TICK} minTickGap={10} />
+              <YAxis tick={CHART_AXIS_TICK} />
+              <Tooltip content={renderLineTooltip} />
+              <Legend
+                wrapperStyle={{ paddingTop: 10, fontSize: 12 }}
+                formatter={(value, entry) => <span style={{ color: (entry as { color?: string }).color }}>{value}</span>}
+              />
+              <Area type="monotone" dataKey="peso" stroke="none" fill="url(#weightAreaGradient)" />
+              <Area type="monotone" dataKey="imc" stroke="none" fill="url(#imcAreaGradient)" />
+              <Line
+                type="monotone"
+                name={t('progress.legend.weight')}
+                dataKey="peso"
+                stroke="#ef4444"
+                strokeWidth={2.25}
+                dot={false}
+                activeDot={{ r: 5, fill: '#ffffff', stroke: '#ef4444', strokeWidth: 2 }}
+              />
+              <Line
+                type="monotone"
+                name={t('progress.legend.imc')}
+                dataKey="imc"
+                stroke="#3b82f6"
+                strokeWidth={2.25}
+                dot={false}
+                activeDot={{ r: 5, fill: '#ffffff', stroke: '#3b82f6', strokeWidth: 2 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -407,19 +518,32 @@ export function ProgresoPage() {
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={volumeData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <defs>
+                <linearGradient id="volumeBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.95} />
+                  <stop offset="100%" stopColor="#34d399" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" />
               <XAxis
                 dataKey="fecha"
-                tick={{ fontSize: 10 }}
+                tick={CHART_AXIS_TICK}
                 minTickGap={10}
                 interval={volumeRange === 'weekly' ? 0 : 2}
               />
               <YAxis
                 domain={[0, volumeAxisMax]}
+                tick={CHART_AXIS_TICK}
                 tickFormatter={(value) => `${Number(value).toLocaleString(numberLocale)}`}
               />
-              <Tooltip formatter={(value) => [`${Number(value).toLocaleString(numberLocale)} kg`, t('progress.tooltip.volumeLabel')]} />
-              <Bar dataKey="volumen" fill="#06D6A0" radius={[4, 4, 0, 0]} />
+              <Tooltip content={renderVolumeTooltip} />
+              <Bar
+                dataKey="volumen"
+                fill="url(#volumeBarGradient)"
+                radius={[4, 4, 0, 0]}
+                isAnimationActive
+                animationDuration={850}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -430,16 +554,55 @@ export function ProgresoPage() {
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.heatmapFrequency')}</h2>
-        <div className="grid grid-cols-10 gap-1 sm:grid-cols-14">
-          {heatmapData.map((cell) => (
+        <div className="overflow-x-auto pb-1">
+          <div className="min-w-max space-y-2">
             <div
-              key={cell.key}
-              title={t('progress.heatmap.cellTitle', { date: cell.label, count: cell.count })}
-              className={`h-4 w-4 rounded ${heatmapColor(cell.count)}`}
-            />
-          ))}
+              className="grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${heatmapData.length}, minmax(0, 1.25rem))` }}
+            >
+              {heatmapMonthGroups.map((month) => (
+                <div
+                  key={month.key}
+                  style={{ gridColumn: `span ${month.span}` }}
+                  className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300"
+                >
+                  {month.label}
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${heatmapData.length}, minmax(0, 1.25rem))` }}
+            >
+              {heatmapData.map((cell) => (
+                <div
+                  key={cell.key}
+                  title={t('progress.heatmap.cellTitle', { date: cell.label, count: cell.count })}
+                  className={`h-5 w-5 rounded ${heatmapColor(cell.count)}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">{t('progress.heatmap.darkerLegend')}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-300">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3.5 w-3.5 rounded bg-slate-200 dark:bg-slate-700" />
+            {t('progress.heatmap.legend.none')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3.5 w-3.5 rounded bg-green-200 dark:bg-green-700" />
+            {t('progress.heatmap.legend.low')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3.5 w-3.5 rounded bg-green-400 dark:bg-green-600" />
+            {t('progress.heatmap.legend.moderate')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3.5 w-3.5 rounded bg-green-600 dark:bg-green-500" />
+            {t('progress.heatmap.legend.high')}
+          </span>
+        </div>
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -636,9 +799,12 @@ export function ProgresoPage() {
               <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyMaxWeight')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {prByType.peso_maximo.map((pr) => (
+                {prByType.peso_maximo.map((pr, index) => (
                   <li key={pr.id} className="flex items-center justify-between">
-                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{podiumEmoji(index)}</span>
+                      <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    </span>
                     <span>{pr.valor.toFixed(1)} kg</span>
                   </li>
                 ))}
@@ -652,9 +818,12 @@ export function ProgresoPage() {
               <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyVolumePerSet')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {prByType.volumen_serie.map((pr) => (
+                {prByType.volumen_serie.map((pr, index) => (
                   <li key={pr.id} className="flex items-center justify-between">
-                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{podiumEmoji(index)}</span>
+                      <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    </span>
                     <span>{pr.valor.toFixed(1)}</span>
                   </li>
                 ))}
@@ -668,9 +837,12 @@ export function ProgresoPage() {
               <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyRepetitions')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {prByType.reps_mismo_peso.map((pr) => (
+                {prByType.reps_mismo_peso.map((pr, index) => (
                   <li key={pr.id} className="flex items-center justify-between">
-                    <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{podiumEmoji(index)}</span>
+                      <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    </span>
                     <span>{pr.valor.toFixed(0)} {t('training.repsPlaceholder').toLowerCase()}</span>
                   </li>
                 ))}
@@ -684,9 +856,12 @@ export function ProgresoPage() {
               <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyTotalVolume')}</p>
             ) : (
               <ul className="space-y-1 text-xs">
-                {prByType.volumen_total.map((pr) => (
+                {prByType.volumen_total.map((pr, index) => (
                   <li key={pr.id} className="flex items-center justify-between">
-                    <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{podiumEmoji(index)}</span>
+                      <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                    </span>
                     <span>{pr.valor.toFixed(0)} kg</span>
                   </li>
                 ))}
@@ -701,14 +876,27 @@ export function ProgresoPage() {
             <p className="text-xs text-slate-500 dark:text-slate-300">{t('progress.pr.emptyRecent')}</p>
           ) : (
             <ul className="space-y-2 text-xs">
-              {recentPrs.map((pr) => (
+              {recentPrs.map((pr, index) => (
                 <li key={pr.id} className="rounded border border-slate-200 p-2 dark:border-slate-700">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{resolvePrExerciseName(pr.ejercicioId)}</span>
-                    <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                      <span>{podiumEmoji(index)}</span>
+                      <span>{resolvePrExerciseName(pr.ejercicioId)}</span>
+                    </span>
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PR_TYPE_BADGE_CLASSES[pr.tipo] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>
+                        {t(`progress.pr.type.${pr.tipo}`, { defaultValue: pr.tipo })}
+                      </span>
+                      {isRecentPrEntry(pr.fecha) ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          {t('progress.pr.newBadge')}
+                        </span>
+                      ) : null}
+                      <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                    </div>
                   </div>
                   <p className="text-slate-600 dark:text-slate-300">
-                    {pr.tipo}: {pr.valor.toFixed(1)} {pr.detalle ? `· ${pr.detalle}` : ''}
+                    {t(`progress.pr.type.${pr.tipo}`, { defaultValue: pr.tipo })}: {pr.valor.toFixed(1)} {pr.detalle ? `· ${pr.detalle}` : ''}
                   </p>
                 </li>
               ))}

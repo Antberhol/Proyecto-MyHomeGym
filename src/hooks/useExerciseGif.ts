@@ -37,6 +37,14 @@ interface ExerciseGifCacheEntry extends ExerciseGifData {
     cachedAt: number
 }
 
+function getLocalStorageSafe(): Storage | null {
+    try {
+        return globalThis.localStorage ?? null
+    } catch {
+        return null
+    }
+}
+
 function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
     return {
         signal,
@@ -52,7 +60,7 @@ function buildGifCacheStorageKey(cacheKey: string): string {
 }
 
 function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
-    const storage = globalThis.localStorage
+    const storage = getLocalStorageSafe()
     if (!storage) {
         return undefined
     }
@@ -81,6 +89,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
             return undefined
         }
 
+        if (!parsed.gifUrl || parsed.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
         return {
             gifUrl: parsed.gifUrl,
             targetMuscle: parsed.targetMuscle,
@@ -94,7 +107,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
 }
 
 function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
-    const storage = globalThis.localStorage
+    if (!value.gifUrl || value.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
+        return
+    }
+
+    const storage = getLocalStorageSafe()
     if (!storage) {
         return
     }
@@ -231,7 +248,7 @@ function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey?: string, fal
             return buildExerciseGifUrl(fallbackExerciseDbId, apiKey)
         }
 
-        return EXERCISE_GIF_PLACEHOLDER
+        return ''
     }
 
     if (item.id && apiKey) {
@@ -242,7 +259,7 @@ function resolveExerciseGifUrl(item: ExerciseDbItem | null, apiKey?: string, fal
         return normalizeGifUrl(item.gifUrl)
     }
 
-    return EXERCISE_GIF_PLACEHOLDER
+    return ''
 }
 
 function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOptions) {
