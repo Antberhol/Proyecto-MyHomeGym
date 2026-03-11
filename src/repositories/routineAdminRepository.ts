@@ -30,6 +30,10 @@ export const routineAdminRepository = {
         return db.bulkAddRoutineExercises(items)
     },
 
+    async addExerciseToRoutine(item: RoutineExercise): Promise<string> {
+        return db.bulkAddRoutineExercises([item])
+    },
+
     async deleteRoutineExercise(routineExerciseId: string): Promise<void> {
         await db.deleteRoutineExercise(routineExerciseId)
     },

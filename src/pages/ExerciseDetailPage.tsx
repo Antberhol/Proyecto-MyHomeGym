@@ -34,6 +34,8 @@ export function ExerciseDetailPage() {
     const [exercise, setExercise] = useState<Exercise | null>(null)
     const [isCatalogLoading, setIsCatalogLoading] = useState(true)
     const [catalogError, setCatalogError] = useState('')
+    const [personalNote, setPersonalNote] = useState('')
+    const [noteSaved, setNoteSaved] = useState(false)
 
     useEffect(() => {
         const run = async () => {
@@ -75,6 +77,15 @@ export function ExerciseDetailPage() {
         void run()
     }, [id, t])
 
+    useEffect(() => {
+        if (!exercise) return
+
+        const storageKey = `exercise_notes_${exercise.id}`
+        const storedNote = window.localStorage.getItem(storageKey)
+        setPersonalNote(storedNote ?? '')
+        setNoteSaved(false)
+    }, [exercise])
+
     const englishAlias =
         exercise?.exerciseDbName ??
         exercise?.exerciseDbAliases?.[0] ??
@@ -108,6 +119,16 @@ export function ExerciseDetailPage() {
 
     if (!exercise) {
         return null
+    }
+
+    const savePersonalNote = () => {
+        const storageKey = `exercise_notes_${exercise.id}`
+        window.localStorage.setItem(storageKey, personalNote)
+        setNoteSaved(true)
+
+        window.setTimeout(() => {
+            setNoteSaved(false)
+        }, 1200)
     }
 
     return (
@@ -177,6 +198,26 @@ export function ExerciseDetailPage() {
                     ) : (
                         <p className="text-sm text-slate-600 dark:text-slate-300">{t('common.notFoundDetailedInfo')}</p>
                     )}
+                </section>
+
+                <section className="space-y-2">
+                    <h2 className="text-lg font-semibold">{t('exerciseDetail.notes.title')}</h2>
+                    <textarea
+                        value={personalNote}
+                        onChange={(event) => setPersonalNote(event.target.value)}
+                        placeholder={t('exerciseDetail.notes.placeholder')}
+                        className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                    />
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={savePersonalNote}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+                        >
+                            {t('exerciseDetail.notes.save')}
+                        </button>
+                        {noteSaved ? <span className="text-xs text-emerald-600 dark:text-emerald-300">{t('exerciseDetail.notes.saved')}</span> : null}
+                    </div>
                 </section>
             </Card>
         </div>

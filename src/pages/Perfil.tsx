@@ -56,6 +56,9 @@ export function PerfilPage() {
     const [measurementCintura, setMeasurementCintura] = useState('')
     const [measurementPecho, setMeasurementPecho] = useState('')
     const [measurementDiametroPierna, setMeasurementDiametroPierna] = useState('')
+    const [measurementBiceps, setMeasurementBiceps] = useState('')
+    const [measurementHombros, setMeasurementHombros] = useState('')
+    const [measurementPantorrilla, setMeasurementPantorrilla] = useState('')
     const [measurementStatus, setMeasurementStatus] = useState<StatusState>(null)
 
     const handleExport = async () => {
@@ -161,7 +164,10 @@ export function PerfilPage() {
         const cintura = parseOptionalNumber(measurementCintura)
         const pecho = parseOptionalNumber(measurementPecho)
         const diametroPierna = parseOptionalNumber(measurementDiametroPierna)
-        if (cintura === null || pecho === null || diametroPierna === null) {
+        const biceps = parseOptionalNumber(measurementBiceps)
+        const hombros = parseOptionalNumber(measurementHombros)
+        const pantorrilla = parseOptionalNumber(measurementPantorrilla)
+        if (cintura === null || pecho === null || diametroPierna === null || biceps === null || hombros === null || pantorrilla === null) {
             setMeasurementStatus({
                 type: 'error',
                 message: t('measurements.form.invalidOptionalValues'),
@@ -178,6 +184,9 @@ export function PerfilPage() {
                 cintura,
                 pecho,
                 diametroPierna,
+                biceps,
+                hombros,
+                pantorrilla,
                 imc: calculatedImc,
                 fechaRegistro: new Date().toISOString(),
             })
@@ -186,6 +195,9 @@ export function PerfilPage() {
             setMeasurementCintura('')
             setMeasurementPecho('')
             setMeasurementDiametroPierna('')
+            setMeasurementBiceps('')
+            setMeasurementHombros('')
+            setMeasurementPantorrilla('')
             setMeasurementStatus({
                 type: 'success',
                 message: t('measurements.form.savedSuccessfully'),
@@ -375,6 +387,42 @@ export function PerfilPage() {
                         />
                     </label>
 
+                    <label className="space-y-1 text-sm">
+                        <span className="text-slate-500 dark:text-slate-300">{t('measurements.form.fields.biceps')}</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={measurementBiceps}
+                            onChange={(event) => setMeasurementBiceps(event.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                        />
+                    </label>
+
+                    <label className="space-y-1 text-sm">
+                        <span className="text-slate-500 dark:text-slate-300">{t('measurements.form.fields.hombros')}</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={measurementHombros}
+                            onChange={(event) => setMeasurementHombros(event.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                        />
+                    </label>
+
+                    <label className="space-y-1 text-sm">
+                        <span className="text-slate-500 dark:text-slate-300">{t('measurements.form.fields.pantorrilla')}</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={measurementPantorrilla}
+                            onChange={(event) => setMeasurementPantorrilla(event.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                        />
+                    </label>
+
                     <div className="md:col-span-2">
                         <button type="submit" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium">
                             {t('measurements.form.submitButton')}
@@ -404,6 +452,9 @@ export function PerfilPage() {
                                         <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.cintura')}</th>
                                         <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.pecho')}</th>
                                         <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.pierna')}</th>
+                                        <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.biceps')}</th>
+                                        <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.hombros')}</th>
+                                        <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.pantorrilla')}</th>
                                         <th className="px-3 py-2 text-left font-semibold">{t('measurements.history.columns.actions')}</th>
                                     </tr>
                                 </thead>
@@ -416,6 +467,9 @@ export function PerfilPage() {
                                             <td className="px-3 py-2">{measurement.cintura != null ? `${measurement.cintura.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
                                             <td className="px-3 py-2">{measurement.pecho != null ? `${measurement.pecho.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
                                             <td className="px-3 py-2">{measurement.diametroPierna != null ? `${measurement.diametroPierna.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
+                                            <td className="px-3 py-2">{measurement.biceps != null ? `${measurement.biceps.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
+                                            <td className="px-3 py-2">{measurement.hombros != null ? `${measurement.hombros.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
+                                            <td className="px-3 py-2">{measurement.pantorrilla != null ? `${measurement.pantorrilla.toFixed(1)} cm` : t('measurements.history.emptyValue')}</td>
                                             <td className="px-3 py-2">
                                                 <button
                                                     type="button"
@@ -456,10 +510,16 @@ export function PerfilPage() {
                     <button
                         type="button"
                         onClick={() => setTheme('system')}
-                        className={`rounded-lg border px-3 py-2 text-sm ${theme === 'system' ? 'border-gym-primary text-gym-primary' : 'border-slate-300'
-                            }`}
+                        className={`rounded-lg border px-3 py-2 text-sm ${theme === 'system' ? 'border-gym-primary text-gym-primary' : 'border-slate-300'}`}
                     >
                         {t('profile.themeSystem')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTheme('auto-time')}
+                        className={`rounded-lg border px-3 py-2 text-sm ${theme === 'auto-time' ? 'border-gym-primary text-gym-primary' : 'border-slate-300'}`}
+                    >
+                        {t('profile.themeAutoTime')}
                     </button>
                 </div>
             </section>

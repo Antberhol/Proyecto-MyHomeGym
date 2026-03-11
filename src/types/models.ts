@@ -1,6 +1,6 @@
 export type DifficultyLevel = 'basico' | 'intermedio' | 'avanzado'
 export type DevelopmentLevel = 'basico' | 'medio' | 'avanzado' | 'experto'
-export type ThemePreference = 'light' | 'dark' | 'system'
+export type ThemePreference = 'light' | 'dark' | 'system' | 'auto-time'
 
 export type SyncEntityType = 'training'
 export type SyncQueueStatus = 'pending' | 'failed'
@@ -105,6 +105,9 @@ export interface BodyMeasurement extends SyncMetadata {
   cintura?: number
   pecho?: number
   diametroPierna?: number
+  biceps?: number
+  hombros?: number
+  pantorrilla?: number
   imc: number
   fechaRegistro: string
 }

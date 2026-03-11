@@ -53,6 +53,7 @@ export function EntrenarPage() {
     addFreeExerciseDraft,
     addFreeSet,
     removeFreeExerciseDraft,
+    moveFreeExerciseDraft,
     removeFreeSet,
     updateFreeSetData,
     openPlateCalculator,
@@ -298,13 +299,31 @@ export function EntrenarPage() {
             </div>
 
             <div className="space-y-3">
-              {freeExercisesDraft.map((draft) => {
+              {freeExercisesDraft.map((draft, draftIndex) => {
                 const exerciseName = exercises.find((exercise) => exercise.id === draft.ejercicioId)?.nombre || t('training.exercise')
                 return (
                   <div key={draft.id} className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="text-sm font-medium">{exerciseName}</p>
                       <div className="flex items-center gap-2">
+                        {draftIndex > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => moveFreeExerciseDraft(draftIndex, draftIndex - 1)}
+                            className="rounded border border-slate-300 px-3 py-2 text-[11px]"
+                          >
+                            ▲
+                          </button>
+                        ) : null}
+                        {draftIndex < freeExercisesDraft.length - 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => moveFreeExerciseDraft(draftIndex, draftIndex + 1)}
+                            className="rounded border border-slate-300 px-3 py-2 text-[11px]"
+                          >
+                            ▼
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => addFreeSet(draft.id)}

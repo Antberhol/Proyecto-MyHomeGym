@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { sendLocalNotification } from '../lib/notifications'
 import { progressRepository } from '../repositories/progressRepository'
 
 export interface StreaksData {
@@ -8,12 +10,18 @@ export interface StreaksData {
     lastTrainingDate: string | null
 }
 
+interface StreaksComputedData extends StreaksData {
+    trainedToday: boolean
+}
+
 const EMPTY_STREAKS: StreaksData = {
     currentDayStreak: 0,
     currentWeekStreak: 0,
     totalTrainings: 0,
     lastTrainingDate: null,
 }
+
+const STREAK_WARNING_STORAGE_KEY = 'lastStreakWarningDate'
 
 function toLocalDateKey(value: string): string {
     const date = new Date(value)
@@ -100,13 +108,19 @@ function computeWeekStreak(weekKeys: Set<string>): number {
 }
 
 export function useStreaks(): StreaksData {
-    const data = useLiveQuery(async () => {
+    const data = useLiveQuery<StreaksComputedData>(async () => {
         const filteredTrainings = await progressRepository.listTrainingsUntil(new Date().toISOString())
 
-        if (filteredTrainings.length === 0) return EMPTY_STREAKS
+        if (filteredTrainings.length === 0) {
+            return {
+                ...EMPTY_STREAKS,
+                trainedToday: false,
+            }
+        }
 
         const dayKeys = new Set(filteredTrainings.map((item) => toLocalDateKey(item.fecha)))
         const weekKeys = new Set(filteredTrainings.map((item) => toWeekKey(item.fecha)))
+        const todayKey = toLocalDateKey(new Date().toISOString())
 
         const latest = filteredTrainings.reduce((acc, item) => (item.fecha > acc ? item.fecha : acc), filteredTrainings[0].fecha)
 
@@ -115,8 +129,43 @@ export function useStreaks(): StreaksData {
             currentWeekStreak: computeWeekStreak(weekKeys),
             totalTrainings: filteredTrainings.length,
             lastTrainingDate: latest,
+            trainedToday: dayKeys.has(todayKey),
         }
     }, [])
 
-    return data ?? EMPTY_STREAKS
+    useEffect(() => {
+        if (!data) return
+        if (typeof window === 'undefined') return
+        if (!('Notification' in window)) return
+        if (Notification.permission !== 'granted') return
+
+        if (data.currentDayStreak < 3 || data.trainedToday) return
+
+        const now = new Date()
+        if (now.getHours() < 19) return
+
+        const todayKey = toLocalDateKey(now.toISOString())
+        if (window.localStorage.getItem(STREAK_WARNING_STORAGE_KEY) === todayKey) {
+            return
+        }
+
+        try {
+            sendLocalNotification(
+                'MyHomeGym 🔥',
+                `¡Tu racha de ${data.currentDayStreak} días está en peligro! Entrena hoy para mantenerla.`,
+            )
+            window.localStorage.setItem(STREAK_WARNING_STORAGE_KEY, todayKey)
+        } catch {
+            // Ignore runtime notification errors; permission and API availability are checked above.
+        }
+    }, [data])
+
+    if (!data) return EMPTY_STREAKS
+
+    return {
+        currentDayStreak: data.currentDayStreak,
+        currentWeekStreak: data.currentWeekStreak,
+        totalTrainings: data.totalTrainings,
+        lastTrainingDate: data.lastTrainingDate,
+    }
 }

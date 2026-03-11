@@ -14,7 +14,7 @@ import { profileRepository } from './repositories/profileRepository'
 import { authService } from './services/authService'
 import { syncService } from './services/SyncService'
 import { useAuthStore } from './stores/auth-store'
-import { useUiStore } from './stores/ui-store'
+import { resolveDarkThemePreference, useUiStore } from './stores/ui-store'
 
 const OnboardingWizard = lazy(() => import('./components/profile/OnboardingWizard').then((module) => ({ default: module.OnboardingWizard })))
 const CatalogoPage = lazy(() => import('./pages/Catalogo').then((module) => ({ default: module.CatalogoPage })))
@@ -94,9 +94,31 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const shouldUseDark = theme === 'dark' || (theme === 'system' && prefersDark)
-    root.classList.toggle('dark', shouldUseDark)
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const applyTheme = () => {
+      const shouldUseDark = resolveDarkThemePreference(theme, media.matches)
+      root.classList.toggle('dark', shouldUseDark)
+    }
+
+    applyTheme()
+
+    const handleSystemThemeChange = () => {
+      applyTheme()
+    }
+
+    media.addEventListener('change', handleSystemThemeChange)
+
+    const intervalId = theme === 'auto-time'
+      ? window.setInterval(applyTheme, 60 * 1000)
+      : null
+
+    return () => {
+      media.removeEventListener('change', handleSystemThemeChange)
+      if (intervalId !== null) {
+        window.clearInterval(intervalId)
+      }
+    }
   }, [theme])
 
   if (!hasSelectedLanguage) {

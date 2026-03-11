@@ -36,6 +36,7 @@ interface SortableRoutineExercise {
 interface SortableExerciseListProps {
     items: SortableRoutineExercise[]
     editingRoutineExerciseId: string
+    confirmDeleteRoutineExerciseId: string
     editSeries: number
     editRepeticiones: string
     editDescansoSegundos: number
@@ -46,7 +47,9 @@ interface SortableExerciseListProps {
     onSaveEdit: () => void
     onCancelEdit: () => void
     onMove: (routineExerciseId: string, direction: 'up' | 'down') => void
-    onRemove: (routineExerciseId: string) => void
+    onRequestRemove: (routineExerciseId: string) => void
+    onConfirmRemove: (routineExerciseId: string) => void
+    onCancelRemove: () => void
     onReorder: (sourceId: string, targetId: string) => void
 }
 
@@ -54,6 +57,7 @@ interface SortableItemProps {
     item: SortableRoutineExercise
     index: number
     isEditing: boolean
+    isConfirmingDelete: boolean
     editSeries: number
     editRepeticiones: string
     editDescansoSegundos: number
@@ -64,13 +68,16 @@ interface SortableItemProps {
     onSaveEdit: () => void
     onCancelEdit: () => void
     onMove: (routineExerciseId: string, direction: 'up' | 'down') => void
-    onRemove: (routineExerciseId: string) => void
+    onRequestRemove: (routineExerciseId: string) => void
+    onConfirmRemove: (routineExerciseId: string) => void
+    onCancelRemove: () => void
 }
 
 function SortableItem({
     item,
     index,
     isEditing,
+    isConfirmingDelete,
     editSeries,
     editRepeticiones,
     editDescansoSegundos,
@@ -81,7 +88,9 @@ function SortableItem({
     onSaveEdit,
     onCancelEdit,
     onMove,
-    onRemove,
+    onRequestRemove,
+    onConfirmRemove,
+    onCancelRemove,
 }: SortableItemProps) {
     const { t } = useTranslation()
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
@@ -199,12 +208,31 @@ function SortableItem({
                 </button>
                 <button
                     type="button"
-                    onClick={() => onRemove(item.id)}
+                    onClick={() => onRequestRemove(item.id)}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-red-600"
                 >
                     {t('catalog.delete')}
                 </button>
             </div>
+
+            {isConfirmingDelete ? (
+                <div className="flex w-full items-center justify-end gap-2 pt-1">
+                    <button
+                        type="button"
+                        onClick={() => onConfirmRemove(item.id)}
+                        className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
+                    >
+                        {t('routines.confirmDelete')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCancelRemove}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                    >
+                        {t('routines.cancelDelete')}
+                    </button>
+                </div>
+            ) : null}
         </li>
     )
 }
@@ -212,6 +240,7 @@ function SortableItem({
 export function SortableExerciseList({
     items,
     editingRoutineExerciseId,
+    confirmDeleteRoutineExerciseId,
     editSeries,
     editRepeticiones,
     editDescansoSegundos,
@@ -222,7 +251,9 @@ export function SortableExerciseList({
     onSaveEdit,
     onCancelEdit,
     onMove,
-    onRemove,
+    onRequestRemove,
+    onConfirmRemove,
+    onCancelRemove,
     onReorder,
 }: SortableExerciseListProps) {
     const sensors = useSensors(
@@ -258,6 +289,7 @@ export function SortableExerciseList({
                             item={item}
                             index={index}
                             isEditing={editingRoutineExerciseId === item.id}
+                            isConfirmingDelete={confirmDeleteRoutineExerciseId === item.id}
                             editSeries={editSeries}
                             editRepeticiones={editRepeticiones}
                             editDescansoSegundos={editDescansoSegundos}
@@ -268,7 +300,9 @@ export function SortableExerciseList({
                             onSaveEdit={onSaveEdit}
                             onCancelEdit={onCancelEdit}
                             onMove={onMove}
-                            onRemove={onRemove}
+                            onRequestRemove={onRequestRemove}
+                            onConfirmRemove={onConfirmRemove}
+                            onCancelRemove={onCancelRemove}
                         />
                     ))}
                 </ul>

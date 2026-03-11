@@ -56,7 +56,13 @@
         "invalidExercise": "Invalid exercise.",
         "requestedExerciseNotFound": "The requested exercise was not found.",
         "exerciseLoadFailed": "The exercise could not be loaded.",
-        "gifAlt": "GIF of {{name}}"
+        "gifAlt": "GIF of {{name}}",
+        "notes": {
+            "title": "Personal notes",
+            "placeholder": "Write your own notes for this exercise...",
+            "save": "Save note",
+            "saved": "Saved"
+        }
     },
     "dashboard": {
         "common": {
@@ -97,7 +103,12 @@
             "empty": "No workouts logged yet.",
             "volumeLabel": "Volume: {{volume}} kg",
             "copyWhatsapp": "Copy for WhatsApp",
-            "copyExcel": "Copy for Excel"
+            "copyExcel": "Copy for Excel",
+            "editSets": "Edit sets",
+            "editorTitle": "Saved sets editor",
+            "recalculateVolume": "Recalculate volume",
+            "editorEmpty": "No sets were recorded for this session.",
+            "seriesNumber": "Set {{number}}"
         },
         "smartPlan": {
             "title": "Smart plan for today",
@@ -252,6 +263,11 @@
             "weight": "Weight",
             "imc": "BMI"
         },
+        "charts": {
+            "cintura": "Waist progression",
+            "pecho": "Chest progression",
+            "pierna": "Leg diameter progression"
+        },
         "scaleNote": "Auto scale: minimum 10,000 kg, expanded if you exceed that volume in a single session.",
         "heatmap": {
             "cellTitle": "{{date}}: {{count}} workout(s)",
@@ -316,6 +332,11 @@
                 "reps_mismo_peso": "Reps at same weight",
                 "volumen_total": "Total volume"
             }
+        },
+        "sharePr": {
+            "button": "Share",
+            "copied": "Copied!",
+            "text": "💪 New personal record on {{exerciseName}}! {{type}}: {{value}} kg — MyHomeGym"
         },
         "muscleLabels": {
             "pecho": "Chest",
@@ -484,7 +505,33 @@
         "builderTitle": "Routine builder",
         "addExercise": "+ Add exercise",
         "restPlaceholder": "Rest (s)",
-        "noExercises": "This routine has no assigned exercises yet."
+        "noExercises": "This routine has no assigned exercises yet.",
+        "confirmDelete": "Confirm delete",
+        "cancelDelete": "Cancel",
+        "templates": {
+            "title": "Starter templates",
+            "description": "Create a baseline routine with recommended exercises in one click.",
+            "useTemplate": "Use template",
+            "toastSuccess": "Template applied: {{name}}",
+            "items": {
+                "fullBody3d": {
+                    "name": "Full Body 3 days",
+                    "description": "Balanced full-body plan to build strength and muscle with steady frequency."
+                },
+                "pushPullLegs": {
+                    "name": "Push Pull Legs",
+                    "description": "Classic split by movement pattern for higher weekly training volume."
+                },
+                "upperLower4d": {
+                    "name": "Upper Lower 4 days",
+                    "description": "Upper/lower split with a strong balance of stimulus and recovery."
+                },
+                "fuerza5x5": {
+                    "name": "Strength 5x5",
+                    "description": "Heavy compound-focused template to drive consistent strength gains."
+                }
+            }
+        }
     },
     "profile": {
         "title": "Profile",
@@ -499,6 +546,7 @@
         "themeLight": "Light",
         "themeDark": "Dark",
         "themeSystem": "System",
+        "themeAutoTime": "Auto (time)",
         "localData": "Local data",
         "localDataDescription": "Export or import all your data (profile, routines, workouts, measurements and PRs) in JSON format.",
         "exportBackup": "Export backup",
@@ -528,7 +576,10 @@
                 "pesoCorporal": "Body weight (kg)",
                 "cintura": "Waist (cm)",
                 "pecho": "Chest (cm)",
-                "diametroPierna": "Leg diameter (cm)"
+                "diametroPierna": "Leg diameter (cm)",
+                "biceps": "Biceps (cm)",
+                "hombros": "Shoulders (cm)",
+                "pantorrilla": "Calf (cm)"
             },
             "submitButton": "Save measurement",
             "invalidWeight": "Enter a valid body weight.",
@@ -546,6 +597,9 @@
                 "cintura": "Waist",
                 "pecho": "Chest",
                 "pierna": "Leg",
+                "biceps": "Biceps",
+                "hombros": "Shoulders",
+                "pantorrilla": "Calf",
                 "actions": "Actions"
             },
             "deleteButton": "Delete",

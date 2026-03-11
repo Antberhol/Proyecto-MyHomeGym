@@ -56,7 +56,13 @@
         "invalidExercise": "Ejercicio no válido.",
         "requestedExerciseNotFound": "No se encontró el ejercicio solicitado.",
         "exerciseLoadFailed": "No se pudo cargar el ejercicio.",
-        "gifAlt": "GIF de {{name}}"
+        "gifAlt": "GIF de {{name}}",
+        "notes": {
+            "title": "Notas personales",
+            "placeholder": "Escribe aquí tus observaciones para este ejercicio...",
+            "save": "Guardar nota",
+            "saved": "Guardado"
+        }
     },
     "dashboard": {
         "common": {
@@ -97,7 +103,12 @@
             "empty": "Aún no hay entrenamientos registrados.",
             "volumeLabel": "Volumen: {{volume}} kg",
             "copyWhatsapp": "Copiar para WhatsApp",
-            "copyExcel": "Copiar para Excel"
+            "copyExcel": "Copiar para Excel",
+            "editSets": "Editar series",
+            "editorTitle": "Editor de series guardadas",
+            "recalculateVolume": "Recalcular volumen",
+            "editorEmpty": "No hay series registradas para esta sesión.",
+            "seriesNumber": "Serie {{number}}"
         },
         "smartPlan": {
             "title": "Plan inteligente de hoy",
@@ -252,6 +263,11 @@
             "weight": "Peso",
             "imc": "IMC"
         },
+        "charts": {
+            "cintura": "Evolución de cintura",
+            "pecho": "Evolución de pecho",
+            "pierna": "Evolución de diámetro de pierna"
+        },
         "scaleNote": "Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.",
         "heatmap": {
             "cellTitle": "{{date}}: {{count}} entrenamiento(s)",
@@ -316,6 +332,11 @@
                 "reps_mismo_peso": "Reps al mismo peso",
                 "volumen_total": "Volumen total"
             }
+        },
+        "sharePr": {
+            "button": "Compartir",
+            "copied": "¡Copiado!",
+            "text": "💪 ¡Nuevo récord personal en {{exerciseName}}! {{type}}: {{value}} kg — MyHomeGym"
         },
         "muscleLabels": {
             "pecho": "Pecho",
@@ -484,7 +505,33 @@
         "builderTitle": "Constructor de rutina",
         "addExercise": "+ Añadir ejercicio",
         "restPlaceholder": "Descanso (s)",
-        "noExercises": "Esta rutina todavía no tiene ejercicios asignados."
+        "noExercises": "Esta rutina todavía no tiene ejercicios asignados.",
+        "confirmDelete": "Confirmar borrado",
+        "cancelDelete": "Cancelar",
+        "templates": {
+            "title": "Plantillas de inicio",
+            "description": "Crea una rutina base con ejercicios recomendados en un clic.",
+            "useTemplate": "Usar plantilla",
+            "toastSuccess": "Plantilla aplicada: {{name}}",
+            "items": {
+                "fullBody3d": {
+                    "name": "Full Body 3 días",
+                    "description": "Rutina global para progresar en fuerza y masa con frecuencia equilibrada."
+                },
+                "pushPullLegs": {
+                    "name": "Push Pull Legs",
+                    "description": "División clásica por patrones de empuje, tirón y piernas para alto volumen."
+                },
+                "upperLower4d": {
+                    "name": "Upper Lower 4 días",
+                    "description": "Equilibrio entre tren superior e inferior con recuperación sólida."
+                },
+                "fuerza5x5": {
+                    "name": "Fuerza 5x5",
+                    "description": "Plantilla centrada en básicos pesados para ganar fuerza de forma consistente."
+                }
+            }
+        }
     },
     "profile": {
         "title": "Perfil",
@@ -499,6 +546,7 @@
         "themeLight": "Claro",
         "themeDark": "Oscuro",
         "themeSystem": "Sistema",
+        "themeAutoTime": "Auto (hora)",
         "localData": "Datos locales",
         "localDataDescription": "Exporta o importa toda tu información (perfil, rutinas, entrenamientos, medidas y PRs) en formato JSON.",
         "exportBackup": "Exportar respaldo",
@@ -528,7 +576,10 @@
                 "pesoCorporal": "Peso corporal (kg)",
                 "cintura": "Cintura (cm)",
                 "pecho": "Pecho (cm)",
-                "diametroPierna": "Diámetro pierna (cm)"
+                "diametroPierna": "Diámetro pierna (cm)",
+                "biceps": "Bíceps (cm)",
+                "hombros": "Hombros (cm)",
+                "pantorrilla": "Pantorrilla (cm)"
             },
             "submitButton": "Guardar medición",
             "invalidWeight": "Ingresa un peso corporal válido.",
@@ -546,6 +597,9 @@
                 "cintura": "Cintura",
                 "pecho": "Pecho",
                 "pierna": "Pierna",
+                "biceps": "Bíceps",
+                "hombros": "Hombros",
+                "pantorrilla": "Pantorrilla",
                 "actions": "Acciones"
             },
             "deleteButton": "Eliminar",

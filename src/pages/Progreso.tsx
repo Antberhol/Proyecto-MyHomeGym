@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
+import { Share2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Area, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BodyDiagramSvg } from '../components/body/BodyDiagramSvg'
@@ -223,16 +224,37 @@ export function ProgresoPage() {
   const [calMinutes, setCalMinutes] = useState(60)
   const [calMet, setCalMet] = useState(6)
   const [volumeRange, setVolumeRange] = useState<'weekly' | 'monthly'>('weekly')
+  const [copiedPrId, setCopiedPrId] = useState<string | null>(null)
   const numberLocale = i18n.language.toLowerCase().startsWith('es') ? 'es-ES' : 'en-US'
 
-  const bodyData = measurements
-    .slice()
-    .sort((a, b) => +new Date(a.fechaRegistro) - +new Date(b.fechaRegistro))
-    .map((item) => ({
-      fecha: new Date(item.fechaRegistro).toLocaleDateString(),
-      peso: item.pesoCorporal,
-      imc: item.imc,
-    }))
+  const sortedMeasurements = useMemo(
+    () =>
+      measurements
+        .slice()
+        .sort((a, b) => +new Date(a.fechaRegistro) - +new Date(b.fechaRegistro)),
+    [measurements],
+  )
+
+  const bodyData = sortedMeasurements.map((item) => ({
+    fecha: new Date(item.fechaRegistro).toLocaleDateString(),
+    peso: item.pesoCorporal,
+    imc: item.imc,
+  }))
+
+  const cinturaData = useMemo(
+    () => buildOptionalMeasurementSeries(sortedMeasurements, 'cintura'),
+    [sortedMeasurements],
+  )
+
+  const pechoData = useMemo(
+    () => buildOptionalMeasurementSeries(sortedMeasurements, 'pecho'),
+    [sortedMeasurements],
+  )
+
+  const diametroPiernaData = useMemo(
+    () => buildOptionalMeasurementSeries(sortedMeasurements, 'diametroPierna'),
+    [sortedMeasurements],
+  )
 
   const volumeData = useMemo(() => {
     const sorted = trainings
@@ -393,6 +415,35 @@ export function ProgresoPage() {
     return exerciseNameById.get(exerciseId) ?? t('dashboard.common.exercise')
   }
 
+  const sharePrRecord = async (params: {
+    id: string
+    exerciseId: string
+    tipo: string
+    valor: number
+  }) => {
+    const shareText = t('progress.sharePr.text', {
+      exerciseName: resolvePrExerciseName(params.exerciseId),
+      type: t(`progress.pr.type.${params.tipo}`, { defaultValue: params.tipo }),
+      value: params.valor.toFixed(1),
+    })
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      await navigator.share({ text: shareText })
+      return
+    }
+
+    if (!navigator.clipboard?.writeText) {
+      return
+    }
+
+    await navigator.clipboard.writeText(shareText)
+    setCopiedPrId(params.id)
+
+    window.setTimeout(() => {
+      setCopiedPrId((current) => (current === params.id ? null : current))
+    }, 2000)
+  }
+
   const groupLabel = (group: string) => {
     return t(`progress.muscleLabels.${group}`, {
       defaultValue: GROUP_LABELS[group] ?? group,
@@ -442,6 +493,30 @@ export function ProgresoPage() {
       </div>
     )
   }
+
+  const optionalMeasurementCharts = [
+    {
+      id: 'cintura',
+      title: t('progress.charts.cintura'),
+      data: cinturaData,
+      color: '#f97316',
+      gradientId: 'cinturaAreaGradient',
+    },
+    {
+      id: 'pecho',
+      title: t('progress.charts.pecho'),
+      data: pechoData,
+      color: '#8b5cf6',
+      gradientId: 'pechoAreaGradient',
+    },
+    {
+      id: 'pierna',
+      title: t('progress.charts.pierna'),
+      data: diametroPiernaData,
+      color: '#14b8a6',
+      gradientId: 'piernaAreaGradient',
+    },
+  ].filter((chart) => chart.data.length >= 2)
 
   return (
     <div className="space-y-6">
@@ -494,6 +569,42 @@ export function ProgresoPage() {
           </ResponsiveContainer>
         </div>
       </section>
+
+      {optionalMeasurementCharts.map((chart) => (
+        <section key={chart.id} className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+          <h2 className="mb-3 text-lg font-semibold">{chart.title}</h2>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chart.data}>
+                <defs>
+                  <linearGradient id={chart.gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chart.color} stopOpacity={0.32} />
+                    <stop offset="100%" stopColor={chart.color} stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" />
+                <XAxis dataKey="fecha" tick={CHART_AXIS_TICK} minTickGap={10} />
+                <YAxis tick={CHART_AXIS_TICK} />
+                <Tooltip content={renderLineTooltip} />
+                <Legend
+                  wrapperStyle={{ paddingTop: 10, fontSize: 12 }}
+                  formatter={(value, entry) => <span style={{ color: (entry as { color?: string }).color }}>{value}</span>}
+                />
+                <Area type="monotone" dataKey="valor" stroke="none" fill={`url(#${chart.gradientId})`} />
+                <Line
+                  type="monotone"
+                  name={chart.title}
+                  dataKey="valor"
+                  stroke={chart.color}
+                  strokeWidth={2.25}
+                  dot={false}
+                  activeDot={{ r: 5, fill: '#ffffff', stroke: chart.color, strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      ))}
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -893,6 +1004,27 @@ export function ProgresoPage() {
                         </span>
                       ) : null}
                       <span>{new Date(pr.fecha).toLocaleDateString()}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void sharePrRecord({
+                            id: pr.id,
+                            exerciseId: pr.ejercicioId,
+                            tipo: pr.tipo,
+                            valor: pr.valor,
+                          })
+                        }}
+                        className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-[10px] font-semibold"
+                        title={t('progress.sharePr.button')}
+                      >
+                        <Share2 size={12} />
+                        <span>{t('progress.sharePr.button')}</span>
+                      </button>
+                      {copiedPrId === pr.id ? (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                          {t('progress.sharePr.copied')}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <p className="text-slate-600 dark:text-slate-300">
@@ -906,4 +1038,16 @@ export function ProgresoPage() {
       </section>
     </div>
   )
+}
+
+function buildOptionalMeasurementSeries(
+  measurements: Array<{ fechaRegistro: string; cintura?: number; pecho?: number; diametroPierna?: number }>,
+  field: 'cintura' | 'pecho' | 'diametroPierna',
+) {
+  return measurements
+    .filter((item) => item[field] != null)
+    .map((item) => ({
+      fecha: new Date(item.fechaRegistro).toLocaleDateString(),
+      valor: Number(item[field]),
+    }))
 }

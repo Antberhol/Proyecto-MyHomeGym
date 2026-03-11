@@ -18,6 +18,85 @@ const routineSchema = z.object({
 
 type RoutineForm = z.infer<typeof routineSchema>
 
+type RoutineTemplate = {
+  id: 'fullBody3d' | 'pushPullLegs' | 'upperLower4d' | 'fuerza5x5'
+  nameKey: string
+  descriptionKey: string
+  diasSemana: string[]
+  color: string
+  exercises: Array<{
+    ejercicioId: string
+    series: number
+    repeticiones: string
+    descansoSegundos: number
+  }>
+}
+
+const ROUTINE_TEMPLATES: RoutineTemplate[] = [
+  {
+    id: 'fullBody3d',
+    nameKey: 'routines.templates.items.fullBody3d.name',
+    descriptionKey: 'routines.templates.items.fullBody3d.description',
+    diasSemana: ['lunes', 'miercoles', 'viernes'],
+    color: '#0ea5e9',
+    exercises: [
+      { ejercicioId: 'pecho-press-banca', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'espalda-dominadas', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'piernas-sentadilla-trasera', series: 4, repeticiones: '5-8', descansoSegundos: 150 },
+      { ejercicioId: 'hombros-press-militar', series: 3, repeticiones: '8-12', descansoSegundos: 90 },
+    ],
+  },
+  {
+    id: 'pushPullLegs',
+    nameKey: 'routines.templates.items.pushPullLegs.name',
+    descriptionKey: 'routines.templates.items.pushPullLegs.description',
+    diasSemana: ['lunes', 'martes', 'jueves', 'viernes', 'sabado'],
+    color: '#f97316',
+    exercises: [
+      { ejercicioId: 'pecho-press-banca', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'hombros-press-militar', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'triceps-press-frances', series: 3, repeticiones: '10-14', descansoSegundos: 75 },
+      { ejercicioId: 'espalda-dominadas', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'espalda-remo-barra', series: 4, repeticiones: '8-12', descansoSegundos: 105 },
+      { ejercicioId: 'biceps-curl-barra', series: 3, repeticiones: '10-14', descansoSegundos: 75 },
+      { ejercicioId: 'piernas-sentadilla-trasera', series: 4, repeticiones: '5-8', descansoSegundos: 150 },
+      { ejercicioId: 'piernas-peso-muerto', series: 3, repeticiones: '4-6', descansoSegundos: 180 },
+      { ejercicioId: 'piernas-hip-thrust', series: 4, repeticiones: '8-12', descansoSegundos: 120 },
+    ],
+  },
+  {
+    id: 'upperLower4d',
+    nameKey: 'routines.templates.items.upperLower4d.name',
+    descriptionKey: 'routines.templates.items.upperLower4d.description',
+    diasSemana: ['lunes', 'martes', 'jueves', 'viernes'],
+    color: '#8b5cf6',
+    exercises: [
+      { ejercicioId: 'pecho-press-banca', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'espalda-dominadas', series: 4, repeticiones: '6-10', descansoSegundos: 120 },
+      { ejercicioId: 'espalda-remo-barra', series: 4, repeticiones: '8-12', descansoSegundos: 105 },
+      { ejercicioId: 'hombros-press-militar', series: 3, repeticiones: '8-12', descansoSegundos: 90 },
+      { ejercicioId: 'biceps-curl-barra', series: 3, repeticiones: '10-14', descansoSegundos: 75 },
+      { ejercicioId: 'triceps-press-frances', series: 3, repeticiones: '10-14', descansoSegundos: 75 },
+      { ejercicioId: 'piernas-sentadilla-trasera', series: 4, repeticiones: '5-8', descansoSegundos: 150 },
+      { ejercicioId: 'piernas-hip-thrust', series: 4, repeticiones: '8-12', descansoSegundos: 120 },
+    ],
+  },
+  {
+    id: 'fuerza5x5',
+    nameKey: 'routines.templates.items.fuerza5x5.name',
+    descriptionKey: 'routines.templates.items.fuerza5x5.description',
+    diasSemana: ['lunes', 'martes', 'miercoles', 'viernes', 'sabado'],
+    color: '#22c55e',
+    exercises: [
+      { ejercicioId: 'piernas-sentadilla-trasera', series: 5, repeticiones: '5', descansoSegundos: 180 },
+      { ejercicioId: 'pecho-press-banca', series: 5, repeticiones: '5', descansoSegundos: 180 },
+      { ejercicioId: 'espalda-remo-barra', series: 5, repeticiones: '5', descansoSegundos: 150 },
+      { ejercicioId: 'piernas-peso-muerto', series: 5, repeticiones: '5', descansoSegundos: 210 },
+      { ejercicioId: 'hombros-press-militar', series: 5, repeticiones: '5', descansoSegundos: 150 },
+    ],
+  },
+]
+
 export function MisRutinasPage() {
   const { t } = useTranslation()
   const routines = useLiveQuery(() => routineAdminRepository.listRoutines(), []) ?? []
@@ -30,6 +109,10 @@ export function MisRutinasPage() {
   const [editRoutineDiasSemana, setEditRoutineDiasSemana] = useState('')
   const [editRoutineColor, setEditRoutineColor] = useState('#E63946')
   const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState(false)
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
+  const [templateToast, setTemplateToast] = useState('')
+  const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState('')
+  const [confirmDeleteRoutineExerciseId, setConfirmDeleteRoutineExerciseId] = useState('')
   const [series, setSeries] = useState<number>(4)
   const [repeticiones, setRepeticiones] = useState<string>('8-12')
   const [descansoSegundos, setDescansoSegundos] = useState<number>(90)
@@ -73,6 +156,10 @@ export function MisRutinasPage() {
 
   const deleteRoutine = async (routineId: string) => {
     await routineAdminRepository.deleteRoutine(routineId)
+    if (selectedRoutineId === routineId) {
+      setSelectedRoutineId('')
+    }
+    setConfirmDeleteRoutineId('')
   }
 
   const startEditRoutine = (routineId: string) => {
@@ -151,6 +238,53 @@ export function MisRutinasPage() {
 
   const removeRoutineExercise = async (routineExerciseId: string) => {
     await routineAdminRepository.deleteRoutineExercise(routineExerciseId)
+    setConfirmDeleteRoutineExerciseId('')
+  }
+
+  const createRoutineFromTemplate = async (templateId: RoutineTemplate['id']) => {
+    const template = ROUTINE_TEMPLATES.find((item) => item.id === templateId)
+    if (!template) return
+
+    const routineId = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    await routineAdminRepository.createRoutine({
+      id: routineId,
+      nombre: t(template.nameKey),
+      descripcion: t(template.descriptionKey),
+      diasSemana: template.diasSemana,
+      activa: true,
+      color: template.color,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const existingExerciseIds = new Set(exercises.map((exercise) => exercise.id))
+
+    for (let index = 0; index < template.exercises.length; index += 1) {
+      const item = template.exercises[index]
+      if (!existingExerciseIds.has(item.ejercicioId)) {
+        continue
+      }
+
+      await routineAdminRepository.addExerciseToRoutine({
+        id: crypto.randomUUID(),
+        rutinaId: routineId,
+        ejercicioId: item.ejercicioId,
+        orden: index + 1,
+        series: item.series,
+        repeticiones: item.repeticiones,
+        descansoSegundos: item.descansoSegundos,
+      })
+    }
+
+    setSelectedRoutineId(routineId)
+    setIsTemplatesOpen(false)
+    setTemplateToast(t('routines.templates.toastSuccess', { name: t(template.nameKey) }))
+
+    window.setTimeout(() => {
+      setTemplateToast('')
+    }, 2600)
   }
 
   const moveRoutineExercise = async (routineExerciseId: string, direction: 'up' | 'down') => {
@@ -215,6 +349,40 @@ export function MisRutinasPage() {
       </header>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+        <button
+          type="button"
+          onClick={() => setIsTemplatesOpen((current) => !current)}
+          className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left dark:border-slate-700"
+        >
+          <div>
+            <h2 className="text-lg font-semibold">{t('routines.templates.title')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-300">{t('routines.templates.description')}</p>
+          </div>
+          <span className="text-xs font-semibold">{isTemplatesOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {isTemplatesOpen ? (
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {ROUTINE_TEMPLATES.map((template) => (
+              <article key={template.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                <p className="font-semibold">{t(template.nameKey)}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{t(template.descriptionKey)}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void createRoutineFromTemplate(template.id)
+                  }}
+                  className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                >
+                  {t('routines.templates.useTemplate')}
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
         <h2 className="mb-3 text-lg font-semibold">{t('routines.newRoutine')}</h2>
         <form onSubmit={onCreate} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
@@ -247,7 +415,7 @@ export function MisRutinasPage() {
         {routines.map((routine) => (
           <SwipeToDeleteItem
             key={routine.id}
-            onDelete={() => deleteRoutine(routine.id)}
+            onDelete={() => setConfirmDeleteRoutineId(routine.id)}
             disabled={editingRoutineId === routine.id}
           >
             <article className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -329,6 +497,27 @@ export function MisRutinasPage() {
                   {routine.activa ? t('routines.deactivate') : t('routines.activate')}
                 </button>
               </div>
+
+              {confirmDeleteRoutineId === routine.id ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 dark:border-red-900/40 dark:bg-red-900/20">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void deleteRoutine(routine.id)
+                    }}
+                    className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+                  >
+                    {t('routines.confirmDelete')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteRoutineId('')}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                  >
+                    {t('routines.cancelDelete')}
+                  </button>
+                </div>
+              ) : null}
             </article>
           </SwipeToDeleteItem>
         ))}
@@ -405,6 +594,7 @@ export function MisRutinasPage() {
             <SortableExerciseList
               items={selectedRoutineExercises}
               editingRoutineExerciseId={editingRoutineExerciseId}
+              confirmDeleteRoutineExerciseId={confirmDeleteRoutineExerciseId}
               editSeries={editSeries}
               editRepeticiones={editRepeticiones}
               editDescansoSegundos={editDescansoSegundos}
@@ -419,9 +609,13 @@ export function MisRutinasPage() {
               onMove={(routineExerciseId, direction) => {
                 void moveRoutineExercise(routineExerciseId, direction)
               }}
-              onRemove={(routineExerciseId) => {
+              onRequestRemove={(routineExerciseId) => {
+                setConfirmDeleteRoutineExerciseId(routineExerciseId)
+              }}
+              onConfirmRemove={(routineExerciseId) => {
                 void removeRoutineExercise(routineExerciseId)
               }}
+              onCancelRemove={() => setConfirmDeleteRoutineExerciseId('')}
               onReorder={(sourceId, targetId) => {
                 void reorderRoutineExercises(sourceId, targetId)
               }}
@@ -433,6 +627,12 @@ export function MisRutinasPage() {
           )}
         </section>
       )}
+
+      {templateToast ? (
+        <div className="fixed bottom-6 right-4 z-20 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 shadow-lg dark:border-emerald-900/40 dark:bg-emerald-900/30 dark:text-emerald-300">
+          {templateToast}
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -69,6 +69,19 @@ class GymDatabase extends Dexie {
       prs: 'id, ejercicioId, tipo, fecha, updatedAt, isSynced, ownerUid',
       pendingSyncQueue: 'id, entityType, entityId, status, createdAt',
     })
+
+    // v5 documents additional optional body measurement fields without changing indexed keys.
+    this.version(5).stores({
+      userProfile: 'id, nombre, updatedAt, isSynced, ownerUid',
+      ejerciciosCatalogo: 'id, nombre, grupoMuscularPrimario, nivelDificultad, equipoNecesario, esPersonalizado, updatedAt, isSynced, ownerUid',
+      rutinas: 'id, nombre, activa, updatedAt, isSynced, ownerUid',
+      rutinaEjercicios: 'id, rutinaId, ejercicioId, orden, rpe, updatedAt, isSynced, ownerUid',
+      entrenamientosRegistrados: 'id, rutinaId, fecha, completado, updatedAt, isSynced, ownerUid',
+      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha, rpe, updatedAt, isSynced, ownerUid, [ejercicioId+fecha]',
+      medidasCorporalesHistorico: 'id, fechaRegistro, updatedAt, isSynced, ownerUid',
+      prs: 'id, ejercicioId, tipo, fecha, updatedAt, isSynced, ownerUid',
+      pendingSyncQueue: 'id, entityType, entityId, status, createdAt',
+    })
   }
 
   getAllRoutines() {
@@ -189,6 +202,10 @@ class GymDatabase extends Dexie {
     return this.ejerciciosRealizados.toArray()
   }
 
+  updatePerformedExercise(performedExerciseId: string, changes: Partial<PerformedExercise>) {
+    return this.ejerciciosRealizados.update(performedExerciseId, changes)
+  }
+
   getPerformedExercisesSince(sinceIso: string) {
     return this.ejerciciosRealizados.where('fecha').aboveOrEqual(sinceIso).toArray()
   }
@@ -203,6 +220,10 @@ class GymDatabase extends Dexie {
 
   getAllTrainings() {
     return this.entrenamientosRegistrados.toArray()
+  }
+
+  updateTraining(trainingId: string, changes: Partial<RegisteredTraining>) {
+    return this.entrenamientosRegistrados.update(trainingId, changes)
   }
 
   getTrainingsBeforeOrEqual(maxDateIso: string) {

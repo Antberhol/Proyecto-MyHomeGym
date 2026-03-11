@@ -354,6 +354,27 @@ export function useActiveWorkoutController() {
         setFreeExercisesDraft((current) => current.filter((item) => item.id !== draftId))
     }
 
+    const moveFreeExerciseDraft = (fromIndex: number, toIndex: number) => {
+        if (fromIndex === toIndex) return
+
+        setFreeExercisesDraft((current) => {
+            if (
+                fromIndex < 0
+                || toIndex < 0
+                || fromIndex >= current.length
+                || toIndex >= current.length
+            ) {
+                return current
+            }
+
+            const next = current.slice()
+            const temp = next[fromIndex]
+            next[fromIndex] = next[toIndex]
+            next[toIndex] = temp
+            return next
+        })
+    }
+
     const addFreeSet = (draftId: string) => {
         setFreeExercisesDraft((current) =>
             current.map((item) =>
@@ -629,6 +650,7 @@ export function useActiveWorkoutController() {
         addFreeExerciseDraft,
         addFreeSet,
         removeFreeExerciseDraft,
+        moveFreeExerciseDraft,
         removeFreeSet,
         updateFreeSetData,
         openPlateCalculator,

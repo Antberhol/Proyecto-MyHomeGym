@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { StreakBadge } from '../components/StreakBadge'
 import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
 import { useStreaks } from '../hooks/useStreaks'
+import { db } from '../lib/db'
 import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
 import { progressRepository } from '../repositories/progressRepository'
 import { formatWorkoutToCSV, formatWorkoutToText, type TrainingData } from '../utils/clipboard'
@@ -12,6 +14,8 @@ const WEEKDAY_CODES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
 export function DashboardPage() {
   const { t } = useTranslation()
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [setDraftById, setSetDraftById] = useState<Record<string, { reps: string; weight: string }>>({})
   const streaks = useStreaks()
   const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
   const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
@@ -45,6 +49,11 @@ export function DashboardPage() {
     .slice()
     .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
     .slice(0, 5)
+
+  const exerciseNameById = useMemo(
+    () => new Map(exercises.map((exercise) => [exercise.id, exercise.nombre])),
+    [exercises],
+  )
 
   const buildTrainingData = (trainingId: string): TrainingData | null => {
     const training = trainings.find((item) => item.id === trainingId)
@@ -90,6 +99,63 @@ export function DashboardPage() {
   const resolvePrExerciseName = (exerciseId: string) => {
     if (exerciseId === 'GLOBAL') return t('dashboard.prs.globalSession')
     return exercises.find((item) => item.id === exerciseId)?.nombre || t('dashboard.common.exercise')
+  }
+
+  const getSetDraft = (setId: string, reps: number, weight: number) => {
+    return setDraftById[setId] ?? { reps: String(reps), weight: String(weight) }
+  }
+
+  const updateSetDraftField = (setId: string, field: 'reps' | 'weight', value: string) => {
+    setSetDraftById((current) => {
+      const currentDraft = current[setId] ?? { reps: '', weight: '' }
+      return {
+        ...current,
+        [setId]: {
+          ...currentDraft,
+          [field]: value,
+        },
+      }
+    })
+  }
+
+  const persistPerformedExercise = async (params: {
+    setId: string
+    currentReps: number
+    currentWeight: number
+  }) => {
+    const draft = setDraftById[params.setId]
+    if (!draft) return
+
+    const parsedReps = Number(draft.reps)
+    const parsedWeight = Number(draft.weight)
+
+    const nextReps = Number.isFinite(parsedReps) ? Math.max(0, parsedReps) : params.currentReps
+    const nextWeight = Number.isFinite(parsedWeight) ? Math.max(0, parsedWeight) : params.currentWeight
+
+    await db.updatePerformedExercise(params.setId, {
+      repeticionesRealizadas: nextReps,
+      pesoUtilizado: nextWeight,
+      updatedAt: new Date().toISOString(),
+    })
+  }
+
+  const recalculateTrainingVolume = async (trainingId: string) => {
+    const sessionSets = performedExercises.filter((item) => item.entrenamientoId === trainingId)
+    const newVolume = sessionSets.reduce((acc, item) => {
+      const draft = setDraftById[item.id]
+      const draftReps = Number(draft?.reps)
+      const draftWeight = Number(draft?.weight)
+
+      const reps = Number.isFinite(draftReps) ? Math.max(0, draftReps) : item.repeticionesRealizadas
+      const weight = Number.isFinite(draftWeight) ? Math.max(0, draftWeight) : item.pesoUtilizado
+
+      return acc + reps * weight
+    }, 0)
+
+    await db.updateTraining(trainingId, {
+      volumenTotal: newVolume,
+      updatedAt: new Date().toISOString(),
+    })
   }
 
   const today = new Date()
@@ -257,7 +323,96 @@ export function DashboardPage() {
                     >
                       {t('dashboard.recentSessions.copyExcel')}
                     </button>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      onClick={() => {
+                        setExpandedSessionId((current) => (current === training.id ? null : training.id))
+                      }}
+                    >
+                      {t('dashboard.recentSessions.editSets')}
+                    </button>
                   </div>
+
+                  {expandedSessionId === training.id ? (
+                    <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                          {t('dashboard.recentSessions.editorTitle')}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void recalculateTrainingVolume(training.id)
+                          }}
+                          className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                        >
+                          {t('dashboard.recentSessions.recalculateVolume')}
+                        </button>
+                      </div>
+
+                      {performedExercises.filter((item) => item.entrenamientoId === training.id).length === 0 ? (
+                        <p className="text-xs text-slate-500 dark:text-slate-300">
+                          {t('dashboard.recentSessions.editorEmpty')}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {performedExercises
+                            .filter((item) => item.entrenamientoId === training.id)
+                            .sort((a, b) => {
+                              if (a.ejercicioId === b.ejercicioId) {
+                                return a.serieNumero - b.serieNumero
+                              }
+                              return a.ejercicioId.localeCompare(b.ejercicioId)
+                            })
+                            .map((set) => {
+                              const draft = getSetDraft(set.id, set.repeticionesRealizadas, set.pesoUtilizado)
+                              return (
+                                <div key={set.id} className="grid grid-cols-1 gap-2 rounded-md border border-slate-200 p-2 dark:border-slate-700 md:grid-cols-4">
+                                  <p className="text-xs font-medium">
+                                    {(exerciseNameById.get(set.ejercicioId) ?? t('dashboard.common.exercise'))}
+                                  </p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                                    {t('dashboard.recentSessions.seriesNumber', { number: set.serieNumero })}
+                                  </p>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={draft.reps}
+                                    onChange={(event) => updateSetDraftField(set.id, 'reps', event.target.value)}
+                                    onBlur={() => {
+                                      void persistPerformedExercise({
+                                        setId: set.id,
+                                        currentReps: set.repeticionesRealizadas,
+                                        currentWeight: set.pesoUtilizado,
+                                      })
+                                    }}
+                                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                    placeholder={t('training.repsPlaceholder')}
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step={0.5}
+                                    value={draft.weight}
+                                    onChange={(event) => updateSetDraftField(set.id, 'weight', event.target.value)}
+                                    onBlur={() => {
+                                      void persistPerformedExercise({
+                                        setId: set.id,
+                                        currentReps: set.repeticionesRealizadas,
+                                        currentWeight: set.pesoUtilizado,
+                                      })
+                                    }}
+                                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-900"
+                                    placeholder={t('training.weightPlaceholder')}
+                                  />
+                                </div>
+                              )
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 </li>
               ))}
           </ul>
