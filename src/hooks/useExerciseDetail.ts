@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
+import { exerciseStaticImages } from '../constants/exerciseStaticImages'
 import i18n from '../i18n'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 
@@ -46,6 +47,7 @@ interface UseExerciseDetailOptions {
     exerciseDbAliases?: string[]
     fallbackInstructions?: string
     fallbackGifUrl?: string
+    grupoMuscularPrimario?: string
     /** Increment to clear the in-memory cache and force a re-fetch. */
     retryKey?: number | string
 }
@@ -60,9 +62,23 @@ const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v5'
-const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
+const EXERCISE_DB_FREE_API_BASE = 'https://exercisedb-api.vercel.app/api/v2'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const pendingRequests = new Set<string>()
+let activeRequests = 0
+const MAX_CONCURRENT = 3
+const waitQueue: Array<() => void> = []
+
+interface ExerciseDbListResponse {
+    success?: boolean
+    data?: ExerciseDbItem[]
+}
+
+interface ExerciseDbItemResponse {
+    success?: boolean
+    data?: ExerciseDbItem
+}
 
 function isLegacyRapidApiGifUrl(url: string): boolean {
     return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
@@ -101,14 +117,19 @@ function writeGifUrlToLocalStorage(exerciseDbId: string, gifUrl: string): void {
     }
 }
 
-function buildExerciseDbRequestInit(apiKey: string, signal?: AbortSignal): RequestInit {
-    return {
-        signal,
-        headers: {
-            'X-RapidAPI-Key': apiKey,
-            'X-RapidAPI-Host': EXERCISE_DB_RAPIDAPI_HOST,
-        },
+async function acquireSlot(): Promise<void> {
+    if (activeRequests < MAX_CONCURRENT) {
+        activeRequests += 1
+        return
     }
+
+    await new Promise<void>((resolve) => waitQueue.push(resolve))
+    activeRequests += 1
+}
+
+function releaseSlot(): void {
+    activeRequests = Math.max(0, activeRequests - 1)
+    waitQueue.shift()?.()
 }
 
 // FIX 4: Persist whenever we resolved a new/better exerciseDbId — no resolvedByCandidate gate.
@@ -1160,6 +1181,25 @@ function normalizeGifUrl(url: string): string {
     return normalized.replace(/^http:\/\//i, 'https://')
 }
 
+function resolveStaticFallbackGifUrl(primaryMuscle?: string): string {
+    if (!primaryMuscle?.trim()) {
+        return ''
+    }
+
+    const normalizedMuscle = normalizeExerciseName(primaryMuscle)
+    if (exerciseStaticImages[normalizedMuscle]) {
+        return exerciseStaticImages[normalizedMuscle]
+    }
+
+    for (const [muscleKey, imageUrl] of Object.entries(exerciseStaticImages)) {
+        if (normalizedMuscle.includes(muscleKey)) {
+            return imageUrl
+        }
+    }
+
+    return ''
+}
+
 // FIX 1: Use the CDN gifUrl from the API response — cache by item.id for in-session reuse.
 function resolveExerciseGifUrl(item: ExerciseDbItem | null): string {
     if (item?.gifUrl?.trim()) {
@@ -1242,65 +1282,91 @@ function buildQueryCandidates(exerciseName: string, options?: UseExerciseDetailO
 
 async function searchExerciseByCandidates(
     candidates: string[],
-    apiKey: string,
     signal: AbortSignal,
 ): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
     for (const candidate of candidates) {
-        const response = await fetch(
-            `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/name/${encodeURIComponent(candidate)}`,
-            buildExerciseDbRequestInit(apiKey, signal),
-        )
-
-        if (!response.ok) {
+        if (pendingRequests.has(candidate)) {
             continue
         }
 
-        const payload = (await response.json()) as ExerciseDbItem[]
-        if (!Array.isArray(payload) || payload.length === 0) {
-            continue
-        }
+        pendingRequests.add(candidate)
+        await acquireSlot()
 
-        const best = selectBestMatch(payload, candidate)
-        if (best?.id) {
-            return { item: best, usedCandidate: candidate }
+        try {
+            const response = await fetch(
+                `${EXERCISE_DB_FREE_API_BASE}/exercises/name/${encodeURIComponent(candidate)}?limit=5`,
+                { signal },
+            )
+
+            if (!response.ok) {
+                continue
+            }
+
+            const payload = (await response.json()) as ExerciseDbListResponse
+            const items = Array.isArray(payload?.data) ? payload.data : []
+            if (items.length === 0) {
+                continue
+            }
+
+            const best = selectBestMatch(items, candidate)
+            if (best?.id) {
+                return { item: best, usedCandidate: candidate }
+            }
+        } catch {
+            if (signal.aborted) {
+                return null
+            }
+        } finally {
+            releaseSlot()
+            pendingRequests.delete(candidate)
         }
     }
 
     return null
 }
 
-async function searchExerciseById(exerciseDbId: string, apiKey: string, signal: AbortSignal): Promise<ExerciseDbItem | null> {
-    const response = await fetch(
-        `https://${EXERCISE_DB_RAPIDAPI_HOST}/exercises/exercise/${encodeURIComponent(exerciseDbId)}`,
-        buildExerciseDbRequestInit(apiKey, signal),
-    )
+async function searchExerciseById(exerciseDbId: string, signal: AbortSignal): Promise<ExerciseDbItem | null> {
+    await acquireSlot()
+    try {
+        const response = await fetch(
+            `${EXERCISE_DB_FREE_API_BASE}/exercises/${encodeURIComponent(exerciseDbId)}`,
+            { signal },
+        )
 
-    if (!response.ok) {
+        if (!response.ok) {
+            return null
+        }
+
+        const payload = (await response.json()) as ExerciseDbItemResponse
+        const item = payload?.data
+        if (!item?.id && !item?.gifUrl) {
+            return null
+        }
+
+        return item
+    } catch {
         return null
+    } finally {
+        releaseSlot()
     }
-
-    const payload = (await response.json()) as ExerciseDbItem
-    if (!payload?.id) {
-        return null
-    }
-
-    return payload
 }
 
 export function useExerciseDetail(exerciseName: string, options?: UseExerciseDetailOptions): UseExerciseDetailResult {
     const normalizedName = useMemo(() => normalizeExerciseName(exerciseName), [exerciseName])
     const currentLanguage = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
-    const apiKey = import.meta.env.VITE_EXERCISEDB_API_KEY
     const exerciseId = options?.exerciseId
     const exerciseDbId = options?.exerciseDbId
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
+    const primaryMuscle = options?.grupoMuscularPrimario
     const fallbackInstructionsValue = options?.fallbackInstructions
     const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
+    const staticFallbackGifUrl = resolveStaticFallbackGifUrl(primaryMuscle)
     const fallbackInstructionSignature = normalizeExerciseName(fallbackInstructionsValue ?? '')
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
+    const primaryMuscleSignature = normalizeExerciseName(primaryMuscle ?? '')
     const retryKey = options?.retryKey ?? ''
-    const cacheKey = `${INSTRUCTION_TRANSLATION_CACHE_VERSION}|${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}|${fallbackGifUrl}|${fallbackInstructionSignature}|${retryKey}`
+    const cacheKey = `${INSTRUCTION_TRANSLATION_CACHE_VERSION}|${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${currentLanguage}|${fallbackGifUrl}|${staticFallbackGifUrl}|${primaryMuscleSignature}|${fallbackInstructionSignature}|${retryKey}`
     const cached = normalizedName ? detailCache.get(cacheKey) : undefined
     const shouldFetch = Boolean(normalizedName && cached === undefined)
     const [state, setState] = useState<UseExerciseDetailResult>({
@@ -1339,7 +1405,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             if (cachedGifUrl && exerciseDbId?.trim()) {
                 gifUrlCache.set(exerciseDbId, cachedGifUrl)
             }
-            const resolvedFallbackGifUrl = cachedGifUrl || fallbackGifUrl || ''
+            const resolvedFallbackGifUrl = cachedGifUrl || fallbackGifUrl || staticFallbackGifUrl || ''
 
             setState({
                 data: null,
@@ -1354,13 +1420,13 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
             })
 
             try {
-                const byId = apiKey && exerciseDbId?.trim()
-                    ? await searchExerciseById(exerciseDbId, apiKey, controller.signal)
+                const byId = exerciseDbId?.trim()
+                    ? await searchExerciseById(exerciseDbId, controller.signal)
                     : null
                 let byCandidate: { item: ExerciseDbItem; usedCandidate: string } | null = null
 
-                if (!byId && apiKey) {
-                    byCandidate = await searchExerciseByCandidates(candidates, apiKey, controller.signal)
+                if (!byId) {
+                    byCandidate = await searchExerciseByCandidates(candidates, controller.signal)
                 }
 
                 const bestMatch = byId ?? byCandidate?.item ?? null
@@ -1572,7 +1638,6 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         }
     }, [
         aliasSignature,
-        apiKey,
         cacheKey,
         currentLanguage,
         exerciseId,
@@ -1583,6 +1648,7 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
         fallbackGifUrl,
         fallbackInstructionsValue,
         normalizedName,
+        staticFallbackGifUrl,
         shouldFetch,
     ])
 

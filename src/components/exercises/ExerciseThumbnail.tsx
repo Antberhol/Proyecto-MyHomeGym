@@ -16,7 +16,7 @@ interface ExerciseThumbnailProps {
 export function ExerciseThumbnail({
     exerciseId,
     nombre,
-    grupoMuscularPrimario: _grupoMuscularPrimario,
+    grupoMuscularPrimario,
     equipoNecesario: _equipoNecesario,
     imagenUrl,
     exerciseDbId,
@@ -24,7 +24,7 @@ export function ExerciseThumbnail({
     exerciseDbAliases,
     className = 'h-16 w-24',
 }: ExerciseThumbnailProps) {
-    // FIX 5: Delay fetch until the element has been visible for 500ms to prevent
+    // FIX 5: Delay fetch until the element has been visible for 200ms to prevent
     // 30-50 simultaneous API requests on catalog page load.
     const containerRef = useRef<HTMLDivElement>(null)
     const [isVisible, setIsVisible] = useState(false)
@@ -38,12 +38,12 @@ export function ExerciseThumbnail({
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0]?.isIntersecting) {
-                    timeoutId = setTimeout(() => setIsVisible(true), 500)
+                    timeoutId = setTimeout(() => setIsVisible(true), 200)
                 } else {
                     clearTimeout(timeoutId)
                 }
             },
-            { threshold: 0 },
+            { threshold: 0.1 },
         )
 
         observer.observe(container)
@@ -59,9 +59,13 @@ export function ExerciseThumbnail({
         exerciseDbName,
         exerciseDbAliases,
         fallbackGifUrl: imagenUrl,
+        grupoMuscularPrimario,
         enabled: isVisible,
     })
     const [gifLoaded, setGifLoaded] = useState(false)
+
+    const shouldShowSkeleton = !isVisible || (isVisible && (isLoading || !gifLoaded))
+    const skeletonOpacityClass = !isVisible ? 'opacity-50' : 'opacity-100'
 
     useEffect(() => {
         setGifLoaded(false)
@@ -69,13 +73,13 @@ export function ExerciseThumbnail({
 
     return (
         <div ref={containerRef} className={`relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
-            {(isLoading || !gifLoaded) && (
-                <div className="absolute inset-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
+            {shouldShowSkeleton && (
+                <div className={`absolute inset-0 animate-pulse bg-slate-200 dark:bg-slate-700 ${skeletonOpacityClass}`} />
             )}
             <img
                 src={gifUrl || EXERCISE_GIF_PLACEHOLDER}
                 alt={`GIF de ${nombre}`}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover transition-opacity duration-500 ${gifLoaded ? 'opacity-100' : 'opacity-0'}`}
                 loading="lazy"
                 onLoad={() => setGifLoaded(true)}
                 onError={(event) => {

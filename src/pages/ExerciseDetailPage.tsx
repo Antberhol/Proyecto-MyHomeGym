@@ -99,10 +99,38 @@ export function ExerciseDetailPage() {
         exerciseDbId: exercise?.exerciseDbId,
         exerciseDbName: englishAlias,
         exerciseDbAliases: exercise?.exerciseDbAliases,
+        grupoMuscularPrimario: exercise?.grupoMuscularPrimario,
         fallbackInstructions: exercise?.instrucciones,
         fallbackGifUrl: exercise?.imagenUrl,
         retryKey: retryCount,
     })
+
+    const apiSource = 'exercisedb-api.vercel.app (free)'
+    const gifUrlDomain = (() => {
+        const gifUrl = detail.data?.gifUrl
+        if (!gifUrl || gifUrl.startsWith('data:')) {
+            return 'placeholder'
+        }
+
+        try {
+            return new URL(gifUrl).hostname || 'placeholder'
+        } catch {
+            return 'placeholder'
+        }
+    })()
+
+    const clearExerciseGifCache = () => {
+        const cacheExerciseDbId =
+            exercise?.exerciseDbId?.trim() ||
+            detail.debug.resolvedExerciseDbId?.trim() ||
+            ''
+
+        if (cacheExerciseDbId) {
+            window.localStorage.removeItem(`gifcache_v1_${cacheExerciseDbId}`)
+        }
+
+        setRetryCount((c) => c + 1)
+    }
 
     if (isCatalogLoading || (exercise && detail.isLoading)) {
         return <ExerciseDetailSkeleton />
@@ -272,7 +300,18 @@ export function ExerciseDetailPage() {
                             <dd className="pl-4">{detail.debug.lastError ?? '—'}</dd>
                             <dt className="font-medium">gifUrl</dt>
                             <dd className="break-all pl-4">{detail.data?.gifUrl ?? '—'}</dd>
+                            <dt className="font-medium">apiSource</dt>
+                            <dd className="pl-4">{apiSource}</dd>
+                            <dt className="font-medium">gifUrlDomain</dt>
+                            <dd className="pl-4">{gifUrlDomain}</dd>
                         </dl>
+                        <button
+                            type="button"
+                            onClick={clearExerciseGifCache}
+                            className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                        >
+                            Limpiar caché de este ejercicio
+                        </button>
                     </details>
                 )}
             </Card>
