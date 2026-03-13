@@ -64,6 +64,10 @@ const EXERCISE_DB_RAPIDAPI_HOST = 'exercisedb.p.rapidapi.com'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
+function isLegacyRapidApiGifUrl(url: string): boolean {
+    return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
+}
+
 // FIX 2: localStorage helpers for cross-session gifUrl persistence.
 function readGifUrlFromLocalStorage(exerciseDbId: string): string | undefined {
     try {
@@ -75,6 +79,10 @@ function readGifUrlFromLocalStorage(exerciseDbId: string): string | undefined {
             return undefined
         }
         if (typeof parsed.gifUrl !== 'string' || !parsed.gifUrl) return undefined
+        if (isLegacyRapidApiGifUrl(parsed.gifUrl)) {
+            localStorage.removeItem(`${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`)
+            return undefined
+        }
         return parsed.gifUrl
     } catch {
         return undefined
@@ -1153,8 +1161,8 @@ function normalizeGifUrl(url: string): string {
 }
 
 // FIX 1: Use the CDN gifUrl from the API response — cache by item.id for in-session reuse.
-function resolveExerciseGifUrl(item: ExerciseDbItem): string {
-    if (item.gifUrl?.trim()) {
+function resolveExerciseGifUrl(item: ExerciseDbItem | null): string {
+    if (item?.gifUrl?.trim()) {
         const normalized = normalizeGifUrl(item.gifUrl)
         if (item.id && normalized) {
             gifUrlCache.set(item.id, normalized)
@@ -1162,7 +1170,7 @@ function resolveExerciseGifUrl(item: ExerciseDbItem): string {
         return normalized
     }
 
-    if (item.id) {
+    if (item?.id) {
         return gifUrlCache.get(item.id) ?? ''
     }
 

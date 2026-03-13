@@ -36,6 +36,10 @@ const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 let hasRunCacheCleanup = false
 
+function isLegacyRapidApiGifUrl(url: string): boolean {
+    return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
+}
+
 interface ExerciseGifCacheEntry extends ExerciseGifData {
     cachedAt: number
 }
@@ -88,6 +92,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
         }
 
         if (typeof parsed.gifUrl !== 'string' || typeof parsed.targetMuscle !== 'string') {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
+        if (isLegacyRapidApiGifUrl(parsed.gifUrl)) {
             storage.removeItem(storageKey)
             return undefined
         }
