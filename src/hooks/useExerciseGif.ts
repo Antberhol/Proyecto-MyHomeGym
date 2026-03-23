@@ -391,12 +391,6 @@ function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOpti
     return Array.from(candidates)
 }
 
-function tokenizeForMatch(value: string): string[] {
-    return normalizeExerciseName(value)
-        .split(' ')
-        .filter((token) => token.length > 2)
-}
-
 function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDbItem | null {
     if (items.length === 0) return null
     const normalizedCandidate = normalizeExerciseName(candidate)
