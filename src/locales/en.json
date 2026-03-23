@@ -247,6 +247,7 @@
             "volumePerSession": "Volume per session",
             "heatmapFrequency": "Frequency heatmap (10 weeks)",
             "oneRmCalculator": "1RM calculator (Epley)",
+            "oneRmEvolution": "1RM evolution by exercise",
             "sessionCalculators": "Session calculators",
             "consistencyRecommendations": "Consistency and recommendations",
             "bodyDiagram": "Body diagram",
@@ -254,7 +255,11 @@
         },
         "range": {
             "weekly": "Weekly",
-            "monthly": "Monthly"
+            "monthly": "Monthly",
+            "1m": "1 month",
+            "3m": "3 months",
+            "6m": "6 months",
+            "all": "All"
         },
         "tooltip": {
             "volumeLabel": "Volume",
@@ -267,7 +272,10 @@
         "charts": {
             "cintura": "Waist progression",
             "pecho": "Chest progression",
-            "pierna": "Leg diameter progression"
+            "pierna": "Leg diameter progression",
+            "biceps": "Biceps progression",
+            "hombros": "Shoulders progression",
+            "pantorrilla": "Calf progression"
         },
         "scaleNote": "Auto scale: minimum 10,000 kg, expanded if you exceed that volume in a single session.",
         "heatmap": {
@@ -288,6 +296,11 @@
             "met": "MET"
         },
         "oneRmEstimated": "Estimated 1RM",
+        "oneRmEvolution": {
+            "selectExercise": "Select an exercise",
+            "noData": "Select an exercise with at least 3 logs to see its 1RM evolution.",
+            "rmLabel": "Estimated 1RM"
+        },
         "estimatedVolume": "Estimated volume",
         "estimatedCalories": "Estimated calories",
         "labels": {

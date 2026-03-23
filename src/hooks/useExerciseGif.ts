@@ -10,6 +10,9 @@ interface ExerciseDbItem {
     gifUrl?: string
     target?: string
     targetMuscles?: string[]
+    equipment?: string
+    instructions?: string[]
+    secondaryMuscles?: string[]
 }
 
 interface ExerciseGifData {
@@ -34,7 +37,7 @@ interface UseExerciseGifOptions {
     enabled?: boolean
 }
 
-const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
+const EXERCISE_DB_FREE_API_BASE = 'https://exercisedb-api.vercel.app/api/v2'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v2_'
 const LEGACY_EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -45,10 +48,6 @@ const waitQueue: Array<() => void> = []
 
 function isLegacyRapidApiGifUrl(url: string): boolean {
     return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
-}
-
-function isExerciseDbHostedGifUrl(url: string): boolean {
-    return /https?:\/\/(?:[^/]+\.)?exercisedb\.(?:dev|io)\//i.test(url)
 }
 
 function resolveExerciseDbItemId(item: ExerciseDbItem | null): string {
@@ -71,7 +70,12 @@ interface ExerciseGifCacheEntry extends ExerciseGifData {
 
 interface ExerciseDbListResponse {
     success?: boolean
-    data?: ExerciseDbItem[]
+    data?: {
+        previousPage?: string | null
+        nextPage?: string | null
+        totalExercises?: number
+        exercises?: ExerciseDbItem[]
+    }
 }
 
 interface ExerciseDbItemResponse {
@@ -141,11 +145,6 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
             return undefined
         }
 
-        if (!isExerciseDbHostedGifUrl(parsed.gifUrl)) {
-            storage.removeItem(storageKey)
-            return undefined
-        }
-
         if (!parsed.gifUrl || parsed.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
             storage.removeItem(storageKey)
             return undefined
@@ -165,10 +164,6 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
 
 function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
     if (!value.gifUrl || value.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
-        return
-    }
-
-    if (!isExerciseDbHostedGifUrl(value.gifUrl)) {
         return
     }
 
@@ -250,7 +245,7 @@ async function searchExerciseDbByCandidates(
 
         try {
             const response = await fetch(
-                `${EXERCISE_DB_FREE_API_BASE}/exercises/search?q=${encodeURIComponent(candidate)}&limit=5`,
+                `${EXERCISE_DB_FREE_API_BASE}/exercises?name=${encodeURIComponent(candidate)}&limit=5&offset=0`,
                 { signal },
             )
 
@@ -259,7 +254,7 @@ async function searchExerciseDbByCandidates(
             }
 
             const payload = (await response.json()) as ExerciseDbListResponse
-            const items = Array.isArray(payload?.data) ? payload.data : []
+            const items = Array.isArray(payload?.data?.exercises) ? payload.data.exercises : []
             if (items.length === 0) {
                 continue
             }

@@ -247,6 +247,7 @@
             "volumePerSession": "Volumen por sesión",
             "heatmapFrequency": "Heatmap de frecuencia (10 semanas)",
             "oneRmCalculator": "Calculadora 1RM (Epley)",
+            "oneRmEvolution": "Evolución de 1RM por ejercicio",
             "sessionCalculators": "Calculadoras de sesión",
             "consistencyRecommendations": "Consistencia y recomendaciones",
             "bodyDiagram": "Diagrama corporal",
@@ -254,7 +255,11 @@
         },
         "range": {
             "weekly": "Semanal",
-            "monthly": "Mensual"
+            "monthly": "Mensual",
+            "1m": "1 mes",
+            "3m": "3 meses",
+            "6m": "6 meses",
+            "all": "Todo"
         },
         "tooltip": {
             "volumeLabel": "Volumen",
@@ -267,7 +272,10 @@
         "charts": {
             "cintura": "Evolución de cintura",
             "pecho": "Evolución de pecho",
-            "pierna": "Evolución de diámetro de pierna"
+            "pierna": "Evolución de diámetro de pierna",
+            "biceps": "Evolución de bíceps",
+            "hombros": "Evolución de hombros",
+            "pantorrilla": "Evolución de pantorrilla"
         },
         "scaleNote": "Escala automática: mínimo 10.000 kg, se amplía si superas ese volumen en una sesión.",
         "heatmap": {
@@ -288,6 +296,11 @@
             "met": "MET"
         },
         "oneRmEstimated": "1RM estimado",
+        "oneRmEvolution": {
+            "selectExercise": "Selecciona un ejercicio",
+            "noData": "Selecciona un ejercicio con al menos 3 registros para ver su evolución de 1RM.",
+            "rmLabel": "1RM estimado"
+        },
         "estimatedVolume": "Volumen estimado",
         "estimatedCalories": "Calorías estimadas",
         "labels": {

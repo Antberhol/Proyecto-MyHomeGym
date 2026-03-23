@@ -28,21 +28,21 @@ const TRACKED_GROUPS = [
 ] as const
 
 const GROUP_LABELS: Record<string, string> = {
-  pecho: 'Chest',
-  hombros: 'Shoulders',
-  biceps: 'Biceps',
-  triceps: 'Triceps',
-  antebrazo: 'Forearm',
+  pecho: 'Pecho',
+  hombros: 'Hombros',
+  biceps: 'Bíceps',
+  triceps: 'Tríceps',
+  antebrazo: 'Antebrazo',
   core: 'Core',
-  oblicuos: 'Obliques',
-  trapecio: 'Trapezius',
-  'espalda-alta': 'Upper back',
-  'espalda-baja': 'Lower back',
-  cuadriceps: 'Quadriceps',
-  isquiotibial: 'Hamstring',
-  gluteo: 'Glute',
-  gemelo: 'Calf',
-  aductor: 'Adductor',
+  oblicuos: 'Oblicuos',
+  trapecio: 'Trapecio',
+  'espalda-alta': 'Espalda alta',
+  'espalda-baja': 'Espalda baja',
+  cuadriceps: 'Cuádriceps',
+  isquiotibial: 'Isquiotibial',
+  gluteo: 'Glúteo',
+  gemelo: 'Gemelo',
+  aductor: 'Aductor',
   abductor: 'Abductor',
 }
 
@@ -223,7 +223,9 @@ export function ProgresoPage() {
   const [calWeight, setCalWeight] = useState(75)
   const [calMinutes, setCalMinutes] = useState(60)
   const [calMet, setCalMet] = useState(6)
+  const [selectedExerciseForRm, setSelectedExerciseForRm] = useState<string>('')
   const [volumeRange, setVolumeRange] = useState<'weekly' | 'monthly'>('weekly')
+  const [measurementRange, setMeasurementRange] = useState<'1m' | '3m' | '6m' | 'all'>('all')
   const [copiedPrId, setCopiedPrId] = useState<string | null>(null)
   const numberLocale = i18n.language.toLowerCase().startsWith('es') ? 'es-ES' : 'en-US'
 
@@ -235,25 +237,64 @@ export function ProgresoPage() {
     [measurements],
   )
 
-  const bodyData = sortedMeasurements.map((item) => ({
-    fecha: new Date(item.fechaRegistro).toLocaleDateString(),
-    peso: item.pesoCorporal,
-    imc: item.imc,
-  }))
+  const filteredMeasurements = useMemo(() => {
+    if (measurementRange === 'all') {
+      return sortedMeasurements
+    }
+
+    const monthsByRange: Record<'1m' | '3m' | '6m', number> = {
+      '1m': 1,
+      '3m': 3,
+      '6m': 6,
+    }
+    const months = monthsByRange[measurementRange]
+    const since = new Date()
+    since.setMonth(since.getMonth() - months)
+
+    return sortedMeasurements.filter((item) => {
+      const itemDate = new Date(item.fechaRegistro)
+      return Number.isFinite(itemDate.getTime()) && itemDate >= since
+    })
+  }, [measurementRange, sortedMeasurements])
+
+  const bodyData = useMemo(
+    () =>
+      filteredMeasurements.map((item) => ({
+        fecha: new Date(item.fechaRegistro).toLocaleDateString(),
+        peso: item.pesoCorporal,
+        imc: item.imc,
+      })),
+    [filteredMeasurements],
+  )
 
   const cinturaData = useMemo(
-    () => buildOptionalMeasurementSeries(sortedMeasurements, 'cintura'),
-    [sortedMeasurements],
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'cintura'),
+    [filteredMeasurements],
   )
 
   const pechoData = useMemo(
-    () => buildOptionalMeasurementSeries(sortedMeasurements, 'pecho'),
-    [sortedMeasurements],
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'pecho'),
+    [filteredMeasurements],
   )
 
   const diametroPiernaData = useMemo(
-    () => buildOptionalMeasurementSeries(sortedMeasurements, 'diametroPierna'),
-    [sortedMeasurements],
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'diametroPierna'),
+    [filteredMeasurements],
+  )
+
+  const bicepsData = useMemo(
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'biceps'),
+    [filteredMeasurements],
+  )
+
+  const hombrosData = useMemo(
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'hombros'),
+    [filteredMeasurements],
+  )
+
+  const pantorrillaData = useMemo(
+    () => buildOptionalMeasurementSeries(filteredMeasurements, 'pantorrilla'),
+    [filteredMeasurements],
   )
 
   const volumeData = useMemo(() => {
@@ -392,6 +433,57 @@ export function ProgresoPage() {
     return new Map(exercises.map((exercise) => [exercise.id, exercise.nombre]))
   }, [exercises])
 
+  const exercisesEligibleForRmEvolution = useMemo(() => {
+    const countByExerciseId = performedExercises.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.ejercicioId] = (acc[entry.ejercicioId] ?? 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(countByExerciseId)
+      .filter(([, count]) => count >= 3)
+      .map(([id]) => ({
+        id,
+        name: exerciseNameById.get(id) ?? t('dashboard.common.exercise'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, numberLocale))
+  }, [exerciseNameById, numberLocale, performedExercises, t])
+
+  const oneRmEvolutionData = useMemo(() => {
+    if (!selectedExerciseForRm) {
+      return []
+    }
+
+    const bestSetByDay = new Map<string, { fecha: string; peso: number; reps: number }>()
+    for (const entry of performedExercises) {
+      if (entry.ejercicioId !== selectedExerciseForRm) {
+        continue
+      }
+
+      const date = new Date(entry.fecha)
+      if (!Number.isFinite(date.getTime())) {
+        continue
+      }
+
+      const dayKey = date.toISOString().slice(0, 10)
+      const current = bestSetByDay.get(dayKey)
+      if (!current || entry.pesoUtilizado > current.peso) {
+        bestSetByDay.set(dayKey, {
+          fecha: dayKey,
+          peso: entry.pesoUtilizado,
+          reps: entry.repeticionesRealizadas,
+        })
+      }
+    }
+
+    return Array.from(bestSetByDay.values())
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map((item) => ({
+        fecha: new Date(`${item.fecha}T00:00:00`).toLocaleDateString(),
+        rm: estimateOneRmEpley(item.peso, item.reps),
+      }))
+      .filter((item) => Number.isFinite(item.rm) && item.rm > 0)
+  }, [performedExercises, selectedExerciseForRm])
+
   const prByType = useMemo(() => {
     const exercisePrs = prs.filter((pr) => pr.ejercicioId !== 'GLOBAL')
     const byType = {
@@ -516,6 +608,27 @@ export function ProgresoPage() {
       color: '#14b8a6',
       gradientId: 'piernaAreaGradient',
     },
+    {
+      id: 'biceps',
+      title: t('progress.charts.biceps'),
+      data: bicepsData,
+      color: '#ec4899',
+      gradientId: 'bicepsAreaGradient',
+    },
+    {
+      id: 'hombros',
+      title: t('progress.charts.hombros'),
+      data: hombrosData,
+      color: '#6366f1',
+      gradientId: 'hombrosAreaGradient',
+    },
+    {
+      id: 'pantorrilla',
+      title: t('progress.charts.pantorrilla'),
+      data: pantorrillaData,
+      color: '#fb923c',
+      gradientId: 'pantorrillaAreaGradient',
+    },
   ].filter((chart) => chart.data.length >= 2)
 
   return (
@@ -523,7 +636,39 @@ export function ProgresoPage() {
       <h1 className="text-2xl font-bold">{t('progress.title')}</h1>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.weightImc')}</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{t('progress.sections.weightImc')}</h2>
+          <div className="inline-flex rounded-lg border border-slate-300 p-1 dark:border-slate-600">
+            <button
+              type="button"
+              onClick={() => setMeasurementRange('1m')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${measurementRange === '1m' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              {t('progress.range.1m')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeasurementRange('3m')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${measurementRange === '3m' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              {t('progress.range.3m')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeasurementRange('6m')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${measurementRange === '6m' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              {t('progress.range.6m')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMeasurementRange('all')}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${measurementRange === 'all' ? 'bg-gym-primary text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              {t('progress.range.all')}
+            </button>
+          </div>
+        </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={bodyData}>
@@ -737,6 +882,54 @@ export function ProgresoPage() {
             {t('progress.oneRmEstimated')}: <span className="font-semibold">{oneRm.toFixed(1)} kg</span>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+        <h2 className="mb-3 text-lg font-semibold">{t('progress.sections.oneRmEvolution')}</h2>
+        <div className="mb-3">
+          <label htmlFor="one-rm-exercise" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+            {t('progress.oneRmEvolution.selectExercise')}
+          </label>
+          <select
+            id="one-rm-exercise"
+            value={selectedExerciseForRm}
+            onChange={(event) => setSelectedExerciseForRm(event.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          >
+            <option value="">{t('progress.oneRmEvolution.selectExercise')}</option>
+            {exercisesEligibleForRmEvolution.map((exercise) => (
+              <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {oneRmEvolutionData.length >= 3 ? (
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={oneRmEvolutionData}>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" />
+                <XAxis dataKey="fecha" tick={CHART_AXIS_TICK} minTickGap={10} />
+                <YAxis tick={CHART_AXIS_TICK} />
+                <Tooltip content={renderLineTooltip} />
+                <Legend
+                  wrapperStyle={{ paddingTop: 10, fontSize: 12 }}
+                  formatter={(value, entry) => <span style={{ color: (entry as { color?: string }).color }}>{value}</span>}
+                />
+                <Line
+                  type="monotone"
+                  name={t('progress.oneRmEvolution.rmLabel')}
+                  dataKey="rm"
+                  stroke="#f59e0b"
+                  strokeWidth={2.25}
+                  dot={false}
+                  activeDot={{ r: 5, fill: '#ffffff', stroke: '#f59e0b', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-300">{t('progress.oneRmEvolution.noData')}</p>
+        )}
       </section>
 
       <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -1041,8 +1234,16 @@ export function ProgresoPage() {
 }
 
 function buildOptionalMeasurementSeries(
-  measurements: Array<{ fechaRegistro: string; cintura?: number; pecho?: number; diametroPierna?: number }>,
-  field: 'cintura' | 'pecho' | 'diametroPierna',
+  measurements: Array<{
+    fechaRegistro: string
+    cintura?: number
+    pecho?: number
+    diametroPierna?: number
+    biceps?: number
+    hombros?: number
+    pantorrilla?: number
+  }>,
+  field: 'cintura' | 'pecho' | 'diametroPierna' | 'biceps' | 'hombros' | 'pantorrilla',
 ) {
   return measurements
     .filter((item) => item[field] != null)
