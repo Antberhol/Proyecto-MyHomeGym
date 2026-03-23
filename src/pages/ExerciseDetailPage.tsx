@@ -105,7 +105,7 @@ export function ExerciseDetailPage() {
         retryKey: retryCount,
     })
 
-    const apiSource = 'exercisedb-api.vercel.app (free)'
+    const apiSource = 'oss.exercisedb.dev (free)'
     const gifUrlDomain = (() => {
         const gifUrl = detail.data?.gifUrl
         if (!gifUrl || gifUrl.startsWith('data:')) {
@@ -126,6 +126,7 @@ export function ExerciseDetailPage() {
             ''
 
         if (cacheExerciseDbId) {
+            window.localStorage.removeItem(`gifcache_v2_${cacheExerciseDbId}`)
             window.localStorage.removeItem(`gifcache_v1_${cacheExerciseDbId}`)
         }
 

@@ -5,9 +5,11 @@ import { exerciseRepository } from '../repositories/exerciseRepository'
 
 interface ExerciseDbItem {
     id?: string
+    exerciseId?: string
     name?: string
     gifUrl?: string
     target?: string
+    targetMuscles?: string[]
 }
 
 interface ExerciseGifData {
@@ -32,17 +34,35 @@ interface UseExerciseGifOptions {
     enabled?: boolean
 }
 
-const EXERCISE_DB_FREE_API_BASE = 'https://exercisedb-api.vercel.app/api/v2'
-const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
+const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
+const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v2_'
+const LEGACY_EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 let hasRunCacheCleanup = false
-const pendingRequests = new Set<string>()
 let activeRequests = 0
 const MAX_CONCURRENT = 3
 const waitQueue: Array<() => void> = []
 
 function isLegacyRapidApiGifUrl(url: string): boolean {
     return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
+}
+
+function isExerciseDbHostedGifUrl(url: string): boolean {
+    return /https?:\/\/(?:[^/]+\.)?exercisedb\.(?:dev|io)\//i.test(url)
+}
+
+function resolveExerciseDbItemId(item: ExerciseDbItem | null): string {
+    return item?.id?.trim() || item?.exerciseId?.trim() || ''
+}
+
+function resolveTargetMuscle(item: ExerciseDbItem | null): string {
+    const primaryTarget = item?.target?.trim()
+    if (primaryTarget) {
+        return primaryTarget
+    }
+
+    const targetFromList = item?.targetMuscles?.find((muscle) => typeof muscle === 'string' && muscle.trim())?.trim()
+    return targetFromList ?? ''
 }
 
 interface ExerciseGifCacheEntry extends ExerciseGifData {
@@ -121,6 +141,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
             return undefined
         }
 
+        if (!isExerciseDbHostedGifUrl(parsed.gifUrl)) {
+            storage.removeItem(storageKey)
+            return undefined
+        }
+
         if (!parsed.gifUrl || parsed.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
             storage.removeItem(storageKey)
             return undefined
@@ -140,6 +165,10 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
 
 function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
     if (!value.gifUrl || value.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
+        return
+    }
+
+    if (!isExerciseDbHostedGifUrl(value.gifUrl)) {
         return
     }
 
@@ -217,16 +246,11 @@ async function searchExerciseDbByCandidates(
     signal: AbortSignal,
 ): Promise<ExerciseDbItem | null> {
     for (const candidate of candidates) {
-        if (pendingRequests.has(candidate)) {
-            continue
-        }
-
-        pendingRequests.add(candidate)
         await acquireSlot()
 
         try {
             const response = await fetch(
-                `${EXERCISE_DB_FREE_API_BASE}/exercises/name/${encodeURIComponent(candidate)}?limit=5`,
+                `${EXERCISE_DB_FREE_API_BASE}/exercises/search?q=${encodeURIComponent(candidate)}&limit=5`,
                 { signal },
             )
 
@@ -241,7 +265,7 @@ async function searchExerciseDbByCandidates(
             }
 
             const best = selectBestMatch(
-                items.filter((item) => item.id || item.gifUrl),
+                items.filter((item) => Boolean(resolveExerciseDbItemId(item) || item.gifUrl)),
                 candidate,
             )
             if (best) {
@@ -253,7 +277,6 @@ async function searchExerciseDbByCandidates(
             }
         } finally {
             releaseSlot()
-            pendingRequests.delete(candidate)
         }
     }
 
@@ -277,11 +300,11 @@ async function searchExerciseDbById(
 
         const payload = (await response.json()) as ExerciseDbItemResponse
         const item = payload?.data
-        if (!item?.id && !item?.gifUrl) {
+        if (!resolveExerciseDbItemId(item ?? null) && !item?.gifUrl) {
             return null
         }
 
-        return item
+        return item ?? null
     } catch {
         return null
     } finally {
@@ -381,7 +404,7 @@ function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDb
     }
 
     // FIX 3: Loose fallback — single-result list with valid data.
-    if (items.length === 1 && items[0].gifUrl && items[0].id) {
+    if (items.length === 1 && items[0].gifUrl && resolveExerciseDbItemId(items[0])) {
         return items[0]
     }
 
@@ -426,7 +449,16 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         const keysToRemove: string[] = []
         for (let i = 0; i < storage.length; i++) {
             const key = storage.key(i)
-            if (!key?.startsWith(EXERCISE_GIF_CACHE_KEY_PREFIX)) continue
+            if (!key) {
+                continue
+            }
+            if (!key.startsWith(EXERCISE_GIF_CACHE_KEY_PREFIX) && !key.startsWith(LEGACY_EXERCISE_GIF_CACHE_KEY_PREFIX)) {
+                continue
+            }
+            if (key.startsWith(LEGACY_EXERCISE_GIF_CACHE_KEY_PREFIX)) {
+                keysToRemove.push(key)
+                continue
+            }
             try {
                 const raw = storage.getItem(key)
                 if (!raw) { keysToRemove.push(key); continue }
@@ -479,7 +511,8 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     firstResult = await searchExerciseDbByCandidates(candidates, controller.signal)
                 }
 
-                const resolvedByCandidate = !byId && Boolean(firstResult?.id)
+                const resolvedExerciseDbId = resolveExerciseDbItemId(firstResult)
+                const resolvedByCandidate = !byId && Boolean(resolvedExerciseDbId)
 
                 const resolved: ExerciseGifData = {
                     gifUrl:
@@ -487,8 +520,8 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                         fallbackGifUrl ||
                         staticFallbackGifUrl ||
                         EXERCISE_GIF_PLACEHOLDER,
-                    targetMuscle: firstResult?.target || '',
-                    resolvedExerciseDbId: firstResult?.id,
+                    targetMuscle: resolveTargetMuscle(firstResult),
+                    resolvedExerciseDbId: resolvedExerciseDbId || undefined,
                     resolvedExerciseDbName: firstResult?.name,
                 }
 

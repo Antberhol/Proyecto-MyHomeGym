@@ -24,10 +24,14 @@ export interface ExerciseDetailDebugInfo {
 
 interface ExerciseDbItem {
     id?: string
+    exerciseId?: string
     name?: string
     gifUrl?: string
     target?: string
+    targetMuscles?: string[]
+    bodyParts?: string[]
     equipment?: string
+    equipments?: string[]
     instructions?: string[]
     secondaryMuscles?: string[]
 }
@@ -62,10 +66,9 @@ const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
 const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v5'
-const EXERCISE_DB_FREE_API_BASE = 'https://exercisedb-api.vercel.app/api/v2'
-const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
+const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
+const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v2_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
-const pendingRequests = new Set<string>()
 let activeRequests = 0
 const MAX_CONCURRENT = 3
 const waitQueue: Array<() => void> = []
@@ -84,6 +87,42 @@ function isLegacyRapidApiGifUrl(url: string): boolean {
     return /https?:\/\/exercisedb\.p\.rapidapi\.com\/image/i.test(url)
 }
 
+function isExerciseDbHostedGifUrl(url: string): boolean {
+    return /https?:\/\/(?:[^/]+\.)?exercisedb\.(?:dev|io)\//i.test(url)
+}
+
+function resolveExerciseDbItemId(item: ExerciseDbItem | null): string {
+    return item?.id?.trim() || item?.exerciseId?.trim() || ''
+}
+
+function resolveTargetMuscle(item: ExerciseDbItem | null): string {
+    const primaryTarget = item?.target?.trim()
+    if (primaryTarget) {
+        return primaryTarget
+    }
+
+    const targetFromList = item?.targetMuscles?.find((muscle) => typeof muscle === 'string' && muscle.trim())?.trim()
+    return targetFromList ?? ''
+}
+
+function resolveEquipment(item: ExerciseDbItem | null): string {
+    const equipment = item?.equipment?.trim()
+    if (equipment) {
+        return equipment
+    }
+
+    const equipmentFromList = item?.equipments?.find((value) => typeof value === 'string' && value.trim())?.trim()
+    return equipmentFromList ?? ''
+}
+
+function resolveSecondaryMuscles(item: ExerciseDbItem | null): string[] {
+    if (!Array.isArray(item?.secondaryMuscles)) {
+        return []
+    }
+
+    return item.secondaryMuscles.filter((muscle) => typeof muscle === 'string' && muscle.trim())
+}
+
 // FIX 2: localStorage helpers for cross-session gifUrl persistence.
 function readGifUrlFromLocalStorage(exerciseDbId: string): string | undefined {
     try {
@@ -96,6 +135,10 @@ function readGifUrlFromLocalStorage(exerciseDbId: string): string | undefined {
         }
         if (typeof parsed.gifUrl !== 'string' || !parsed.gifUrl) return undefined
         if (isLegacyRapidApiGifUrl(parsed.gifUrl)) {
+            localStorage.removeItem(`${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`)
+            return undefined
+        }
+        if (!isExerciseDbHostedGifUrl(parsed.gifUrl)) {
             localStorage.removeItem(`${EXERCISE_GIF_CACHE_KEY_PREFIX}${exerciseDbId}`)
             return undefined
         }
@@ -1204,14 +1247,16 @@ function resolveStaticFallbackGifUrl(primaryMuscle?: string): string {
 function resolveExerciseGifUrl(item: ExerciseDbItem | null): string {
     if (item?.gifUrl?.trim()) {
         const normalized = normalizeGifUrl(item.gifUrl)
-        if (item.id && normalized) {
-            gifUrlCache.set(item.id, normalized)
+        const exerciseDbItemId = resolveExerciseDbItemId(item)
+        if (exerciseDbItemId && normalized) {
+            gifUrlCache.set(exerciseDbItemId, normalized)
         }
         return normalized
     }
 
-    if (item?.id) {
-        return gifUrlCache.get(item.id) ?? ''
+    const exerciseDbItemId = resolveExerciseDbItemId(item)
+    if (exerciseDbItemId) {
+        return gifUrlCache.get(exerciseDbItemId) ?? ''
     }
 
     return ''
@@ -1247,7 +1292,7 @@ function selectBestMatch(items: ExerciseDbItem[], exerciseName: string): Exercis
     }
 
     // FIX 3: Loose fallback — single-result list with valid data.
-    if (items.length === 1 && items[0].gifUrl && items[0].id) {
+    if (items.length === 1 && items[0].gifUrl && resolveExerciseDbItemId(items[0])) {
         return items[0]
     }
 
@@ -1285,16 +1330,11 @@ async function searchExerciseByCandidates(
     signal: AbortSignal,
 ): Promise<{ item: ExerciseDbItem; usedCandidate: string } | null> {
     for (const candidate of candidates) {
-        if (pendingRequests.has(candidate)) {
-            continue
-        }
-
-        pendingRequests.add(candidate)
         await acquireSlot()
 
         try {
             const response = await fetch(
-                `${EXERCISE_DB_FREE_API_BASE}/exercises/name/${encodeURIComponent(candidate)}?limit=5`,
+                `${EXERCISE_DB_FREE_API_BASE}/exercises/search?q=${encodeURIComponent(candidate)}&limit=5`,
                 { signal },
             )
 
@@ -1309,7 +1349,7 @@ async function searchExerciseByCandidates(
             }
 
             const best = selectBestMatch(items, candidate)
-            if (best?.id) {
+            if (best && resolveExerciseDbItemId(best)) {
                 return { item: best, usedCandidate: candidate }
             }
         } catch {
@@ -1318,7 +1358,6 @@ async function searchExerciseByCandidates(
             }
         } finally {
             releaseSlot()
-            pendingRequests.delete(candidate)
         }
     }
 
@@ -1339,11 +1378,11 @@ async function searchExerciseById(exerciseDbId: string, signal: AbortSignal): Pr
 
         const payload = (await response.json()) as ExerciseDbItemResponse
         const item = payload?.data
-        if (!item?.id && !item?.gifUrl) {
+        if (!resolveExerciseDbItemId(item ?? null) && !item?.gifUrl) {
             return null
         }
 
-        return item
+        return item ?? null
     } catch {
         return null
     } finally {
@@ -1430,13 +1469,13 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 }
 
                 const bestMatch = byId ?? byCandidate?.item ?? null
-                const resolvedByCandidate = !byId && Boolean(byCandidate?.item.id)
+                const resolvedByCandidate = !byId && Boolean(resolveExerciseDbItemId(byCandidate?.item ?? null))
 
                 await persistResolvedExerciseDbLink({
                     exerciseId,
                     currentExerciseDbId: exerciseDbId,
                     currentExerciseDbName: exerciseDbName,
-                    resolvedExerciseDbId: byCandidate?.item.id,
+                    resolvedExerciseDbId: resolveExerciseDbItemId(byCandidate?.item ?? null) || undefined,
                     resolvedExerciseDbName: byCandidate?.item.name,
                     resolvedByCandidate,
                 })
@@ -1522,15 +1561,16 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                 const instructionSource = rawInstructions.length > 0 ? rawInstructions : fallbackInstructions
                 // FIX 1: Get gifUrl from CDN field; FIX 2: write to localStorage for next visit.
                 const resolvedGifUrl = resolveExerciseGifUrl(bestMatch) || resolvedFallbackGifUrl
-                if (bestMatch.id && resolvedGifUrl) {
-                    writeGifUrlToLocalStorage(bestMatch.id, resolvedGifUrl)
+                const bestMatchId = resolveExerciseDbItemId(bestMatch)
+                if (bestMatchId && resolvedGifUrl && isExerciseDbHostedGifUrl(resolvedGifUrl)) {
+                    writeGifUrlToLocalStorage(bestMatchId, resolvedGifUrl)
                 }
                 const detailData: ExerciseDetailData = {
                     gifUrl: resolvedGifUrl,
-                    target: bestMatch.target ?? '',
-                    equipment: bestMatch.equipment ?? '',
+                    target: resolveTargetMuscle(bestMatch),
+                    equipment: resolveEquipment(bestMatch),
                     instructions: instructionSource,
-                    secondaryMuscles: Array.isArray(bestMatch.secondaryMuscles) ? bestMatch.secondaryMuscles : [],
+                    secondaryMuscles: resolveSecondaryMuscles(bestMatch),
                 }
 
                 const needsTranslation =
@@ -1544,8 +1584,8 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                         isTranslatingInstructions: true,
                         notFound: false,
                         debug: {
-                            source: byId || bestMatch.id ? 'id' : 'candidate',
-                            resolvedExerciseDbId: bestMatch.id,
+                            source: byId ? 'id' : 'candidate',
+                            resolvedExerciseDbId: bestMatchId || undefined,
                             resolvedExerciseDbName: bestMatch.name,
                             usedCandidate: byCandidate?.usedCandidate,
                             candidatesTried: candidates,
@@ -1565,8 +1605,8 @@ export function useExerciseDetail(exerciseName: string, options?: UseExerciseDet
                     data: detailData,
                     notFound: false,
                     debug: {
-                        source: byId || bestMatch.id ? 'id' : 'candidate',
-                        resolvedExerciseDbId: bestMatch.id,
+                        source: byId ? 'id' : 'candidate',
+                        resolvedExerciseDbId: bestMatchId || undefined,
                         resolvedExerciseDbName: bestMatch.name,
                         usedCandidate: byCandidate?.usedCandidate,
                         candidatesTried: candidates,

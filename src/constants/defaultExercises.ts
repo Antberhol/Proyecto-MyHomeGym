@@ -1,5 +1,10 @@
 import { exerciseDbExpandedExercises } from './exerciseDbExpandedExercises'
 import {
+    getExerciseDbAliasesForName,
+    getExerciseDbQueryCandidates,
+    normalizeExerciseName,
+} from './exerciseDbAliases'
+import {
     buildSpanishExerciseDescription,
     normalizeEquipmentLabel,
     normalizeExerciseDisplayName,
@@ -86,8 +91,79 @@ const baseDefaultExercises: DefaultExerciseSeed[] = [
     { id: 'core-crunch-cable', nombre: 'Crunch en polea', grupoMuscularPrimario: 'core', equipoNecesario: 'cable' },
 ]
 
-const baseIds = new Set(baseDefaultExercises.map((exercise) => exercise.id))
-const baseNames = new Set(baseDefaultExercises.map((exercise) => exercise.nombre.trim().toLowerCase()))
+function mergeExerciseDbAliases(...aliasGroups: Array<string[] | undefined>): string[] | undefined {
+    const merged = Array.from(
+        new Set(
+            aliasGroups
+                .flatMap((group) => group ?? [])
+                .map((alias) => alias.trim())
+                .filter(Boolean),
+        ),
+    )
+
+    return merged.length > 0 ? merged : undefined
+}
+
+function buildCandidateKeys(exercise: DefaultExerciseSeed): string[] {
+    const keys = new Set<string>()
+    const add = (value?: string) => {
+        const normalized = normalizeExerciseName(value ?? '')
+        if (normalized) {
+            keys.add(normalized)
+        }
+    }
+
+    add(exercise.exerciseDbName)
+    for (const alias of exercise.exerciseDbAliases ?? []) {
+        add(alias)
+    }
+    for (const alias of getExerciseDbAliasesForName(exercise.nombre)) {
+        add(alias)
+    }
+    for (const candidate of getExerciseDbQueryCandidates(exercise.nombre)) {
+        add(candidate)
+    }
+
+    return Array.from(keys)
+}
+
+const expandedByDbName = new Map(
+    exerciseDbExpandedExercises
+        .filter((exercise) => exercise.exerciseDbName && exercise.exerciseDbId && exercise.imagenUrl)
+        .map((exercise) => [normalizeExerciseName(exercise.exerciseDbName), exercise] as const),
+)
+
+const enrichedBaseDefaultExercises: DefaultExerciseSeed[] = baseDefaultExercises.map((exercise) => {
+    if (exercise.exerciseDbId?.trim() && exercise.imagenUrl?.trim()) {
+        return exercise
+    }
+
+    const matchedExpanded = buildCandidateKeys(exercise)
+        .map((candidate) => expandedByDbName.get(candidate))
+        .find((match) => Boolean(match?.exerciseDbId && match?.imagenUrl))
+
+    if (!matchedExpanded) {
+        return {
+            ...exercise,
+            exerciseDbAliases: mergeExerciseDbAliases(exercise.exerciseDbAliases, getExerciseDbAliasesForName(exercise.nombre)),
+        }
+    }
+
+    return {
+        ...exercise,
+        imagenUrl: exercise.imagenUrl ?? matchedExpanded.imagenUrl,
+        exerciseDbId: exercise.exerciseDbId ?? matchedExpanded.exerciseDbId,
+        exerciseDbName: exercise.exerciseDbName ?? matchedExpanded.exerciseDbName,
+        exerciseDbAliases: mergeExerciseDbAliases(
+            exercise.exerciseDbAliases,
+            getExerciseDbAliasesForName(exercise.nombre),
+            matchedExpanded.exerciseDbAliases,
+        ),
+    }
+})
+
+const baseIds = new Set(enrichedBaseDefaultExercises.map((exercise) => exercise.id))
+const baseNames = new Set(enrichedBaseDefaultExercises.map((exercise) => exercise.nombre.trim().toLowerCase()))
 
 const normalizedExpandedDefaults: DefaultExerciseSeed[] = exerciseDbExpandedExercises.map((exercise) => {
     const grupoMuscularPrimario = normalizePrimaryMuscleLabel(exercise.grupoMuscularPrimario)
@@ -116,4 +192,4 @@ const expandedUniqueDefaults: DefaultExerciseSeed[] = normalizedExpandedDefaults
     (exercise) => !baseIds.has(exercise.id) && !baseNames.has(exercise.nombre.trim().toLowerCase()),
 )
 
-export const defaultExercises: DefaultExerciseSeed[] = [...baseDefaultExercises, ...expandedUniqueDefaults]
+export const defaultExercises: DefaultExerciseSeed[] = [...enrichedBaseDefaultExercises, ...expandedUniqueDefaults]

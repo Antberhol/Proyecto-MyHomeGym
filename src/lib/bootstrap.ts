@@ -53,11 +53,61 @@ async function insertMissingDefaultExercises(now: string) {
 }
 
 export async function resyncExerciseGifMappings() {
+  const existing = await db.getAllExercisesCatalog()
+  const defaultExerciseById = new Map(defaultExercises.map((exercise) => [exercise.id, exercise]))
+  let updated = 0
+
+  await Promise.all(
+    existing.map(async (exercise) => {
+      const defaultSeed = defaultExerciseById.get(exercise.id)
+      const preferredName =
+        defaultSeed?.exerciseDbName ??
+        getPreferredExerciseDbName(exercise.nombre) ??
+        getExerciseDbQueryCandidates(exercise.nombre)[0]
+      const aliases = Array.from(
+        new Set([
+          ...(defaultSeed?.exerciseDbAliases ?? []),
+          ...getExerciseDbAliasesForName(exercise.nombre),
+        ]),
+      )
+
+      const nextName = exercise.exerciseDbName ?? preferredName
+      const nextExerciseDbId = exercise.exerciseDbId ?? defaultSeed?.exerciseDbId
+      const nextImageUrl =
+        exercise.imagenUrl ?? (defaultSeed && !exercise.esPersonalizado ? defaultSeed.imagenUrl : undefined)
+      const nextAliases =
+        exercise.exerciseDbAliases && exercise.exerciseDbAliases.length > 0
+          ? exercise.exerciseDbAliases
+          : aliases
+
+      const hasNameChange = Boolean(nextName && nextName !== exercise.exerciseDbName)
+      const hasExerciseDbIdChange = Boolean(nextExerciseDbId && nextExerciseDbId !== exercise.exerciseDbId)
+      const hasImageUrlChange = Boolean(nextImageUrl && nextImageUrl !== exercise.imagenUrl)
+      const hasAliasesChange =
+        nextAliases.length > 0 &&
+        JSON.stringify(nextAliases) !== JSON.stringify(exercise.exerciseDbAliases ?? [])
+
+      if (!hasNameChange && !hasExerciseDbIdChange && !hasImageUrlChange && !hasAliasesChange) {
+        return
+      }
+
+      await db.updateExercise(exercise.id, {
+        exerciseDbId: nextExerciseDbId,
+        exerciseDbName: nextName,
+        exerciseDbAliases: nextAliases.length > 0 ? nextAliases : undefined,
+        imagenUrl: nextImageUrl,
+        updatedAt: new Date().toISOString(),
+      })
+
+      updated += 1
+    }),
+  )
+
   return {
     skipped: false,
     reason: 'ok' as const,
-    scanned: 0,
-    updated: 0,
+    scanned: existing.length,
+    updated,
   }
 }
 
