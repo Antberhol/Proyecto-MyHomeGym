@@ -29,21 +29,46 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
     }, [gifUrl])
 
     const language = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
-    const localInstructions = (exercise.instrucciones ?? '').split(/\r?\n|\.\s+/).map((step) => step.trim()).filter((step) => step.length > 0)
+
+    // Función estricta para detectar si una frase es española y NO contiene basura en inglés
+    const isSpanishStep = (step: string) => {
+        const lowerStep = step.toLowerCase()
+        const hasEnglish = /\b(the|to|and|with|your|you|keep|push|pull|lower|raise|repeat|starting|position|feet|hands|back|straight|then)\b/.test(lowerStep)
+        const hasSpanish = /\b(el|la|los|las|y|con|tu|su|mantén|empuja|tira|baja|eleva|repite|posición|espalda|pecho|brazos|pies|manos)\b/.test(lowerStep)
+        return hasSpanish && !hasEnglish // Debe tener palabras clave en ES y NINGUNA en EN
+    }
+
+    // Extraemos y limpiamos la BD local
+    const rawLocalSteps = (exercise.instrucciones ?? '')
+        .split(/\r?\n|.\s+/)
+        .map((step) => step.trim())
+        .filter((step) => step.length > 5)
+
+    const pureSpanishInstructions = rawLocalSteps.filter(isSpanishStep)
     const apiInstructions = (instructions ?? []).filter((step) => step.trim().length > 0)
-    const generatedInstructions = language === 'es' ? [
-        `Coloca tu cuerpo en la posición inicial de ${exercise.nombre} y estabiliza el core.`,
-        'Ejecuta el movimiento de forma controlada y con rango completo.',
-        'Regresa a la posición inicial manteniendo la técnica y repite.'
-    ] : [
-        `Set your body in the starting position for ${exercise.nombre} and brace your core.`,
-        'Perform each rep in a controlled full range of motion.',
-        'Return to the starting position with good form and repeat.'
-    ]
+
+    // Instrucciones dinámicas generadas si todo falla
+    const generatedInstructions = language === 'es'
+        ? [
+            `Prepárate para realizar ${exercise.nombre}. Ajusta el peso adecuado a tu nivel.`,
+            `Adopta la posición inicial, manteniendo una buena postura y activando el core.`,
+            `Ejecuta el movimiento de forma controlada, sintiendo el trabajo en la zona de ${exercise.grupoMuscularPrimario || 'esfuerzo'}.`,
+            `Regresa a la posición inicial sin perder la tensión muscular y repite.`
+        ]
+        : [
+            `Get ready for ${exercise.nombre}. Select an appropriate weight.`,
+            `Assume the starting position, keeping good posture and a tight core.`,
+            `Perform the movement with control, focusing on your ${targetMuscle || exercise.grupoMuscularPrimario || 'target'} muscles.`,
+            `Return to the start position maintaining muscle tension and repeat.`
+        ]
+
+    // Asignación final sin mezcla de idiomas
     let effectiveInstructions: string[] = []
     if (language === 'es') {
-        effectiveInstructions = localInstructions.length > 0 ? localInstructions : generatedInstructions
+        // Si logramos salvar al menos 2 pasos buenos en español de la BD, los usamos. Si no, usamos las generadas.
+        effectiveInstructions = pureSpanishInstructions.length >= 2 ? pureSpanishInstructions : generatedInstructions
     } else {
+        // En inglés priorizamos la API
         effectiveInstructions = apiInstructions.length > 0 ? apiInstructions : generatedInstructions
     }
 

@@ -345,17 +345,35 @@ function normalizeGifUrl(url: string): string {
 }
 
 function resolveStaticFallbackGifUrl(primaryMuscle?: string): string {
-    if (!primaryMuscle?.trim()) {
-        return ''
+    if (!primaryMuscle?.trim()) return ''
+
+    // Normalizar quitando tildes y pasando a minúsculas
+    const normalizedMuscle = primaryMuscle
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+
+    // Mapeo exhaustivo de sinónimos al nombre base en inglés de tu objeto exerciseStaticImages
+    const muscleMap: Record<string, string> = {
+        'pecho': 'chest', 'pectorales': 'chest',
+        'espalda': 'back', 'dorsales': 'back', 'lumbares': 'back',
+        'hombros': 'shoulders', 'deltoides': 'shoulders',
+        'brazos': 'arms', 'biceps': 'arms', 'triceps': 'arms', 'antebrazos': 'arms',
+        'piernas': 'legs', 'cuadriceps': 'legs', 'femorales': 'legs', 'gemelos': 'legs', 'pantorrillas': 'legs', 'gluteos': 'legs',
+        'core': 'core', 'abdominales': 'core', 'abdomen': 'core'
     }
 
-    const normalizedMuscle = normalizeExerciseName(primaryMuscle)
-    if (exerciseStaticImages[normalizedMuscle]) {
-        return exerciseStaticImages[normalizedMuscle]
+    const mappedKey = muscleMap[normalizedMuscle] || normalizedMuscle
+
+    // Buscar coincidencia en exerciseStaticImages
+    if (exerciseStaticImages[mappedKey]) {
+        return exerciseStaticImages[mappedKey]
     }
 
-    for (const [muscleKey, imageUrl] of Object.entries(exerciseStaticImages)) {
-        if (normalizedMuscle.includes(muscleKey)) {
+    // Búsqueda parcial como último recurso
+    for (const [key, imageUrl] of Object.entries(exerciseStaticImages)) {
+        if (mappedKey.includes(key) || key.includes(mappedKey)) {
             return imageUrl
         }
     }
