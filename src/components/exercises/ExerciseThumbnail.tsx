@@ -93,8 +93,8 @@ export function ExerciseThumbnail({
                 className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
                 loading="lazy"
                 onLoad={() => setGifLoaded(true)}
-                onError={(event) => {
-                    event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                onError={(e) => {
+                    e.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
                     setGifLoaded(true)
                 }}
             />

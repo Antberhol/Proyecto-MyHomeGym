@@ -29,31 +29,23 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
     }, [gifUrl])
 
     const language = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
-
-    const normalizedFallbackInstructions = (exercise.instrucciones ?? '')
-        .split(/\r?\n|\.\s+/)
-        .map((step) => step.trim())
-        .filter((step) => step.length > 0)
-
-    const apiInstructions = (instructions ?? [])
-        .map((step) => step.trim())
-        .filter((step) => step.length > 0)
-
-    const generatedInstructions = language === 'es'
-        ? [
-            `Coloca tu cuerpo en la posición inicial de ${exercise.nombre} y estabiliza el core.`,
-            'Ejecuta el movimiento de forma controlada y con rango completo.',
-            'Regresa a la posición inicial manteniendo la técnica y repite.',
-        ]
-        : [
-            `Set your body in the starting position for ${exercise.nombre} and brace your core.`,
-            'Perform each rep in a controlled full range of motion.',
-            'Return to the starting position with good form and repeat.',
-        ]
-
-    const effectiveInstructions = language === 'es'
-        ? (normalizedFallbackInstructions.length > 0 ? normalizedFallbackInstructions : generatedInstructions)
-        : (apiInstructions.length > 0 ? apiInstructions : generatedInstructions)
+    const localInstructions = (exercise.instrucciones ?? '').split(/\r?\n|\.\s+/).map((step) => step.trim()).filter((step) => step.length > 0)
+    const apiInstructions = (instructions ?? []).filter((step) => step.trim().length > 0)
+    const generatedInstructions = language === 'es' ? [
+        `Coloca tu cuerpo en la posición inicial de ${exercise.nombre} y estabiliza el core.`,
+        'Ejecuta el movimiento de forma controlada y con rango completo.',
+        'Regresa a la posición inicial manteniendo la técnica y repite.'
+    ] : [
+        `Set your body in the starting position for ${exercise.nombre} and brace your core.`,
+        'Perform each rep in a controlled full range of motion.',
+        'Return to the starting position with good form and repeat.'
+    ]
+    let effectiveInstructions: string[] = []
+    if (language === 'es') {
+        effectiveInstructions = localInstructions.length > 0 ? localInstructions : generatedInstructions
+    } else {
+        effectiveInstructions = apiInstructions.length > 0 ? apiInstructions : generatedInstructions
+    }
 
     const equipmentTags = [exercise.equipoNecesario]
         .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -80,8 +72,8 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                         className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
                         loading="lazy"
                         onLoad={() => setGifLoaded(true)}
-                        onError={(event) => {
-                            event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                        onError={(e) => {
+                            e.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
                             setGifLoaded(true)
                         }}
                     />
