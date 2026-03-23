@@ -37,7 +37,7 @@ interface UseExerciseGifOptions {
     enabled?: boolean
 }
 
-const EXERCISE_DB_FREE_API_BASE = 'https://exercisedb-api.vercel.app/api/v2'
+const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v2_'
 const LEGACY_EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v1_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -70,7 +70,9 @@ interface ExerciseGifCacheEntry extends ExerciseGifData {
 
 interface ExerciseDbListResponse {
     success?: boolean
-    data?: {
+    data?:
+        | ExerciseDbItem[]
+        | {
         previousPage?: string | null
         nextPage?: string | null
         totalExercises?: number
@@ -245,7 +247,7 @@ async function searchExerciseDbByCandidates(
 
         try {
             const response = await fetch(
-                `${EXERCISE_DB_FREE_API_BASE}/exercises?name=${encodeURIComponent(candidate)}&limit=5&offset=0`,
+                `${EXERCISE_DB_FREE_API_BASE}/exercises/search?q=${encodeURIComponent(candidate)}&limit=5`,
                 { signal },
             )
 
@@ -254,7 +256,11 @@ async function searchExerciseDbByCandidates(
             }
 
             const payload = (await response.json()) as ExerciseDbListResponse
-            const items = Array.isArray(payload?.data?.exercises) ? payload.data.exercises : []
+            const items = Array.isArray(payload?.data)
+                ? payload.data
+                : Array.isArray(payload?.data?.exercises)
+                    ? payload.data.exercises
+                    : []
             if (items.length === 0) {
                 continue
             }
