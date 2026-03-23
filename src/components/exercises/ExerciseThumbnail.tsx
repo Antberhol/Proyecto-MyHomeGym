@@ -65,13 +65,9 @@ export function ExerciseThumbnail({
         grupoMuscularPrimario,
         enabled: shouldFetchGif,
     })
-
-    const previewUrl = imagenUrl || EXERCISE_GIF_PLACEHOLDER
-    const renderedUrl = shouldFetchGif ? gifUrl || previewUrl : previewUrl
     const [gifLoaded, setGifLoaded] = useState(false)
 
-    const shouldShowSkeleton = !isVisible || (shouldFetchGif && (isLoading || !gifLoaded))
-    const skeletonOpacityClass = !isVisible ? 'opacity-50' : 'opacity-100'
+    const shouldShowSkeleton = shouldFetchGif && isLoading && !gifLoaded
 
     useEffect(() => {
         setGifLoaded(false)
@@ -89,16 +85,16 @@ export function ExerciseThumbnail({
             onClick={() => setHasInteracted(true)}
         >
             {shouldShowSkeleton && (
-                <div className={`absolute inset-0 animate-pulse bg-slate-200 dark:bg-slate-700 ${skeletonOpacityClass}`} />
+                <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
             )}
             <img
-                src={renderedUrl}
+                src={gifUrl}
                 alt={`GIF de ${nombre}`}
-                className={`h-full w-full object-cover transition-opacity duration-500 ${gifLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
                 loading="lazy"
                 onLoad={() => setGifLoaded(true)}
                 onError={(event) => {
-                    event.currentTarget.src = previewUrl
+                    event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
                     setGifLoaded(true)
                 }}
             />

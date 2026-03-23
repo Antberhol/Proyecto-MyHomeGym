@@ -451,17 +451,11 @@ function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDb
         .sort((a, b) => b.score - a.score)
 
     const best = ranked[0]
-    if (!best || best.score < 220) {
+    if (!best || best.score < 150) {
         return null
     }
 
-    const second = ranked[1]
-    if (second && best.score - second.score < 40) {
-        // Ambiguous match: better return no match than a wrong GIF.
-        return null
-    }
-
-    if (!resolveExerciseDbItemId(best.item) || !best.item.gifUrl) {
+    if (!best.item.gifUrl) {
         return null
     }
 
