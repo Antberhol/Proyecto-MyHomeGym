@@ -76,8 +76,8 @@ const waitQueue: Array<() => void> = []
 interface ExerciseDbListResponse {
     success?: boolean
     data?:
-        | ExerciseDbItem[]
-        | {
+    | ExerciseDbItem[]
+    | {
         previousPage?: string | null
         nextPage?: string | null
         totalExercises?: number

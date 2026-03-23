@@ -24,10 +24,11 @@ export function ExerciseThumbnail({
     exerciseDbAliases,
     className = 'h-16 w-24',
 }: ExerciseThumbnailProps) {
-    // FIX 5: Delay fetch until the element has been visible for 200ms to prevent
-    // 30-50 simultaneous API requests on catalog page load.
+    // Keep IntersectionObserver as a visibility gate, but fetch only after user interaction.
     const containerRef = useRef<HTMLDivElement>(null)
     const [isVisible, setIsVisible] = useState(false)
+    const [isHovered, setIsHovered] = useState(false)
+    const [hasInteracted, setHasInteracted] = useState(false)
 
     useEffect(() => {
         const container = containerRef.current
@@ -53,6 +54,8 @@ export function ExerciseThumbnail({
         }
     }, [])
 
+    const shouldFetchGif = isVisible && (isHovered || hasInteracted)
+
     const { gifUrl, isLoading } = useExerciseGif(nombre, {
         exerciseId,
         exerciseDbId,
@@ -60,11 +63,14 @@ export function ExerciseThumbnail({
         exerciseDbAliases,
         fallbackGifUrl: imagenUrl,
         grupoMuscularPrimario,
-        enabled: isVisible,
+        enabled: shouldFetchGif,
     })
+
+    const previewUrl = imagenUrl || EXERCISE_GIF_PLACEHOLDER
+    const renderedUrl = shouldFetchGif ? gifUrl || previewUrl : previewUrl
     const [gifLoaded, setGifLoaded] = useState(false)
 
-    const shouldShowSkeleton = !isVisible || (isVisible && (isLoading || !gifLoaded))
+    const shouldShowSkeleton = !isVisible || (shouldFetchGif && (isLoading || !gifLoaded))
     const skeletonOpacityClass = !isVisible ? 'opacity-50' : 'opacity-100'
 
     useEffect(() => {
@@ -72,18 +78,27 @@ export function ExerciseThumbnail({
     }, [gifUrl])
 
     return (
-        <div ref={containerRef} className={`relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}>
+        <div
+            ref={containerRef}
+            className={`relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 ${className}`}
+            onMouseEnter={() => {
+                setIsHovered(true)
+                setHasInteracted(true)
+            }}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={() => setHasInteracted(true)}
+        >
             {shouldShowSkeleton && (
                 <div className={`absolute inset-0 animate-pulse bg-slate-200 dark:bg-slate-700 ${skeletonOpacityClass}`} />
             )}
             <img
-                src={gifUrl || EXERCISE_GIF_PLACEHOLDER}
+                src={renderedUrl}
                 alt={`GIF de ${nombre}`}
                 className={`h-full w-full object-cover transition-opacity duration-500 ${gifLoaded ? 'opacity-100' : 'opacity-0'}`}
                 loading="lazy"
                 onLoad={() => setGifLoaded(true)}
                 onError={(event) => {
-                    event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                    event.currentTarget.src = previewUrl
                     setGifLoaded(true)
                 }}
             />

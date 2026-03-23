@@ -18,6 +18,7 @@ interface ExerciseDbItem {
 interface ExerciseGifData {
     gifUrl: string
     targetMuscle: string
+    instructions?: string[]
     resolvedExerciseDbId?: string
     resolvedExerciseDbName?: string
 }
@@ -64,6 +65,26 @@ function resolveTargetMuscle(item: ExerciseDbItem | null): string {
     return targetFromList ?? ''
 }
 
+function sanitizeInstructions(input: unknown): string[] {
+    if (!Array.isArray(input)) {
+        return []
+    }
+
+    return input
+        .filter((step): step is string => typeof step === 'string')
+        .map((step) =>
+            step
+                .replace(/^\s*step\s*:?\s*\d+\s*/i, '')
+                .replace(/^\s*\d+[).:-]?\s*/, '')
+                .trim(),
+        )
+        .filter((step) => step.length > 0)
+}
+
+function resolveInstructions(item: ExerciseDbItem | null): string[] {
+    return sanitizeInstructions(item?.instructions)
+}
+
 interface ExerciseGifCacheEntry extends ExerciseGifData {
     cachedAt: number
 }
@@ -71,8 +92,8 @@ interface ExerciseGifCacheEntry extends ExerciseGifData {
 interface ExerciseDbListResponse {
     success?: boolean
     data?:
-        | ExerciseDbItem[]
-        | {
+    | ExerciseDbItem[]
+    | {
         previousPage?: string | null
         nextPage?: string | null
         totalExercises?: number
@@ -155,6 +176,7 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
         return {
             gifUrl: parsed.gifUrl,
             targetMuscle: parsed.targetMuscle,
+            instructions: sanitizeInstructions(parsed.instructions),
             resolvedExerciseDbId: typeof parsed.resolvedExerciseDbId === 'string' ? parsed.resolvedExerciseDbId : undefined,
             resolvedExerciseDbName: typeof parsed.resolvedExerciseDbName === 'string' ? parsed.resolvedExerciseDbName : undefined,
         }
@@ -375,6 +397,39 @@ function tokenizeForMatch(value: string): string[] {
         .filter((token) => token.length > 2)
 }
 
+function scoreMatch(item: ExerciseDbItem, candidate: string): number {
+    const normalizedCandidate = normalizeExerciseName(candidate)
+    const normalizedName = normalizeExerciseName(item.name ?? '')
+
+    if (!normalizedName) {
+        return 0
+    }
+
+    const candidateTokens = tokenizeForMatch(candidate)
+    const nameTokens = new Set(tokenizeForMatch(item.name ?? ''))
+    const sharedTokenCount = candidateTokens.filter((token) => nameTokens.has(token)).length
+    const tokenCoverage = candidateTokens.length > 0 ? sharedTokenCount / candidateTokens.length : 0
+
+    let score = 0
+    if (normalizedName === normalizedCandidate) {
+        score += 1000
+    }
+
+    if (normalizedName.startsWith(normalizedCandidate) || normalizedCandidate.startsWith(normalizedName)) {
+        score += 250
+    }
+
+    score += Math.round(tokenCoverage * 200)
+    if (resolveExerciseDbItemId(item)) {
+        score += 25
+    }
+    if (item.gifUrl) {
+        score += 25
+    }
+
+    return score
+}
+
 function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDbItem | null {
     if (items.length === 0) {
         return null
@@ -391,25 +446,26 @@ function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDb
         return null
     }
 
-    const strongTokenMatch = items.find((item) => {
-        const nameTokens = new Set(tokenizeForMatch(item.name ?? ''))
-        if (nameTokens.size === 0) {
-            return false
-        }
+    const ranked = items
+        .map((item) => ({ item, score: scoreMatch(item, candidate) }))
+        .sort((a, b) => b.score - a.score)
 
-        return candidateTokens.every((token) => nameTokens.has(token))
-    })
-
-    if (strongTokenMatch) {
-        return strongTokenMatch
+    const best = ranked[0]
+    if (!best || best.score < 220) {
+        return null
     }
 
-    // FIX 3: Loose fallback — single-result list with valid data.
-    if (items.length === 1 && items[0].gifUrl && resolveExerciseDbItemId(items[0])) {
-        return items[0]
+    const second = ranked[1]
+    if (second && best.score - second.score < 40) {
+        // Ambiguous match: better return no match than a wrong GIF.
+        return null
     }
 
-    return null
+    if (!resolveExerciseDbItemId(best.item) || !best.item.gifUrl) {
+        return null
+    }
+
+    return best.item
 }
 
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
@@ -522,6 +578,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                         staticFallbackGifUrl ||
                         EXERCISE_GIF_PLACEHOLDER,
                     targetMuscle: resolveTargetMuscle(firstResult),
+                    instructions: resolveInstructions(firstResult),
                     resolvedExerciseDbId: resolvedExerciseDbId || undefined,
                     resolvedExerciseDbName: firstResult?.name,
                 }
@@ -545,6 +602,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                     const fallback = {
                         gifUrl: resolvedFallbackGifUrl,
                         targetMuscle: '',
+                        instructions: [],
                         resolvedExerciseDbId: undefined,
                         resolvedExerciseDbName: undefined,
                     }
@@ -578,6 +636,7 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         return {
             gifUrl: defaultGifUrl,
             targetMuscle: '',
+            instructions: [],
             resolvedExerciseDbId: undefined,
             resolvedExerciseDbName: undefined,
             isLoading: false,
