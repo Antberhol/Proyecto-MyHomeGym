@@ -6,7 +6,7 @@ import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
 import { getPreferredExerciseDbName } from '../constants/exerciseDbAliases'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
-import { EXERCISE_GIF_PLACEHOLDER } from '../hooks/useExerciseGif'
+import { DEFAULT_FALLBACK_GIF } from '../hooks/useExerciseGif'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
 import type { Exercise } from '../types/models'
@@ -196,14 +196,15 @@ export function ExerciseDetailPage() {
                         <div className="absolute inset-0 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                     )}
                     <img
-                        src={detail.data?.gifUrl || EXERCISE_GIF_PLACEHOLDER}
+                        src={detail.data?.gifUrl || DEFAULT_FALLBACK_GIF}
                         alt={t('exerciseDetail.gifAlt', { name: exercise.nombre })}
                         className={`h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 md:h-96 ${gifLoaded ? 'opacity-100' : 'opacity-0'
                             }`}
                         loading="lazy"
                         onLoad={() => setGifLoaded(true)}
                         onError={(event) => {
-                            event.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                            event.currentTarget.onerror = null
+                            event.currentTarget.src = DEFAULT_FALLBACK_GIF
                             setGifLoaded(true)
                         }}
                     />

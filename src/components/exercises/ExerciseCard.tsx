@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Exercise } from '../../types/models'
-import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
+import { DEFAULT_FALLBACK_GIF, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseCardProps {
-    exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'equipoNecesario' | 'imagenUrl' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases' | 'instrucciones'>
+    exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'equipoNecesario' | 'gifUrl' | 'imagenUrl' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases' | 'instrucciones'>
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
@@ -18,6 +18,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         exerciseDbId: exercise.exerciseDbId,
         exerciseDbName: exercise.exerciseDbName,
         exerciseDbAliases: exercise.exerciseDbAliases,
+        gifUrl: exercise.gifUrl,
         fallbackGifUrl: exercise.imagenUrl,
         grupoMuscularPrimario: exercise.grupoMuscularPrimario,
         enabled: shouldFetchGif,
@@ -98,7 +99,8 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                         loading="lazy"
                         onLoad={() => setGifLoaded(true)}
                         onError={(e) => {
-                            e.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                            e.currentTarget.onerror = null
+                            e.currentTarget.src = DEFAULT_FALLBACK_GIF
                             setGifLoaded(true)
                         }}
                     />

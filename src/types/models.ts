@@ -44,6 +44,7 @@ export interface Exercise extends SyncMetadata {
   gruposMuscularesSecundarios: string[]
   nivelDificultad: DifficultyLevel
   equipoNecesario: string
+  gifUrl?: string
   imagenUrl?: string
   exerciseDbId?: string
   exerciseDbName?: string

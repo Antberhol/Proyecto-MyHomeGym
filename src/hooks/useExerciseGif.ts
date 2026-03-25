@@ -32,6 +32,7 @@ interface UseExerciseGifOptions {
     exerciseDbId?: string
     exerciseDbName?: string
     exerciseDbAliases?: string[]
+    gifUrl?: string
     fallbackGifUrl?: string
     grupoMuscularPrimario?: string
     /** When false, returns placeholder immediately without fetching (IntersectionObserver gate). */
@@ -248,17 +249,53 @@ async function persistResolvedExerciseDbLink(input: {
     }
 }
 
-export const EXERCISE_GIF_PLACEHOLDER =
-    'data:image/svg+xml;utf8,' +
-    encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Exercise image">' +
-        '<rect width="480" height="320" rx="24" fill="#E2E8F0"/>' +
-        '<rect x="160" y="120" width="160" height="110" rx="14" fill="#94A3B8"/>' +
-        '<circle cx="240" cy="175" r="34" fill="#CBD5E1"/>' +
-        '<circle cx="240" cy="175" r="22" fill="#94A3B8"/>' +
-        '<rect x="197" y="105" width="46" height="22" rx="7" fill="#94A3B8"/>' +
-        '</svg>',
-    )
+export const DEFAULT_FALLBACK_GIF =
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Squats_demo.gif/320px-Squats_demo.gif'
+
+// Backward-compatible export name used across existing components.
+export const EXERCISE_GIF_PLACEHOLDER = DEFAULT_FALLBACK_GIF
+
+function isGifUrl(url: string): boolean {
+    return /^data:image\/gif/i.test(url) || /\.gif(?:[?#].*)?$/i.test(url)
+}
+
+function sanitizeExerciseDbId(value?: string): string {
+    const normalized = value?.trim() ?? ''
+    if (!normalized) {
+        return ''
+    }
+
+    return /^[a-z0-9]+$/i.test(normalized) ? normalized : ''
+}
+
+function buildGifUrlFromExerciseIdentifiers(input: {
+    exerciseDbId?: string
+    exerciseId?: string
+}): string {
+    const fromDbId = sanitizeExerciseDbId(input.exerciseDbId)
+    if (fromDbId) {
+        return `https://static.exercisedb.dev/media/${fromDbId}.gif`
+    }
+
+    const exerciseId = input.exerciseId?.trim() ?? ''
+    const match = exerciseId.match(/^db-([a-z0-9]+)$/i)
+    if (match?.[1]) {
+        return `https://static.exercisedb.dev/media/${match[1]}.gif`
+    }
+
+    return ''
+}
+
+function resolveGuaranteedGifUrl(...candidates: Array<string | undefined>): string {
+    for (const candidate of candidates) {
+        const normalized = normalizeGifUrl(candidate ?? '')
+        if (normalized && isGifUrl(normalized)) {
+            return normalized
+        }
+    }
+
+    return DEFAULT_FALLBACK_GIF
+}
 
 async function searchExerciseDbByCandidates(
     candidates: string[],
@@ -427,11 +464,16 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     const exerciseDbName = options?.exerciseDbName
     const exerciseDbAliases = options?.exerciseDbAliases
     const primaryMuscle = options?.grupoMuscularPrimario
+    const directGifUrl = normalizeGifUrl(options?.gifUrl ?? '')
     const fallbackGifUrl = normalizeGifUrl(options?.fallbackGifUrl ?? '')
     const staticFallbackGifUrl = resolveStaticFallbackGifUrl(primaryMuscle)
+    const idBasedGifUrl = buildGifUrlFromExerciseIdentifiers({
+        exerciseDbId,
+        exerciseId,
+    })
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
     const primaryMuscleSignature = normalizeExerciseName(primaryMuscle ?? '')
-    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${fallbackGifUrl}|${primaryMuscleSignature}`
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${directGifUrl}|${fallbackGifUrl}|${primaryMuscleSignature}`
     const cached = useMemo(
         () => (normalizedName ? readExerciseGifCache(cacheKey) : undefined),
         [cacheKey, normalizedName],
@@ -439,7 +481,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     // FIX 5: disabled when element not yet visible (IntersectionObserver gate in ExerciseThumbnail).
     const enabled = options?.enabled !== false
     const shouldFetch = Boolean(normalizedName && !cached && enabled)
-    const defaultGifUrl = fallbackGifUrl || staticFallbackGifUrl || EXERCISE_GIF_PLACEHOLDER
+    const defaultGifUrl = resolveGuaranteedGifUrl(
+        directGifUrl,
+        idBasedGifUrl,
+        fallbackGifUrl,
+        staticFallbackGifUrl,
+    )
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: defaultGifUrl,
@@ -524,11 +571,13 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 const resolvedByCandidate = !byId && Boolean(resolvedExerciseDbId)
 
                 const resolved: ExerciseGifData = {
-                    gifUrl:
-                        resolveExerciseGifUrl(firstResult) ||
-                        fallbackGifUrl ||
-                        staticFallbackGifUrl ||
-                        EXERCISE_GIF_PLACEHOLDER,
+                    gifUrl: resolveGuaranteedGifUrl(
+                        resolveExerciseGifUrl(firstResult),
+                        directGifUrl,
+                        idBasedGifUrl,
+                        fallbackGifUrl,
+                        staticFallbackGifUrl,
+                    ),
                     targetMuscle: resolveTargetMuscle(firstResult),
                     instructions: resolveInstructions(firstResult),
                     resolvedExerciseDbId: resolvedExerciseDbId || undefined,
@@ -549,7 +598,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
             } catch (error) {
                 if (!controller.signal.aborted) {
                     console.warn('[GIF]', error)
-                    const resolvedFallbackGifUrl = fallbackGifUrl || staticFallbackGifUrl || EXERCISE_GIF_PLACEHOLDER
+                    const resolvedFallbackGifUrl = resolveGuaranteedGifUrl(
+                        directGifUrl,
+                        idBasedGifUrl,
+                        fallbackGifUrl,
+                        staticFallbackGifUrl,
+                    )
 
                     const fallback = {
                         gifUrl: resolvedFallbackGifUrl,
@@ -578,7 +632,9 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
         exerciseDbId,
         exerciseDbName,
         exerciseName,
+        directGifUrl,
         fallbackGifUrl,
+        idBasedGifUrl,
         normalizedName,
         staticFallbackGifUrl,
         shouldFetch,

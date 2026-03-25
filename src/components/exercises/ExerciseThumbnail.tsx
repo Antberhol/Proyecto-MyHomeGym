@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
+import { DEFAULT_FALLBACK_GIF, useExerciseGif } from '../../hooks/useExerciseGif'
 
 interface ExerciseThumbnailProps {
     exerciseId?: string
     nombre: string
     grupoMuscularPrimario?: string
     equipoNecesario?: string
+    gifUrl?: string
     imagenUrl?: string
     exerciseDbId?: string
     exerciseDbName?: string
@@ -18,6 +19,7 @@ export function ExerciseThumbnail({
     nombre,
     grupoMuscularPrimario,
     equipoNecesario: _equipoNecesario,
+    gifUrl: exerciseGifUrl,
     imagenUrl,
     exerciseDbId,
     exerciseDbName,
@@ -56,11 +58,12 @@ export function ExerciseThumbnail({
 
     const shouldFetchGif = isVisible && (isHovered || hasInteracted)
 
-    const { gifUrl, isLoading } = useExerciseGif(nombre, {
+    const { gifUrl: resolvedGifUrl, isLoading } = useExerciseGif(nombre, {
         exerciseId,
         exerciseDbId,
         exerciseDbName,
         exerciseDbAliases,
+        gifUrl: exerciseGifUrl,
         fallbackGifUrl: imagenUrl,
         grupoMuscularPrimario,
         enabled: shouldFetchGif,
@@ -71,7 +74,7 @@ export function ExerciseThumbnail({
 
     useEffect(() => {
         setGifLoaded(false)
-    }, [gifUrl])
+    }, [resolvedGifUrl])
 
     return (
         <div
@@ -88,13 +91,14 @@ export function ExerciseThumbnail({
                 <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
             )}
             <img
-                src={gifUrl}
+                src={resolvedGifUrl}
                 alt={`GIF de ${nombre}`}
                 className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
                 loading="lazy"
                 onLoad={() => setGifLoaded(true)}
                 onError={(e) => {
-                    e.currentTarget.src = EXERCISE_GIF_PLACEHOLDER
+                    e.currentTarget.onerror = null
+                    e.currentTarget.src = DEFAULT_FALLBACK_GIF
                     setGifLoaded(true)
                 }}
             />

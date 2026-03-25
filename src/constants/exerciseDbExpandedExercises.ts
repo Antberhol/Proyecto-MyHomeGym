@@ -6,6 +6,7 @@ export interface ExpandedExerciseSeed {
   gruposMuscularesSecundarios: string[]
   nivelDificultad: 'basico' | 'intermedio' | 'avanzado'
   equipoNecesario: string
+  gifUrl?: string
   imagenUrl: string
   exerciseDbId: string
   exerciseDbName: string
