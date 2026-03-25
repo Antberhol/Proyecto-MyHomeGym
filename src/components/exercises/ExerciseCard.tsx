@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Exercise } from '../../types/models'
-import { DEFAULT_FALLBACK_GIF, useExerciseGif } from '../../hooks/useExerciseGif'
+import { useExerciseGif } from '../../hooks/useExerciseGif'
+import { ExerciseMediaFallback } from './ExerciseMediaFallback'
 
 interface ExerciseCardProps {
     exercise: Pick<Exercise, 'id' | 'nombre' | 'grupoMuscularPrimario' | 'equipoNecesario' | 'gifUrl' | 'imagenUrl' | 'exerciseDbId' | 'exerciseDbName' | 'exerciseDbAliases' | 'instrucciones'>
@@ -23,10 +24,10 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         grupoMuscularPrimario: exercise.grupoMuscularPrimario,
         enabled: shouldFetchGif,
     })
-    const [gifLoaded, setGifLoaded] = useState(false)
+    const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
 
     useEffect(() => {
-        setGifLoaded(false)
+        setImageStatus('loading')
     }, [gifUrl])
 
     const language = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
@@ -89,20 +90,24 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         >
             <div className="flex items-center gap-3">
                 <div className="relative h-20 w-28 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-                    {(shouldFetchGif && isLoading && !gifLoaded) && (
+                    {(imageStatus === 'loading' || (shouldFetchGif && isLoading)) && (
                         <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
+                    )}
+                    {imageStatus === 'error' && (
+                        <div className="absolute inset-0 z-10">
+                            <ExerciseMediaFallback className="rounded-none" />
+                        </div>
                     )}
                     <img
                         src={gifUrl}
                         alt={`GIF de ${exercise.nombre}`}
-                        className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
+                        className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${
+                            imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
+                        }`}
                         loading="lazy"
-                        onLoad={() => setGifLoaded(true)}
-                        onError={(e) => {
-                            e.currentTarget.onerror = null
-                            e.currentTarget.src = DEFAULT_FALLBACK_GIF
-                            setGifLoaded(true)
-                        }}
+                        onLoad={() => setImageStatus('loaded')}
+                        onError={() => setImageStatus('error')}
+                        aria-hidden={imageStatus !== 'loaded'}
                     />
                 </div>
                 <div>

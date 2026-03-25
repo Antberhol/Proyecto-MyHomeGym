@@ -97,6 +97,7 @@ export interface PerformedExercise extends SyncMetadata {
   repeticionesRealizadas: number
   pesoUtilizado: number
   rpe?: number
+  type?: 'normal' | 'warmup' | 'dropset' | 'failure'
   fecha: string
 }
 

@@ -69,6 +69,28 @@ function parseInputNumber(raw: string): number {
     return Number(parsed.toString())
 }
 
+function currentSetType(...candidates: Array<SetData['type'] | undefined>): NonNullable<SetData['type']> {
+    const match = candidates.find((candidate) => candidate === 'normal' || candidate === 'warmup' || candidate === 'dropset' || candidate === 'failure')
+    return match ?? 'normal'
+}
+
+function normalizeMuscleGroupForShare(group?: string): string {
+    const normalized = (group ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+
+    if (['biceps', 'triceps', 'antebrazos', 'brazo', 'brazos'].includes(normalized)) return 'brazos'
+    if (['dorsales', 'trapecio', 'espalda'].includes(normalized)) return 'espalda'
+    if (['gluteos', 'gluteo', 'femorales', 'cuadriceps', 'pierna', 'piernas'].includes(normalized)) return 'piernas'
+    if (['abdominales', 'abdomen', 'abs', 'core'].includes(normalized)) return 'core'
+    if (['pectoral', 'pectorales', 'pecho'].includes(normalized)) return 'pecho'
+    if (['deltoides', 'hombro', 'hombros'].includes(normalized)) return 'hombros'
+
+    return normalized || 'otros'
+}
+
 export function useActiveWorkoutController() {
     useAudioFeedback()
     useHaptic()
@@ -287,6 +309,7 @@ export function useActiveWorkoutController() {
                     reps: previous?.repeticionesRealizadas ?? 0,
                     peso: previous?.pesoUtilizado ?? 0,
                     rpe: previous?.rpe,
+                    type: previous?.type ?? 'normal',
                 }
             }
 
@@ -338,7 +361,7 @@ export function useActiveWorkoutController() {
     const addFreeExerciseDraft = () => {
         if (!freeExerciseId) return
 
-        const initialSets = Array.from({ length: Math.max(1, freeSeriesCount) }, () => ({ reps: 0, peso: 0 }))
+        const initialSets = Array.from({ length: Math.max(1, freeSeriesCount) }, () => ({ reps: 0, peso: 0, type: 'normal' as const }))
         setFreeExercisesDraft((current) => [
             ...current,
             {
@@ -381,7 +404,7 @@ export function useActiveWorkoutController() {
                 item.id === draftId
                     ? {
                         ...item,
-                        sets: [...item.sets, { reps: 0, peso: 0 }],
+                        sets: [...item.sets, { reps: 0, peso: 0, type: 'normal' }],
                     }
                     : item,
             ),
@@ -395,7 +418,7 @@ export function useActiveWorkoutController() {
                 const nextSets = item.sets.filter((_, index) => index !== setIndex)
                 return {
                     ...item,
-                    sets: nextSets.length > 0 ? nextSets : [{ reps: 0, peso: 0 }],
+                    sets: nextSets.length > 0 ? nextSets : [{ reps: 0, peso: 0, type: 'normal' }],
                 }
             }),
         )
@@ -414,6 +437,8 @@ export function useActiveWorkoutController() {
                         return {
                             reps: field === 'reps' ? value : set.reps,
                             peso: field === 'peso' ? value : set.peso,
+                            rpe: field === 'rpe' ? (value > 0 ? value : undefined) : set.rpe,
+                            type: set.type ?? 'normal',
                         }
                     }),
                 }
@@ -423,19 +448,22 @@ export function useActiveWorkoutController() {
 
     const getSetValue = (routineExerciseId: string, serieNumero: number): SetData => {
         const key = `${routineExerciseId}-${serieNumero}`
-        return setData[key] ?? prefilledSetData[key] ?? { reps: 0, peso: 0 }
+        return setData[key] ?? prefilledSetData[key] ?? { reps: 0, peso: 0, type: 'normal' }
     }
 
-    const updateSetData = (routineExerciseId: string, serieNumero: number, field: keyof SetData, value: number) => {
+    const updateSetData = (routineExerciseId: string, serieNumero: number, field: keyof SetData, value: number | SetData['type']) => {
         const key = `${routineExerciseId}-${serieNumero}`
+        const currentType = currentSetType(setData[key]?.type, prefilledSetData[key]?.type)
+
         setSetData((current) => ({
             ...current,
             [key]: {
-                reps: field === 'reps' ? value : (current[key]?.reps ?? prefilledSetData[key]?.reps ?? 0),
-                peso: field === 'peso' ? value : (current[key]?.peso ?? prefilledSetData[key]?.peso ?? 0),
+                reps: field === 'reps' && typeof value === 'number' ? value : (current[key]?.reps ?? prefilledSetData[key]?.reps ?? 0),
+                peso: field === 'peso' && typeof value === 'number' ? value : (current[key]?.peso ?? prefilledSetData[key]?.peso ?? 0),
                 rpe: field === 'rpe'
-                    ? (value > 0 ? value : undefined)
+                    ? (typeof value === 'number' && value > 0 ? value : undefined)
                     : (current[key]?.rpe ?? prefilledSetData[key]?.rpe),
+                type: field === 'type' && typeof value === 'string' ? value : currentType,
             },
         }))
     }
@@ -451,6 +479,7 @@ export function useActiveWorkoutController() {
                     reps: current[key]?.reps ?? prefilledSetData[key]?.reps ?? 0,
                     peso: activeExerciseSuggestedWeight,
                     rpe: current[key]?.rpe ?? prefilledSetData[key]?.rpe,
+                    type: currentSetType(current[key]?.type, prefilledSetData[key]?.type),
                 }
             }
             return updated
@@ -482,6 +511,7 @@ export function useActiveWorkoutController() {
                     repeticionesRealizadas: reps,
                     pesoUtilizado: peso,
                     rpe: serie?.rpe && serie.rpe > 0 ? serie.rpe : undefined,
+                    type: serie?.type ?? 'normal',
                     fecha: now,
                 }
             })
@@ -507,6 +537,7 @@ export function useActiveWorkoutController() {
                         repeticionesRealizadas: reps,
                         pesoUtilizado: peso,
                         rpe: set.rpe && set.rpe > 0 ? set.rpe : undefined,
+                        type: set.type ?? 'normal',
                         fecha: now,
                     }
                 })
@@ -585,14 +616,32 @@ export function useActiveWorkoutController() {
     const sharePreviewData = useMemo<WorkoutShareData | null>(() => {
         if (!trainingSummary) return null
 
+        const byExerciseMap = new Map(trainingSummary.byExercise.map((item) => [item.exerciseId, item]))
+        const muscleDistributionMap = performedExercises.reduce<Record<string, number>>((acc, performed) => {
+            if (!byExerciseMap.has(performed.ejercicioId)) {
+                return acc
+            }
+
+            const exercise = exercises.find((candidate) => candidate.id === performed.ejercicioId)
+            const group = normalizeMuscleGroupForShare(exercise?.grupoMuscularPrimario)
+            acc[group] = (acc[group] ?? 0) + calculateSetVolume(performed.pesoUtilizado, performed.repeticionesRealizadas)
+            return acc
+        }, {})
+
+        const muscleDistribution = Object.entries(muscleDistributionMap)
+            .map(([muscle, volume]) => ({ muscle, volume }))
+            .sort((a, b) => b.volume - a.volume)
+
         return {
             totalVolume: trainingSummary.totalVolume,
             durationMinutes: trainingSummary.durationMinutes,
             prsCreated: trainingSummary.prsCreated,
             setCount: trainingSummary.setCount,
             dateLabel: new Date().toLocaleDateString(),
+            muscleDistribution,
+            topExercises: trainingSummary.byExercise,
         }
-    }, [trainingSummary])
+    }, [exercises, performedExercises, trainingSummary])
 
     const onShareSummary = async () => {
         if (!sharePreviewData) return

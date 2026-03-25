@@ -1,9 +1,12 @@
 import type { Exercise, PerformedExercise, PersonalRecord, RoutineExercise } from '../../types/models'
 
+export type WorkoutSetType = 'normal' | 'warmup' | 'dropset' | 'failure'
+
 export interface SetData {
     reps: number
     peso: number
     rpe?: number
+    type?: WorkoutSetType
 }
 
 export interface PreviousExerciseSession {

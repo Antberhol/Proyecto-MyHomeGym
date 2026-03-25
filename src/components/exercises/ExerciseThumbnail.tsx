@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { DEFAULT_FALLBACK_GIF, useExerciseGif } from '../../hooks/useExerciseGif'
+import { useExerciseGif } from '../../hooks/useExerciseGif'
+import { ExerciseMediaFallback } from './ExerciseMediaFallback'
 
 interface ExerciseThumbnailProps {
     exerciseId?: string
@@ -68,12 +69,12 @@ export function ExerciseThumbnail({
         grupoMuscularPrimario,
         enabled: shouldFetchGif,
     })
-    const [gifLoaded, setGifLoaded] = useState(false)
+    const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
 
-    const shouldShowSkeleton = shouldFetchGif && isLoading && !gifLoaded
+    const shouldShowSkeleton = imageStatus === 'loading' || (shouldFetchGif && isLoading)
 
     useEffect(() => {
-        setGifLoaded(false)
+        setImageStatus('loading')
     }, [resolvedGifUrl])
 
     return (
@@ -90,17 +91,21 @@ export function ExerciseThumbnail({
             {shouldShowSkeleton && (
                 <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
             )}
+            {imageStatus === 'error' && (
+                <div className="absolute inset-0 z-10">
+                    <ExerciseMediaFallback className="rounded-none" />
+                </div>
+            )}
             <img
                 src={resolvedGifUrl}
                 alt={`GIF de ${nombre}`}
-                className="relative z-10 h-full w-full object-cover transition-opacity duration-300"
+                className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${
+                    imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
+                }`}
                 loading="lazy"
-                onLoad={() => setGifLoaded(true)}
-                onError={(e) => {
-                    e.currentTarget.onerror = null
-                    e.currentTarget.src = DEFAULT_FALLBACK_GIF
-                    setGifLoaded(true)
-                }}
+                onLoad={() => setImageStatus('loaded')}
+                onError={() => setImageStatus('error')}
+                aria-hidden={imageStatus !== 'loaded'}
             />
         </div>
     )

@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
+import { ExerciseMediaFallback } from '../components/exercises/ExerciseMediaFallback'
 import { getPreferredExerciseDbName } from '../constants/exerciseDbAliases'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
-import { DEFAULT_FALLBACK_GIF } from '../hooks/useExerciseGif'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
 import type { Exercise } from '../types/models'
@@ -36,7 +36,7 @@ export function ExerciseDetailPage() {
     const [catalogError, setCatalogError] = useState('')
     const [personalNote, setPersonalNote] = useState('')
     const [noteSaved, setNoteSaved] = useState(false)
-    const [gifLoaded, setGifLoaded] = useState(false)
+    const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
     const [retryCount, setRetryCount] = useState(0)
 
     useEffect(() => {
@@ -86,8 +86,12 @@ export function ExerciseDetailPage() {
         const storedNote = window.localStorage.getItem(storageKey)
         setPersonalNote(storedNote ?? '')
         setNoteSaved(false)
-        setGifLoaded(false)
+        setImageStatus('loading')
     }, [exercise])
+
+    useEffect(() => {
+        setImageStatus('loading')
+    }, [detail.data?.gifUrl])
 
     const englishAlias =
         exercise?.exerciseDbName ??
@@ -192,21 +196,23 @@ export function ExerciseDetailPage() {
 
             <Card className="space-y-4">
                 <div className="relative h-80 w-full md:h-96">
-                    {!gifLoaded && (
+                    {imageStatus === 'loading' && (
                         <div className="absolute inset-0 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                     )}
+                    {imageStatus === 'error' && (
+                        <div className="absolute inset-0 z-10 rounded-xl border border-slate-200 bg-slate-100 p-2 dark:border-slate-700 dark:bg-slate-800">
+                            <ExerciseMediaFallback />
+                        </div>
+                    )}
                     <img
-                        src={detail.data?.gifUrl || DEFAULT_FALLBACK_GIF}
+                        src={detail.data?.gifUrl ?? ''}
                         alt={t('exerciseDetail.gifAlt', { name: exercise.nombre })}
-                        className={`h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 md:h-96 ${gifLoaded ? 'opacity-100' : 'opacity-0'
+                        className={`h-80 w-full rounded-xl border border-slate-200 bg-slate-100 object-contain p-2 transition-opacity duration-300 dark:border-slate-700 dark:bg-slate-800 md:h-96 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
                             }`}
                         loading="lazy"
-                        onLoad={() => setGifLoaded(true)}
-                        onError={(event) => {
-                            event.currentTarget.onerror = null
-                            event.currentTarget.src = DEFAULT_FALLBACK_GIF
-                            setGifLoaded(true)
-                        }}
+                        onLoad={() => setImageStatus('loaded')}
+                        onError={() => setImageStatus('error')}
+                        aria-hidden={imageStatus !== 'loaded'}
                     />
                 </div>
 
