@@ -3,7 +3,10 @@ export const exerciseStaticImages: Record<string, string> = {
     espalda: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Pullup_exercise.jpg/320px-Pullup_exercise.jpg',
     piernas: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Squats_demo.gif/320px-Squats_demo.gif',
     hombros: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Overhead_press.jpg/320px-Overhead_press.jpg',
+    brazos: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Biceps_curl.jpg/320px-Biceps_curl.jpg',
     biceps: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Biceps_curl.jpg/320px-Biceps_curl.jpg',
     triceps: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Triceps_extensions.jpg/320px-Triceps_extensions.jpg',
+    gluteos: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Squats_demo.gif/320px-Squats_demo.gif',
+    antebrazos: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Biceps_curl.jpg/320px-Biceps_curl.jpg',
     core: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Plank_exercise.jpg/320px-Plank_exercise.jpg',
 }
