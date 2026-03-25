@@ -208,11 +208,10 @@ export function ActiveExerciseCard({
                                                     onClick={() =>
                                                         updateSetData(activeRoutineExercise.id, serieNumero, 'type', typeOption)
                                                     }
-                                                    className={`h-8 rounded border text-[11px] font-semibold transition ${
-                                                        isActive
+                                                    className={`h-8 rounded border text-[11px] font-semibold transition ${isActive
                                                             ? SET_TYPE_STYLES[typeOption]
                                                             : 'border-slate-300 text-slate-500 dark:border-slate-600 dark:text-slate-300'
-                                                    }`}
+                                                        }`}
                                                     title={typeOption}
                                                 >
                                                     {SET_TYPE_LABELS[typeOption]}

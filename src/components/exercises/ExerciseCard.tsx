@@ -101,9 +101,8 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                     <img
                         src={gifUrl}
                         alt={`GIF de ${exercise.nombre}`}
-                        className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${
-                            imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
-                        }`}
+                        className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
+                            }`}
                         loading="lazy"
                         onLoad={() => setImageStatus('loaded')}
                         onError={() => setImageStatus('error')}
