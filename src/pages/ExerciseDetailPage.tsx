@@ -89,10 +89,6 @@ export function ExerciseDetailPage() {
         setImageStatus('loading')
     }, [exercise])
 
-    useEffect(() => {
-        setImageStatus('loading')
-    }, [detail.data?.gifUrl])
-
     const englishAlias =
         exercise?.exerciseDbName ??
         exercise?.exerciseDbAliases?.[0] ??
@@ -108,6 +104,10 @@ export function ExerciseDetailPage() {
         fallbackGifUrl: exercise?.imagenUrl,
         retryKey: retryCount,
     })
+
+    useEffect(() => {
+        setImageStatus('loading')
+    }, [detail.data?.gifUrl])
 
     const apiSource = 'oss.exercisedb.dev (free)'
     const gifUrlDomain = (() => {
