@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useExerciseGif } from '../../hooks/useExerciseGif'
+import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 import { ExerciseMediaFallback } from './ExerciseMediaFallback'
 
 interface ExerciseThumbnailProps {
@@ -13,6 +13,7 @@ interface ExerciseThumbnailProps {
     exerciseDbName?: string
     exerciseDbAliases?: string[]
     className?: string
+    forceFetchGif?: boolean
 }
 
 export function ExerciseThumbnail({
@@ -26,6 +27,7 @@ export function ExerciseThumbnail({
     exerciseDbName,
     exerciseDbAliases,
     className = 'h-16 w-24',
+    forceFetchGif = false,
 }: ExerciseThumbnailProps) {
     // Keep IntersectionObserver as a visibility gate, but fetch only after user interaction.
     const containerRef = useRef<HTMLDivElement>(null)
@@ -57,7 +59,12 @@ export function ExerciseThumbnail({
         }
     }, [])
 
-    const shouldFetchGif = isVisible && (isHovered || hasInteracted)
+    const shouldForceFetch =
+        forceFetchGif ||
+        !exerciseGifUrl?.trim() ||
+        exerciseGifUrl.trim() === EXERCISE_GIF_PLACEHOLDER ||
+        /squats_demo\.gif/i.test(exerciseGifUrl)
+    const shouldFetchGif = shouldForceFetch || (isVisible && (isHovered || hasInteracted))
 
     const { gifUrl: resolvedGifUrl, isLoading } = useExerciseGif(nombre, {
         exerciseId,
@@ -92,8 +99,12 @@ export function ExerciseThumbnail({
                 <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
             )}
             {imageStatus === 'error' && (
-                <div className="absolute inset-0 z-10">
-                    <ExerciseMediaFallback className="rounded-none" />
+                <div
+                    className="absolute inset-0 z-20"
+                    title={`Sin imagen disponible para ${nombre}`}
+                    aria-label={`Sin imagen disponible para ${nombre}`}
+                >
+                    <ExerciseMediaFallback className="absolute inset-0 rounded-none" />
                 </div>
             )}
             <img

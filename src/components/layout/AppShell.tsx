@@ -11,6 +11,7 @@ import {
   UserCircle,
   Workflow,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useLanguage } from '../../context/useLanguage'
@@ -58,6 +59,21 @@ export function AppShell() {
   const { currentLanguage, changeLanguage } = useLanguage()
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useUiStore((state) => state.toggleSidebar)
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false)
+  const langDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!langDropdownOpen) return
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
+        setLangDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [langDropdownOpen])
 
   const navItems: NavEntry[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -107,15 +123,52 @@ export function AppShell() {
 
         <main className="app-main-content flex-1 overflow-y-auto p-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
           <div className="mb-4 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void changeLanguage(currentLanguage === 'es' ? 'en' : 'es')
-              }}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-600"
-            >
-              {currentLanguage === 'es' ? 'EN' : 'ES'}
-            </button>
+            <div ref={langDropdownRef} className="relative z-50">
+              <button
+                type="button"
+                onClick={() => setLangDropdownOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={langDropdownOpen}
+                className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-600"
+              >
+                <span>{currentLanguage === 'es' ? '🇪🇸' : '🇬🇧'}</span>
+                <span>{currentLanguage.toUpperCase()}</span>
+              </button>
+
+              {langDropdownOpen && (
+                <div
+                  role="listbox"
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-gym-cardDark"
+                >
+                  {[
+                    { code: 'es' as const, label: 'Español', flag: '🇪🇸' },
+                    { code: 'en' as const, label: 'English', flag: '🇬🇧' },
+                  ].map((option) => (
+                    <button
+                      key={option.code}
+                      type="button"
+                      role="option"
+                      aria-selected={currentLanguage === option.code}
+                      onClick={() => {
+                        void changeLanguage(option.code)
+                        setLangDropdownOpen(false)
+                      }}
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-700 first:rounded-t-xl last:rounded-b-xl ${
+                        currentLanguage === option.code
+                          ? 'font-semibold text-gym-primary'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <span>{option.flag}</span>
+                      <span>{option.label}</span>
+                      {currentLanguage === option.code && (
+                        <span className="ml-auto text-gym-primary">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <SyncStatusIndicator />
           </div>
           <Outlet />

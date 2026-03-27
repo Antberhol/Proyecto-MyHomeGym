@@ -54,6 +54,7 @@
         "equipment": "Equipo",
         "secondaryMuscles": "Músculos secundarios",
         "instructions": "Instrucciones paso a paso",
+        "instructionsInEnglish": "Instrucciones en inglés (traducción no disponible)",
         "invalidExercise": "Ejercicio no válido.",
         "requestedExerciseNotFound": "No se encontró el ejercicio solicitado.",
         "exerciseLoadFailed": "No se pudo cargar el ejercicio.",

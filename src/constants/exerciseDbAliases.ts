@@ -249,6 +249,10 @@ export function getExerciseDbQueryCandidates(exerciseName: string) {
         addSeed(noStopWords)
     }
 
+    for (const simplifiedCandidate of getSimplifiedQueryCandidates(normalized)) {
+        addSeed(simplifiedCandidate)
+    }
+
     const candidates: string[] = []
     const seen = new Set<string>()
     const addCandidate = (value: string) => {
@@ -271,6 +275,39 @@ export function getExerciseDbQueryCandidates(exerciseName: string) {
     }
 
     return candidates
+}
+
+function getSimplifiedQueryCandidates(normalizedName: string): string[] {
+    if (!normalizedName) {
+        return []
+    }
+
+    const simplified = normalizedName
+        .replace(/\b(con|en)\s+(mancuerna|mancuernas|barra|barra z|maquina|multipower|polea|cuerda|banda elastica|banda)\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    const candidates = new Set<string>()
+
+    if (simplified && simplified !== normalizedName) {
+        candidates.add(simplified)
+    }
+
+    const simplifiedTokens = simplified.split(' ').filter((token) => token.length > 2)
+    if (simplifiedTokens.length > 0) {
+        candidates.add(simplifiedTokens[0])
+    }
+
+    if (simplified.includes('curl') || normalizedName.includes('curl')) {
+        candidates.add('curl')
+        candidates.add('bicep curl')
+    }
+
+    if (simplified.includes('press') || normalizedName.includes('press')) {
+        candidates.add('press')
+    }
+
+    return Array.from(candidates)
 }
 
 function expandCandidateVariants(value: string) {

@@ -65,7 +65,7 @@ interface CachedDetailEntry {
 const detailCache = new Map<string, CachedDetailEntry>()
 const gifUrlCache = new Map<string, string>()
 const translatedInstructionCache = new Map<string, string>()
-const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v5'
+const INSTRUCTION_TRANSLATION_CACHE_VERSION = 'es-local-v6'
 const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
 const EXERCISE_GIF_CACHE_KEY_PREFIX = 'gifcache_v2_'
 const EXERCISE_GIF_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -258,7 +258,7 @@ function hasEnglishInstructionSignals(text: string): boolean {
 }
 
 function isMixedInstruction(text: string): boolean {
-    return hasSpanishInstructionSignals(text) && hasEnglishInstructionSignals(text)
+    return countLikelyEnglishWords(text) >= 3 && /[áéíóúñ¿¡]/i.test(text)
 }
 
 function shouldRetryMixedInstruction(text: string): boolean {
@@ -266,6 +266,10 @@ function shouldRetryMixedInstruction(text: string): boolean {
 }
 
 function detectInstructionLanguage(text: string): 'es' | 'en' {
+    if (/[áéíóúñ¿¡]/i.test(text)) {
+        return 'es'
+    }
+
     const hasSpanishSignals = hasSpanishInstructionSignals(text)
     const hasEnglishSignals = hasEnglishInstructionSignals(text)
 
@@ -999,58 +1003,6 @@ function refineSpanishInstructionText(value: string): string {
     return refined.charAt(0).toUpperCase() + refined.slice(1)
 }
 
-function buildSpanishFallbackInstruction(sourceText: string): string {
-    const lower = sourceText.toLowerCase()
-
-    if (/\b(row|remo|pull|curl|pulldown|chin-up|chin up|dominada)\b/.test(lower)) {
-        return 'Tira con control hacia el torso, mantén el pecho alto y junta las escápulas al final.'
-    }
-
-    if (/\b(press|push|empuja|fondo|dip|extensi[oó]n)\b/.test(lower)) {
-        return 'Empuja con control, estabiliza el tronco y extiende sin bloquear bruscamente los codos.'
-    }
-
-    if (/\b(sentadilla|squat|zancada|lunge|deadlift|peso muerto|hinge)\b/.test(lower)) {
-        return 'Desciende con la espalda neutra, mantén la cadera alineada y sube de forma estable.'
-    }
-
-    if (/\b(raise|elevaci[oó]n|fly|apertura|lateral)\b/.test(lower)) {
-        return 'Eleva hasta el rango útil sin balanceo y desciende de forma controlada en cada repetición.'
-    }
-
-    if (/\b(plancha|plank|hold|isom[eé]trico)\b/.test(lower)) {
-        return 'Mantén el abdomen firme, glúteos activos y respiración constante durante todo el esfuerzo.'
-    }
-
-    return 'Realiza cada repetición con control, activa el core y evita balanceos para mantener la técnica.'
-}
-
-function buildEnglishFallbackInstruction(sourceText: string): string {
-    const lower = sourceText.toLowerCase()
-
-    if (/\b(row|remo|pull|curl|pulldown|chin-up|chin up|dominada)\b/.test(lower)) {
-        return 'Pull under control toward your torso, keep your chest up, and squeeze your shoulder blades at the end.'
-    }
-
-    if (/\b(press|push|empuja|fondo|dip|extensi[oó]n)\b/.test(lower)) {
-        return 'Press under control, brace your trunk, and extend without aggressively locking your elbows.'
-    }
-
-    if (/\b(sentadilla|squat|zancada|lunge|deadlift|peso muerto|hinge)\b/.test(lower)) {
-        return 'Lower with a neutral spine, keep your hips aligned, and stand up with stable control.'
-    }
-
-    if (/\b(raise|elevaci[oó]n|fly|apertura|lateral)\b/.test(lower)) {
-        return 'Raise through a useful range without swinging and lower with controlled tempo each rep.'
-    }
-
-    if (/\b(plancha|plank|hold|isom[eé]trico)\b/.test(lower)) {
-        return 'Keep your core braced, glutes active, and breathing steady throughout the hold.'
-    }
-
-    return 'Perform each rep with control, keep your core braced, and avoid momentum.'
-}
-
 function dedupeInstructionSteps(instructions: string[]): string[] {
     const seen = new Set<string>()
     const deduped: string[] = []
@@ -1096,14 +1048,18 @@ function cleanSpanishInstructionText(value: string): string {
     normalized = refineSpanishInstructionText(normalized)
 
     if (!normalized) {
-        return buildSpanishFallbackInstruction(value)
+        return ''
     }
 
     if (countLikelyEnglishWords(normalized) > 4) {
-        return buildSpanishFallbackInstruction(value)
+        return ''
     }
 
     return normalized
+}
+
+function countInstructionWords(value: string): number {
+    return value.toLowerCase().match(/\b[a-z][a-z'-]*\b/g)?.length ?? 0
 }
 
 function translateEnglishInstructionToSpanish(text: string): string {
@@ -1130,13 +1086,26 @@ function translateEnglishInstructionToSpanish(text: string): string {
     translated = cleanSpanishInstructionText(translated)
 
     if (!translated) {
-        return buildSpanishFallbackInstruction(trimmed)
+        return trimmed
+    }
+
+    const translatedWordCount = countInstructionWords(translated)
+    const residualEnglishWordCount = countLikelyEnglishWords(translated)
+    const residualEnglishRatio =
+        translatedWordCount > 0 ? residualEnglishWordCount / translatedWordCount : 1
+
+    if (residualEnglishRatio > 0.6) {
+        return trimmed
     }
 
     return translated
 }
 
 function shouldTranslateInstructions(instructions: string[], language: 'es' | 'en') {
+    if (language === 'en') {
+        return false
+    }
+
     return instructions.some(
         (instruction) =>
             detectInstructionLanguage(instruction) !== language || isMixedInstruction(instruction),
@@ -1175,10 +1144,7 @@ async function translateInstruction(
     }
 
     if (targetLanguage === 'en') {
-        translated =
-            sourceLanguage === 'en' && !isMixedInstruction(normalizedText)
-                ? normalizedText
-                : buildEnglishFallbackInstruction(normalizedText)
+        translated = normalizedText
     }
 
     translatedInstructionCache.set(cacheKey, translated)
@@ -1194,6 +1160,10 @@ async function maybeTranslateInstructions(
         return instructions
     }
 
+    if (language === 'en') {
+        return dedupeInstructionSteps(instructions)
+    }
+
     const translated = await Promise.all(
         instructions.map((instruction) =>
             translateInstruction(
@@ -1207,11 +1177,10 @@ async function maybeTranslateInstructions(
 
     const deduped = dedupeInstructionSteps(translated)
 
-    if (language === 'es') {
-        return deduped.map((instruction) => cleanSpanishInstructionText(instruction))
-    }
-
-    return deduped
+    return deduped.map((instruction) => {
+        const cleaned = cleanSpanishInstructionText(instruction)
+        return cleaned || instruction
+    })
 }
 
 function normalizeGifUrl(url: string): string {

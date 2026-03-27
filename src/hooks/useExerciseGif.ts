@@ -169,7 +169,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
             return undefined
         }
 
-        if (!parsed.gifUrl || parsed.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
+        if (
+            !parsed.gifUrl ||
+            parsed.gifUrl === EXERCISE_GIF_PLACEHOLDER ||
+            parsed.gifUrl === LEGACY_WIKIPEDIA_FALLBACK_GIF
+        ) {
             storage.removeItem(storageKey)
             return undefined
         }
@@ -188,7 +192,11 @@ function readExerciseGifCache(cacheKey: string): ExerciseGifData | undefined {
 }
 
 function writeExerciseGifCache(cacheKey: string, value: ExerciseGifData): void {
-    if (!value.gifUrl || value.gifUrl === EXERCISE_GIF_PLACEHOLDER) {
+    if (
+        !value.gifUrl ||
+        value.gifUrl === EXERCISE_GIF_PLACEHOLDER ||
+        value.gifUrl === LEGACY_WIKIPEDIA_FALLBACK_GIF
+    ) {
         return
     }
 
@@ -250,6 +258,9 @@ async function persistResolvedExerciseDbLink(input: {
 }
 
 export const DEFAULT_FALLBACK_GIF =
+    ''
+
+const LEGACY_WIKIPEDIA_FALLBACK_GIF =
     'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Squats_demo.gif/320px-Squats_demo.gif'
 
 // Backward-compatible export name used across existing components.
@@ -286,12 +297,36 @@ function buildGifUrlFromExerciseIdentifiers(input: {
     return ''
 }
 
-function resolveGuaranteedGifUrl(...candidates: Array<string | undefined>): string {
-    for (const candidate of candidates) {
-        const normalized = normalizeGifUrl(candidate ?? '')
-        if (normalized && isGifUrl(normalized)) {
-            return normalized
-        }
+function resolveGuaranteedGifUrl(input: {
+    directGifUrl?: string
+    idBasedGifUrl?: string
+    apiGifUrl?: string
+    fallbackGifUrl?: string
+    staticFallbackGifUrl?: string
+}): string {
+    const directGifUrl = normalizeGifUrl(input.directGifUrl ?? '')
+    if (directGifUrl && isGifUrl(directGifUrl) && directGifUrl !== LEGACY_WIKIPEDIA_FALLBACK_GIF) {
+        return directGifUrl
+    }
+
+    const idBasedGifUrl = normalizeGifUrl(input.idBasedGifUrl ?? '')
+    if (idBasedGifUrl && isGifUrl(idBasedGifUrl) && idBasedGifUrl !== LEGACY_WIKIPEDIA_FALLBACK_GIF) {
+        return idBasedGifUrl
+    }
+
+    const apiGifUrl = normalizeGifUrl(input.apiGifUrl ?? '')
+    if (apiGifUrl && isGifUrl(apiGifUrl) && apiGifUrl !== LEGACY_WIKIPEDIA_FALLBACK_GIF) {
+        return apiGifUrl
+    }
+
+    const fallbackGifUrl = normalizeGifUrl(input.fallbackGifUrl ?? '')
+    if (fallbackGifUrl && fallbackGifUrl !== LEGACY_WIKIPEDIA_FALLBACK_GIF) {
+        return fallbackGifUrl
+    }
+
+    const staticFallbackGifUrl = normalizeGifUrl(input.staticFallbackGifUrl ?? '')
+    if (staticFallbackGifUrl && staticFallbackGifUrl !== LEGACY_WIKIPEDIA_FALLBACK_GIF) {
+        return staticFallbackGifUrl
     }
 
     return DEFAULT_FALLBACK_GIF
@@ -449,11 +484,25 @@ function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOpti
 function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDbItem | null {
     if (items.length === 0) return null
     const normalizedCandidate = normalizeExerciseName(candidate)
-    const exact = items.find((item) => normalizeExerciseName(item.name ?? '') === normalizedCandidate && item.gifUrl)
+
+    const hasReasonableNameMatch = (itemName: string): boolean => {
+        const normalizedItemName = normalizeExerciseName(itemName)
+        if (!normalizedItemName || !normalizedCandidate) {
+            return false
+        }
+
+        return (
+            normalizedItemName === normalizedCandidate ||
+            normalizedItemName.includes(normalizedCandidate) ||
+            normalizedCandidate.includes(normalizedItemName)
+        )
+    }
+
+    const exact = items.find((item) => hasReasonableNameMatch(item.name ?? '') && item.gifUrl)
     if (exact) return exact
-    const partial = items.find((item) => normalizeExerciseName(item.name ?? '').includes(normalizedCandidate) && item.gifUrl)
-    if (partial) return partial
-    const firstWithGif = items.find((item) => item.gifUrl && resolveExerciseDbItemId(item))
+    const firstWithGif = items.find(
+        (item) => item.gifUrl && resolveExerciseDbItemId(item) && hasReasonableNameMatch(item.name ?? ''),
+    )
     return firstWithGif || null
 }
 
@@ -481,12 +530,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     // FIX 5: disabled when element not yet visible (IntersectionObserver gate in ExerciseThumbnail).
     const enabled = options?.enabled !== false
     const shouldFetch = Boolean(normalizedName && !cached && enabled)
-    const defaultGifUrl = resolveGuaranteedGifUrl(
+    const defaultGifUrl = resolveGuaranteedGifUrl({
         directGifUrl,
         idBasedGifUrl,
         fallbackGifUrl,
         staticFallbackGifUrl,
-    )
+    })
 
     const [state, setState] = useState<UseExerciseGifResult>({
         gifUrl: defaultGifUrl,
@@ -522,7 +571,9 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 if (
                     typeof parsed.cachedAt !== 'number' ||
                     Date.now() - parsed.cachedAt > EXERCISE_GIF_CACHE_TTL_MS ||
-                    (typeof parsed.gifUrl === 'string' && isLegacyRapidApiGifUrl(parsed.gifUrl))
+                    (typeof parsed.gifUrl === 'string' &&
+                        (isLegacyRapidApiGifUrl(parsed.gifUrl) ||
+                            parsed.gifUrl === LEGACY_WIKIPEDIA_FALLBACK_GIF))
                 ) {
                     keysToRemove.push(key)
                 }
@@ -571,13 +622,13 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 const resolvedByCandidate = !byId && Boolean(resolvedExerciseDbId)
 
                 const resolved: ExerciseGifData = {
-                    gifUrl: resolveGuaranteedGifUrl(
-                        resolveExerciseGifUrl(firstResult),
+                    gifUrl: resolveGuaranteedGifUrl({
                         directGifUrl,
                         idBasedGifUrl,
+                        apiGifUrl: resolveExerciseGifUrl(firstResult),
                         fallbackGifUrl,
                         staticFallbackGifUrl,
-                    ),
+                    }),
                     targetMuscle: resolveTargetMuscle(firstResult),
                     instructions: resolveInstructions(firstResult),
                     resolvedExerciseDbId: resolvedExerciseDbId || undefined,
@@ -598,12 +649,12 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
             } catch (error) {
                 if (!controller.signal.aborted) {
                     console.warn('[GIF]', error)
-                    const resolvedFallbackGifUrl = resolveGuaranteedGifUrl(
+                    const resolvedFallbackGifUrl = resolveGuaranteedGifUrl({
                         directGifUrl,
                         idBasedGifUrl,
                         fallbackGifUrl,
                         staticFallbackGifUrl,
-                    )
+                    })
 
                     const fallback = {
                         gifUrl: resolvedFallbackGifUrl,

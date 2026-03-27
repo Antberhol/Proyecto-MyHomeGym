@@ -54,6 +54,7 @@
         "equipment": "Equipment",
         "secondaryMuscles": "Secondary muscles",
         "instructions": "Step-by-step instructions",
+        "instructionsInEnglish": "Instructions in English",
         "invalidExercise": "Invalid exercise.",
         "requestedExerciseNotFound": "The requested exercise was not found.",
         "exerciseLoadFailed": "The exercise could not be loaded.",

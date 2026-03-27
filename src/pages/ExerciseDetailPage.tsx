@@ -27,7 +27,7 @@ function ExerciseDetailSkeleton() {
 }
 
 export function ExerciseDetailPage() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
     const { id } = useParams<{ id: string }>()
 
@@ -104,6 +104,22 @@ export function ExerciseDetailPage() {
         fallbackGifUrl: exercise?.imagenUrl,
         retryKey: retryCount,
     })
+
+    const isSpanishUi = i18n.language.toLowerCase().startsWith('es')
+    const hasEnglishInstructions =
+        isSpanishUi &&
+        (detail.data?.instructions ?? []).some((instruction) => {
+            const words = instruction.toLowerCase().match(/\b[a-z][a-z'-]*\b/g) ?? []
+            if (words.length === 0) {
+                return false
+            }
+
+            const englishMatches = words.filter((word) =>
+                /^(the|a|an|and|or|with|without|your|you|for|from|to|of|in|on|at|by|then|while|when|keep|maintain|perform|pull|push|lower|raise|pause|repeat|continue|switch|stand|sit|lie|walk|step|grab|grasp|bench|grip|starting|position|shoulder|body|chest|feet|knee|floor|ground|back|arms|elbows)$/.test(word),
+            ).length
+
+            return englishMatches >= 3
+        })
 
     useEffect(() => {
         setImageStatus('loading')
@@ -255,14 +271,25 @@ export function ExerciseDetailPage() {
                 <section className="space-y-2">
                     <h2 className="text-lg font-semibold">{t('exerciseDetail.instructions')}</h2>
                     {detail.isTranslatingInstructions ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-300">{t('common.translating')}</p>
+                        <div className="space-y-2">
+                            <div className="h-4 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                            <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                            <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                        </div>
                     ) : null}
                     {detail.data && detail.data.instructions.length > 0 ? (
-                        <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700 dark:text-slate-200">
-                            {detail.data.instructions.map((instruction, index) => (
-                                <li key={`${instruction}-${index}`}>{instruction}</li>
-                            ))}
-                        </ol>
+                        <>
+                            {hasEnglishInstructions ? (
+                                <p className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-500/60 dark:bg-amber-900/20 dark:text-amber-200">
+                                    {t('exerciseDetail.instructionsInEnglish')}
+                                </p>
+                            ) : null}
+                            <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700 dark:text-slate-200">
+                                {detail.data.instructions.map((instruction, index) => (
+                                    <li key={`${instruction}-${index}`}>{instruction}</li>
+                                ))}
+                            </ol>
+                        </>
                     ) : (
                         <p className="text-sm text-slate-600 dark:text-slate-300">{t('common.notFoundDetailedInfo')}</p>
                     )}
