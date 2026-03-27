@@ -13,6 +13,7 @@ function normalizeBasePath(value?: string): string {
 }
 
 const basePath = normalizeBasePath(process.env.VITE_BASE_PATH)
+const pwaCacheVersion = 'v20260325-update1'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,6 +23,29 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'script' || request.destination === 'style' || request.destination === 'document',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: `app-shell-${pwaCacheVersion}`,
+              networkTimeoutSeconds: 8,
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: `images-${pwaCacheVersion}`,
+              networkTimeoutSeconds: 8,
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'MyHomeGym',
         short_name: 'MyHomeGym',

@@ -153,11 +153,10 @@ export function AppShell() {
                         void changeLanguage(option.code)
                         setLangDropdownOpen(false)
                       }}
-                      className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-700 first:rounded-t-xl last:rounded-b-xl ${
-                        currentLanguage === option.code
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-700 first:rounded-t-xl last:rounded-b-xl ${currentLanguage === option.code
                           ? 'font-semibold text-gym-primary'
                           : 'text-slate-700 dark:text-slate-200'
-                      }`}
+                        }`}
                     >
                       <span>{option.flag}</span>
                       <span>{option.label}</span>

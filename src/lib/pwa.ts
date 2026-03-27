@@ -10,13 +10,14 @@ export function registerServiceWorker(): void {
         return
     }
 
-    registerSW({
+    const updateSW = registerSW({
         immediate: true,
         onOfflineReady() {
             console.info('MyHomeGym listo para uso offline.')
         },
         onNeedRefresh() {
             console.info('Nueva versión disponible. Recarga para actualizar.')
+            void updateSW(true)
         },
     })
 }

@@ -17,6 +17,28 @@ export interface ExpandedExerciseSeed {
 
 export const exerciseDbExpandedExercises: ExpandedExerciseSeed[] = [
   {
+    "id": "db-manual-ez-bar-curl",
+    "nombre": "Ez Bar Curl",
+    "descripcion": "Manual override for EZ bar curl media mapping.",
+    "grupoMuscularPrimario": "biceps",
+    "gruposMuscularesSecundarios": [
+      "forearms"
+    ],
+    "nivelDificultad": "basico",
+    "equipoNecesario": "ez barbell",
+    "gifUrl": "https://fitnessprogramer.com/wp-content/uploads/2021/02/EZ-Bar-Curl.gif?v=update1",
+    "imagenUrl": "https://fitnessprogramer.com/wp-content/uploads/2021/02/EZ-Bar-Curl.gif?v=update1",
+    "exerciseDbId": "manual-ez-bar-curl",
+    "exerciseDbName": "ez bar curl",
+    "exerciseDbAliases": [
+      "ez bar curl",
+      "ez barbell curl",
+      "barbell ez bar curl"
+    ],
+    "instrucciones": "Stand upright with your elbows close to your torso and curl the EZ bar with control.",
+    "esPersonalizado": false
+  },
+  {
     "id": "db-VPPtusI",
     "nombre": "Inverted Row Bent Knees",
     "descripcion": "ExerciseDB inverted row bent knees.",

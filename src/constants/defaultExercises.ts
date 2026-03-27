@@ -21,6 +21,7 @@ export interface DefaultExerciseSeed {
     gruposMuscularesSecundarios?: string[]
     nivelDificultad?: 'basico' | 'intermedio' | 'avanzado'
     equipoNecesario: string
+    gifUrl?: string
     imagenUrl?: string
     exerciseDbId?: string
     exerciseDbName?: string
@@ -74,7 +75,8 @@ const baseDefaultExercises: DefaultExerciseSeed[] = [
         nombre: 'Curl de bíceps con barra Z',
         grupoMuscularPrimario: 'biceps',
         equipoNecesario: 'barra z',
-        imagenUrl: '/gifs/ez-bar-curl.gif',
+        gifUrl: 'https://fitnessprogramer.com/wp-content/uploads/2021/02/EZ-Bar-Curl.gif?v=update1',
+        imagenUrl: 'https://fitnessprogramer.com/wp-content/uploads/2021/02/EZ-Bar-Curl.gif?v=update1',
         exerciseDbName: 'ez bar curl',
         exerciseDbAliases: ['ez bar curl', 'ez barbell curl', 'barbell ez bar curl'],
     },
@@ -159,6 +161,7 @@ const enrichedBaseDefaultExercises: DefaultExerciseSeed[] = baseDefaultExercises
 
     return {
         ...exercise,
+        gifUrl: exercise.gifUrl ?? matchedExpanded.gifUrl ?? matchedExpanded.imagenUrl,
         imagenUrl: exercise.imagenUrl ?? matchedExpanded.imagenUrl,
         exerciseDbId: exercise.exerciseDbId ?? matchedExpanded.exerciseDbId,
         exerciseDbName: exercise.exerciseDbName ?? matchedExpanded.exerciseDbName,
@@ -186,6 +189,7 @@ const normalizedExpandedDefaults: DefaultExerciseSeed[] = exerciseDbExpandedExer
         gruposMuscularesSecundarios,
         nivelDificultad: exercise.nivelDificultad,
         equipoNecesario,
+        gifUrl: exercise.gifUrl ?? exercise.imagenUrl,
         imagenUrl: exercise.imagenUrl,
         exerciseDbId: exercise.exerciseDbId,
         exerciseDbName: exercise.exerciseDbName,
