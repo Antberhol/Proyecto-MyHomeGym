@@ -8,8 +8,10 @@ import type {
 } from './types'
 import { NumberStepper } from '../ui/NumberStepper'
 import { OneRepMaxBadge } from './OneRepMaxBadge'
-import { ExerciseThumbnail } from '../exercises/ExerciseThumbnail'
 import { useTranslation } from 'react-i18next'
+import { useExerciseGif } from '../../hooks/useExerciseGif'
+import { normalizeExerciseName } from '../../constants/exerciseDbAliases'
+import { useMemo, useState } from 'react'
 
 interface ActiveExerciseCardProps {
     activeRoutineExercise: ActiveRoutineExercise | undefined
@@ -46,6 +48,12 @@ const SET_TYPE_STYLES: Record<WorkoutSetType, string> = {
     failure: 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300',
 }
 
+function normalizeGifUrl(url: string): string {
+    const normalized = url.trim()
+    if (!normalized) return ''
+    return normalized.replace(/^http:\/\//i, 'https://')
+}
+
 export function ActiveExerciseCard({
     activeRoutineExercise,
     activeExerciseIndex,
@@ -62,6 +70,7 @@ export function ActiveExerciseCard({
     updateSetData,
 }: ActiveExerciseCardProps) {
     const { t } = useTranslation()
+    const [gifCacheBuster, setGifCacheBuster] = useState<number>(0)
 
     if (!activeRoutineExercise) {
         return null
@@ -69,52 +78,117 @@ export function ActiveExerciseCard({
 
     const previousSession = previousSessionByExercise[activeRoutineExercise.ejercicioId]
 
+    const exercise = activeRoutineExercise.ejercicio
+    const exerciseName = exercise?.nombre || t('training.exerciseCard.exercise')
+
+    const cacheKey = useMemo(() => {
+        const normalizedName = normalizeExerciseName(exerciseName)
+        const exerciseDbId = exercise?.exerciseDbId ?? ''
+        const exerciseDbName = exercise?.exerciseDbName ?? ''
+        const aliasSignature = (exercise?.exerciseDbAliases ?? []).join('|')
+        const directGifUrl = normalizeGifUrl(exercise?.gifUrl ?? '')
+        const fallbackGifUrl = normalizeGifUrl(exercise?.imagenUrl ?? '')
+        const primaryMuscleSignature = normalizeExerciseName(exercise?.grupoMuscularPrimario ?? '')
+
+        return `${normalizedName}|${exerciseDbId}|${exerciseDbName}|${aliasSignature}|${directGifUrl}|${fallbackGifUrl}|${primaryMuscleSignature}|${gifCacheBuster}`
+    }, [exercise, exerciseName, gifCacheBuster])
+
+    const { gifUrl: resolvedGifUrl, isLoading: gifIsLoading } = useExerciseGif(exerciseName, {
+        exerciseId: exercise?.id,
+        exerciseDbId: exercise?.exerciseDbId,
+        exerciseDbName: exercise?.exerciseDbName,
+        exerciseDbAliases: exercise?.exerciseDbAliases,
+        gifUrl: exercise?.gifUrl,
+        fallbackGifUrl: exercise?.imagenUrl,
+        grupoMuscularPrimario: exercise?.grupoMuscularPrimario,
+        enabled: true,
+        cacheBuster: gifCacheBuster,
+    })
+
     return (
-        <div className="space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+        <div className="space-y-4 bg-gym-card border border-gym-border rounded-xl p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-gym-card-2 border border-gym-border rounded-xl p-3">
                 <button
                     type="button"
                     onClick={onPrevious}
-                    className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
+                    className="rounded-lg border border-gym-border px-3 py-1 text-xs text-gym-text-base hover:bg-gym-card"
                 >
                     {t('training.exerciseCard.previous')}
                 </button>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
+                <p className="text-xs text-gym-text-dim">
                     {t('training.exerciseCard.exerciseCount', { current: activeExerciseIndex + 1, total: totalExercises })}
                 </p>
                 <button
                     type="button"
                     onClick={onNext}
-                    className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
+                    className="rounded-lg border border-gym-border px-3 py-1 text-xs text-gym-text-base hover:bg-gym-card"
                 >
                     {t('training.exerciseCard.next')}
                 </button>
             </div>
 
-            <div className="flex items-center gap-3">
-                <ExerciseThumbnail
-                    exerciseId={activeRoutineExercise.ejercicio?.id}
-                    nombre={activeRoutineExercise.ejercicio?.nombre || t('training.exerciseCard.exercise')}
-                    grupoMuscularPrimario={activeRoutineExercise.ejercicio?.grupoMuscularPrimario}
-                    equipoNecesario={activeRoutineExercise.ejercicio?.equipoNecesario}
-                    gifUrl={activeRoutineExercise.ejercicio?.gifUrl}
-                    imagenUrl={activeRoutineExercise.ejercicio?.imagenUrl}
-                    exerciseDbId={activeRoutineExercise.ejercicio?.exerciseDbId}
-                    exerciseDbName={activeRoutineExercise.ejercicio?.exerciseDbName}
-                    exerciseDbAliases={activeRoutineExercise.ejercicio?.exerciseDbAliases}
-                    className="h-16 w-24"
-                />
-                <p className="text-sm font-medium">
-                    {t('training.exerciseCard.summary', {
-                        index: activeExerciseIndex + 1,
-                        name: activeRoutineExercise.ejercicio?.nombre || t('training.exerciseCard.exercise'),
-                        series: activeRoutineExercise.series,
-                        reps: activeRoutineExercise.repeticiones,
+            <div className="space-y-3">
+                <div className="bg-gym-black border border-gym-border rounded-xl overflow-hidden h-[200px] relative">
+                    {(gifIsLoading || !resolvedGifUrl) && (
+                        <div className="absolute inset-0 animate-pulse bg-gym-card-2" />
+                    )}
+                    {resolvedGifUrl && (
+                        <img
+                            src={resolvedGifUrl}
+                            alt={t('training.exerciseCard.gifAlt', { name: exerciseName })}
+                            className="h-full w-full object-contain bg-gym-black"
+                            loading="lazy"
+                        />
+                    )}
+                </div>
+
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="font-display text-2xl text-gym-yellow uppercase tracking-wider truncate">
+                            {exerciseName}
+                        </div>
+                        <div className="mt-1 text-gym-text-dim text-xs">
+                            {t('training.exerciseCard.seriesRepsLine', { series: activeRoutineExercise.series, reps: activeRoutineExercise.repeticiones })}
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            try {
+                                globalThis.localStorage?.removeItem(`gifcache_v2_${cacheKey}`)
+                            } catch {
+                                // ignore
+                            }
+                            setGifCacheBuster(Date.now())
+                        }}
+                        className="shrink-0 rounded-lg border border-gym-yellow text-gym-yellow px-3 py-2 text-xs font-semibold hover:bg-gym-yellow/10"
+                    >
+                        {t('training.exerciseCard.gifIncorrect')}
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: activeRoutineExercise.series }, (_, setIndex) => {
+                        const serieNumero = setIndex + 1
+                        const current = getSetValue(activeRoutineExercise.id, serieNumero)
+                        const isDone = (current.reps ?? 0) > 0 && (current.peso ?? 0) > 0
+                        return (
+                            <div
+                                key={`chip-${activeRoutineExercise.id}-${serieNumero}`}
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${isDone
+                                    ? 'bg-gym-yellow text-black'
+                                    : 'border border-gym-yellow text-gym-yellow'
+                                    }`}
+                            >
+                                {t('training.exerciseCard.setChip', { number: serieNumero })}
+                            </div>
+                        )
                     })}
-                </p>
+                </div>
             </div>
             {previousSession && (
-                <p className="text-xs text-slate-600 dark:text-slate-300">
+                <p className="text-xs text-gym-text-dim">
                     {t('training.exerciseCard.lastRecord', { date: new Date(previousSession.fecha).toLocaleDateString() })}:{' '}
                     {previousSession.sets.map((set) => `S${set.serieNumero} ${set.repeticionesRealizadas}x${set.pesoUtilizado}kg`).join(' · ')}
                 </p>

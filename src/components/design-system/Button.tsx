@@ -8,14 +8,15 @@ function cn(...inputs: Array<string | undefined | false>) {
 }
 
 const buttonVariants = cva(
-    'inline-flex items-center justify-center rounded-lg font-semibold transition disabled:cursor-not-allowed disabled:opacity-60',
+    'inline-flex items-center justify-center rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-60',
     {
         variants: {
             variant: {
-                primary: 'bg-gym-primary text-white hover:opacity-90',
-                secondary: 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
-                danger: 'bg-red-600 text-white hover:bg-red-700',
-                ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800',
+                primary:
+                    'bg-gym-yellow text-black font-bold tracking-wide uppercase hover:bg-gym-yellow-light active:scale-95',
+                secondary: 'border border-gym-yellow text-gym-yellow bg-transparent hover:bg-gym-yellow/10',
+                danger: 'bg-gym-danger text-white hover:opacity-90',
+                ghost: 'text-gym-text-dim hover:text-gym-text-bright',
             },
             size: {
                 sm: 'h-9 px-3 text-sm',

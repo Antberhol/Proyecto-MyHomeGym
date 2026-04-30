@@ -67,7 +67,7 @@ describe('calculations utils', () => {
         })
 
         it('returns same weight for 1 rep', () => {
-            expect(estimateOneRmEpley(100, 0)).toBe(100)
+            expect(estimateOneRmEpley(100, 1)).toBe(100)
         })
 
         it('handles heavy weight low rep scenario', () => {

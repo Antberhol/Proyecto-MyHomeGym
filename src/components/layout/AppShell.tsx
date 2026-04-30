@@ -38,8 +38,8 @@ function NavItem({
       aria-label={t('appShell.goToAria', { label })}
       className={({ isActive }) =>
         `flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${isExpanded ? 'gap-3' : 'justify-center'} ${isActive
-          ? 'bg-gym-primary text-white'
-          : 'text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700'
+          ? 'bg-gym-card-2 text-gym-yellow'
+          : 'text-gym-text-dim hover:bg-gym-card-2 hover:text-gym-text-bright'
         }`
       }
     >
@@ -93,17 +93,17 @@ export function AppShell() {
   ]
 
   return (
-    <div className="min-h-[100dvh] bg-gym-bgLight dark:bg-gym-bgDark dark:text-white">
+    <div className="min-h-[100dvh] bg-gym-bg-dark text-gym-text-base dark:bg-gym-bg-dark dark:text-gym-text-base">
       <div className="mx-auto flex h-[100dvh] max-w-[1400px] overflow-hidden">
         <aside
-          className={`hidden border-r border-slate-200 bg-white p-3 transition-all dark:border-slate-700 dark:bg-gym-cardDark md:block ${sidebarCollapsed ? 'w-[78px]' : 'w-[250px]'
+          className={`hidden border-r border-gym-border bg-gym-black p-3 transition-all md:block ${sidebarCollapsed ? 'w-[78px]' : 'w-[250px]'
             }`}
         >
           <button
             type="button"
             onClick={toggleSidebar}
             aria-label={t('appShell.toggleSidebarAria')}
-            className={`mb-4 inline-flex w-full items-center rounded-lg border border-slate-300 px-3 py-2 text-sm transition-all duration-300 dark:border-slate-600 ${sidebarCollapsed ? 'justify-center' : 'gap-2'
+            className={`mb-4 inline-flex w-full items-center rounded-lg border border-gym-border px-3 py-2 text-sm transition-all duration-300 ${sidebarCollapsed ? 'justify-center' : 'gap-2'
               }`}
           >
             <Menu size={16} className="flex-shrink-0" />
@@ -129,7 +129,7 @@ export function AppShell() {
                 onClick={() => setLangDropdownOpen((prev) => !prev)}
                 aria-haspopup="listbox"
                 aria-expanded={langDropdownOpen}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-600"
+                className="flex items-center gap-1 rounded-lg border border-gym-border bg-gym-card px-3 py-2 text-xs font-semibold"
               >
                 <span>{currentLanguage === 'es' ? '🇪🇸' : '🇬🇧'}</span>
                 <span>{currentLanguage.toUpperCase()}</span>
@@ -138,7 +138,7 @@ export function AppShell() {
               {langDropdownOpen && (
                 <div
                   role="listbox"
-                  className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-gym-cardDark"
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-xl border border-gym-border bg-gym-card shadow-lg"
                 >
                   {[
                     { code: 'es' as const, label: 'Español', flag: '🇪🇸' },
@@ -153,15 +153,15 @@ export function AppShell() {
                         void changeLanguage(option.code)
                         setLangDropdownOpen(false)
                       }}
-                      className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-slate-50 dark:hover:bg-slate-700 first:rounded-t-xl last:rounded-b-xl ${currentLanguage === option.code
-                          ? 'font-semibold text-gym-primary'
-                          : 'text-slate-700 dark:text-slate-200'
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-gym-card-2 first:rounded-t-xl last:rounded-b-xl ${currentLanguage === option.code
+                          ? 'font-semibold text-gym-yellow'
+                          : 'text-gym-text-base'
                         }`}
                     >
                       <span>{option.flag}</span>
                       <span>{option.label}</span>
                       {currentLanguage === option.code && (
-                        <span className="ml-auto text-gym-primary">✓</span>
+                        <span className="ml-auto text-gym-yellow">✓</span>
                       )}
                     </button>
                   ))}
@@ -176,7 +176,7 @@ export function AppShell() {
 
       <nav
         aria-label={t('appShell.mobileNavAria')}
-        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/80 px-2 pt-2 backdrop-blur-md dark:border-slate-700 dark:bg-gym-cardDark/80 md:hidden"
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-gym-border bg-gym-black px-2 pt-2 md:hidden"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
@@ -186,9 +186,9 @@ export function AppShell() {
               to={to}
               aria-label={t('appShell.goToAria', { label })}
               className={({ isActive }) =>
-                `mobile-bottom-nav-item flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-medium transition ${isActive
-                  ? 'text-gym-primary'
-                  : 'text-slate-600 dark:text-slate-300'
+                `mobile-bottom-nav-item relative flex flex-col items-center rounded-xl px-1 py-2 text-[11px] font-medium transition ${isActive
+                  ? "text-gym-yellow before:content-[''] before:absolute before:top-0 before:left-1/2 before:h-[2px] before:w-10 before:-translate-x-1/2 before:rounded-full before:bg-gym-yellow"
+                  : 'text-gym-text-muted'
                 }`
               }
             >

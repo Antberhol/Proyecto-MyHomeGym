@@ -9,7 +9,7 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
-    const { i18n } = useTranslation()
+    const { i18n, t } = useTranslation()
     const [isHovered, setIsHovered] = useState(false)
     const [hasInteracted, setHasInteracted] = useState(false)
     const shouldFetchGif = isHovered || hasInteracted
@@ -78,6 +78,10 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
         .map((value) => value.trim())
 
+    const muscleTags = [exercise.grupoMuscularPrimario]
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .map((value) => value.trim())
+
     return (
         <div
             className="space-y-3"
@@ -89,9 +93,9 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
             onClick={() => setHasInteracted(true)}
         >
             <div className="flex items-center gap-3">
-                <div className="relative h-20 w-28 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="relative aspect-square h-24 overflow-hidden rounded-xl border border-gym-border bg-gym-black">
                     {(imageStatus === 'loading' || (shouldFetchGif && isLoading)) && (
-                        <div className="absolute inset-0 z-0 animate-pulse bg-slate-200 dark:bg-slate-700" />
+                        <div className="absolute inset-0 z-0 animate-pulse bg-gym-card-2" />
                     )}
                     {imageStatus === 'error' && (
                         <div className="absolute inset-0 z-10">
@@ -108,26 +112,44 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                         onError={() => setImageStatus('error')}
                         aria-hidden={imageStatus !== 'loaded'}
                     />
+
+                    <div
+                        className={`absolute inset-0 z-20 flex items-center justify-center bg-black/70 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'
+                            }`}
+                    >
+                        <span className="rounded-full bg-gym-yellow px-3 py-1 text-xs font-bold text-black">
+                            {t('catalog.viewDetail')}
+                        </span>
+                    </div>
                 </div>
                 <div>
-                    <h2 className="font-semibold">{exercise.nombre}</h2>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">
-                        Objetivo: {targetMuscle || exercise.grupoMuscularPrimario}
+                    <h2 className="font-display tracking-wider uppercase text-gym-yellow text-xl">{exercise.nombre}</h2>
+                    <p className="text-xs text-gym-text-dim">
+                        {t('catalog.target')}: {targetMuscle || exercise.grupoMuscularPrimario}
                     </p>
-                    {equipmentTags.length > 0 ? (
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                            {equipmentTags.map((tag) => (
-                                <span key={tag} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
-                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                        {muscleTags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="bg-gym-yellow/10 text-gym-yellow border border-gym-yellow/30 rounded-full text-xs px-2 py-0.5"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        {equipmentTags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="bg-gym-yellow/10 text-gym-yellow border border-gym-yellow/30 rounded-full text-xs px-2 py-0.5"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
-                <ol className="list-decimal space-y-1.5 pl-5 text-xs text-slate-700 dark:text-slate-200">
+            <div className="bg-gym-card border border-gym-border rounded-xl p-3">
+                <ol className="list-decimal space-y-1.5 pl-5 text-xs text-gym-text-base">
                     {effectiveInstructions.map((step, index) => (
                         <li key={`${exercise.id}-step-${index}`}>{step}</li>
                     ))}

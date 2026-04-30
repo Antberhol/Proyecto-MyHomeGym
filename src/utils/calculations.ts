@@ -17,6 +17,7 @@ export function calculateSetVolume(peso: number, reps: number): number {
 
 export function calculate1RM(weight: number, reps: number): number {
   if (weight <= 0 || reps <= 0) return 0
+  if (reps === 1) return Number(weight.toFixed(2))
   return Number((weight * (1 + reps / 30)).toFixed(2))
 }
 

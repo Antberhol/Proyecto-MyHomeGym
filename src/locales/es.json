@@ -135,7 +135,16 @@
             "totalVolume50k": "50.000 kg acumulados",
             "unlocked": "Desbloqueado",
             "pending": "Pendiente"
-        }
+        },
+        "greeting": "Hoy: {{day}}",
+        "subtitle": "¿Listo para entrenar?",
+        "streak": {
+            "title": "Racha",
+            "days": "días",
+            "week": "Esta semana: {{count}}",
+            "total": "Total"
+        },
+        "startWorkout": "EMPEZAR ENTRENAMIENTO"
     },
     "muscleGroups": {
         "chest": "Pecho",
@@ -243,6 +252,80 @@
     },
     "progress": {
         "title": "Progreso",
+        "hero": {
+            "streak": "Racha",
+            "totalWorkouts": "Entrenos totales",
+            "weeklyVolume": "Volumen semanal",
+            "currentWeight": "Peso actual",
+            "topOneRm": "Mejor 1RM",
+            "noData": "—"
+        },
+        "tabs": {
+            "summary": "Resumen",
+            "strength": "Fuerza",
+            "body": "Cuerpo",
+            "prs": "PRs"
+        },
+        "summary": {
+            "daysTrained": "Días entrenados",
+            "weeklyVolume": "Volumen semanal",
+            "weeklySets": "Series semanales"
+        },
+        "units": {
+            "days": "días",
+            "sets": "series"
+        },
+        "muscleDistribution": {
+            "title": "Distribución muscular",
+            "subtitle": "Basado en tus entrenos de los últimos 30 días."
+        },
+        "weeklyVolume": {
+            "title": "Volumen semanal",
+            "subtitle": "Últimas 12 semanas",
+            "empty": "Aún no hay datos suficientes."
+        },
+        "strength": {
+            "exerciseSelector": "Ejercicio",
+            "topPrs": "Top PRs (peso máximo)",
+            "noPrs": "Sin PRs de peso máximo.",
+            "comparisonTitle": "Comparación 1RM",
+            "recent": "Reciente",
+            "thirtyDaysAgo": "Hace 30 días",
+            "notEnoughData": {
+                "title": "Faltan datos",
+                "body": "Registra al menos 3 sesiones de este ejercicio para ver su tendencia."
+            }
+        },
+        "body": {
+            "weight90d": "Peso (90d)",
+            "bmi": "IMC (90d)",
+            "measurements": "Medidas",
+            "waist": "Cintura",
+            "chest": "Pecho",
+            "leg": "Pierna",
+            "biceps": "Bíceps",
+            "shoulders": "Hombros",
+            "calf": "Pantorrilla"
+        },
+        "weekLabel": {
+            "currentShort": "Ahora"
+        },
+        "unknownExercise": "Ejercicio desconocido",
+        "prFilter": {
+            "all": "Todos",
+            "weight": "Peso",
+            "volume": "Volumen",
+            "reps": "Reps"
+        },
+        "prFeed": {
+            "empty": "Aún no hay PRs. Sigue entrenando y aparecerán aquí."
+        },
+        "prTypes": {
+            "peso_maximo": "Peso máximo",
+            "volumen_total": "Volumen total",
+            "reps_mismo_peso": "Reps al mismo peso",
+            "volumen_serie": "Volumen por serie"
+        },
         "sections": {
             "weightImc": "Peso e IMC",
             "volumePerSession": "Volumen por sesión",
@@ -465,6 +548,10 @@
             "next": "Siguiente",
             "exerciseCount": "Ejercicio {{current}} de {{total}}",
             "exercise": "Ejercicio",
+            "gifAlt": "GIF de {{name}}",
+            "gifIncorrect": "GIF incorrecto",
+            "seriesRepsLine": "{{series}} series · objetivo {{reps}}",
+            "setChip": "Serie {{number}}",
             "summary": "{{index}}. {{name}} · {{series}} series · objetivo {{reps}}",
             "lastRecord": "Último registro ({{date}})",
             "suggestedLoad": "Carga sugerida:",
@@ -495,6 +582,7 @@
         "results": "Resultados: {{count}}",
         "target": "Objetivo",
         "tapForInfo": "Pulsa para más información",
+        "viewDetail": "Ver detalle",
         "edit": "Editar",
         "delete": "Borrar",
         "namePlaceholder": "Nombre",

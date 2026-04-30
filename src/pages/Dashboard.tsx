@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { StreakBadge } from '../components/StreakBadge'
 import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
@@ -14,6 +15,7 @@ const WEEKDAY_CODES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
 export function DashboardPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
   const [setDraftById, setSetDraftById] = useState<Record<string, { reps: string; weight: string }>>({})
   const streaks = useStreaks()
@@ -260,14 +262,45 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{t('nav.dashboard')}</h1>
-          <StreakBadge
-            dayStreak={streaks.currentDayStreak}
-            weekStreak={streaks.currentWeekStreak}
-            totalTrainings={streaks.totalTrainings}
-          />
+      <header className="mobile-sticky-header sticky top-0 z-10 bg-gym-bg-dark border-b border-gym-border pb-3 pt-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-4xl text-gym-text-bright tracking-wider">{t('dashboard.greeting', { day: todayLabel })}</h1>
+              <p className="text-gym-text-dim text-sm">{t('dashboard.subtitle')}</p>
+            </div>
+
+            <div className="hidden sm:block">
+              <StreakBadge
+                dayStreak={streaks.currentDayStreak}
+                weekStreak={streaks.currentWeekStreak}
+                totalTrainings={streaks.totalTrainings}
+              />
+            </div>
+          </div>
+
+          <div className="bg-gym-card border border-gym-yellow rounded-xl p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">🔥</div>
+              <div>
+                <div className="text-gym-text-muted text-xs uppercase tracking-wider">{t('dashboard.streak.title')}</div>
+                <div className="text-gym-yellow font-display text-3xl tracking-wide">{streaks.currentDayStreak} {t('dashboard.streak.days')}</div>
+                <div className="text-gym-text-dim text-xs">{t('dashboard.streak.week', { count: streaks.currentWeekStreak })}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-gym-text-muted text-xs uppercase tracking-wider">{t('dashboard.streak.total')}</div>
+              <div className="text-gym-yellow font-display text-2xl tracking-wide">{streaks.totalTrainings.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/entrenar')}
+            className="w-full bg-gym-yellow text-black font-display text-xl tracking-widest uppercase rounded-xl py-3 hover:bg-gym-yellow-light active:scale-[0.99] transition-all"
+          >
+            {t('dashboard.startWorkout')}
+          </button>
         </div>
       </header>
 
@@ -275,26 +308,26 @@ export function DashboardPage() {
         {statsCards.map((card) => (
           <article
             key={card.id}
-            className={`rounded-2xl border border-slate-200 border-l-4 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-gym-cardDark ${card.accentClass}`}
+            className="rounded-2xl border border-gym-border bg-gym-card p-4 transition hover:-translate-y-0.5"
           >
             <div className="flex items-center gap-3">
-              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg ${card.iconWrapClass}`}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg bg-gym-yellow/10 text-gym-yellow border border-gym-yellow/30">
                 <span aria-hidden>{card.icon}</span>
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{card.label}</p>
-                <p className="mt-0.5 text-2xl font-bold leading-tight">{card.value}</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{card.context}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gym-text-muted">{card.label}</p>
+                <p className="mt-0.5 text-2xl font-bold leading-tight text-gym-yellow">{card.value}</p>
+                <p className="mt-1 text-xs text-gym-text-dim">{card.context}</p>
               </div>
             </div>
           </article>
         ))}
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">{t('dashboard.recentSessions.title')}</h2>
+      <section className="rounded-xl bg-gym-card border border-gym-border p-4">
+        <h2 className="mb-3 font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('dashboard.recentSessions.title')}</h2>
         {trainings.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-300">{t('dashboard.recentSessions.empty')}</p>
+          <p className="text-sm text-gym-text-dim">{t('dashboard.recentSessions.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {trainings
@@ -302,30 +335,30 @@ export function DashboardPage() {
               .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
               .slice(0, 5)
               .map((training) => (
-                <li key={training.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>{new Date(training.fecha).toLocaleString()}</span>
-                    <span>{training.duracionMinutos} {t('dashboard.common.minAbbrev')}</span>
+                <li key={training.id} className="rounded-xl border border-gym-border bg-gym-card-2 p-3">
+                  <div className="flex items-center justify-between text-sm text-gym-text-base">
+                    <span className="text-gym-text-dim">{new Date(training.fecha).toLocaleString()}</span>
+                    <span className="text-gym-yellow font-semibold">{training.duracionMinutos} {t('dashboard.common.minAbbrev')}</span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">{t('dashboard.recentSessions.volumeLabel', { volume: training.volumenTotal })}</p>
+                  <p className="text-xs text-gym-text-dim">{t('dashboard.recentSessions.volumeLabel', { volume: training.volumenTotal })}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      className="rounded-md border border-gym-yellow text-gym-yellow px-2.5 py-1.5 text-xs font-medium hover:bg-gym-yellow/10"
                       onClick={() => void copyWorkout(training.id, 'text')}
                     >
                       {t('dashboard.recentSessions.copyWhatsapp')}
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      className="rounded-md border border-gym-yellow text-gym-yellow px-2.5 py-1.5 text-xs font-medium hover:bg-gym-yellow/10"
                       onClick={() => void copyWorkout(training.id, 'csv')}
                     >
                       {t('dashboard.recentSessions.copyExcel')}
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium"
+                      className="rounded-md border border-gym-border text-gym-text-base px-2.5 py-1.5 text-xs font-medium hover:bg-gym-card"
                       onClick={() => {
                         setExpandedSessionId((current) => (current === training.id ? null : training.id))
                       }}

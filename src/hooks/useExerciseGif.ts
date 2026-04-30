@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getExerciseDbQueryCandidates, normalizeExerciseName } from '../constants/exerciseDbAliases'
+import { getExerciseDbQueryCandidates, getPreferredExerciseDbName, normalizeExerciseName } from '../constants/exerciseDbAliases'
 import { exerciseStaticImages } from '../constants/exerciseStaticImages'
 import { exerciseRepository } from '../repositories/exerciseRepository'
 
@@ -37,6 +37,8 @@ interface UseExerciseGifOptions {
     grupoMuscularPrimario?: string
     /** When false, returns placeholder immediately without fetching (IntersectionObserver gate). */
     enabled?: boolean
+    /** Forces a different cacheKey to bypass persisted gifcache_v2_ entries (used for manual refresh). */
+    cacheBuster?: string | number
 }
 
 const EXERCISE_DB_FREE_API_BASE = 'https://oss.exercisedb.dev/api/v1'
@@ -461,49 +463,74 @@ function resolveExerciseGifUrl(item: ExerciseDbItem | null): string {
     return normalizeGifUrl(item.gifUrl)
 }
 
-function buildQueryCandidates(exerciseName: string, options?: UseExerciseGifOptions) {
-    const candidates = new Set<string>()
+function scoreMatch(itemName: string, candidate: string): number {
+    const norm = normalizeExerciseName
+    const a = norm(itemName)
+    const b = norm(candidate)
 
-    if (options?.exerciseDbName?.trim()) {
-        candidates.add(normalizeExerciseName(options.exerciseDbName))
-    }
+    if (a === b) return 100
+    if (a.startsWith(b) || b.startsWith(a)) return 80
 
-    for (const alias of options?.exerciseDbAliases ?? []) {
-        if (alias.trim()) {
-            candidates.add(normalizeExerciseName(alias))
-        }
-    }
+    const tokA = new Set(a.split(' ').filter((t) => t.length > 2))
+    const tokB = new Set(b.split(' ').filter((t) => t.length > 2))
+    const intersection = [...tokA].filter((t) => tokB.has(t)).length
+    const union = new Set([...tokA, ...tokB]).size
+    const jaccard = union === 0 ? 0 : intersection / union
 
-    for (const candidate of getExerciseDbQueryCandidates(exerciseName)) {
-        candidates.add(candidate)
-    }
-
-    return Array.from(candidates)
+    return Math.round(jaccard * 60)
 }
 
 function selectBestMatch(items: ExerciseDbItem[], candidate: string): ExerciseDbItem | null {
     if (items.length === 0) return null
-    const normalizedCandidate = normalizeExerciseName(candidate)
 
-    const hasReasonableNameMatch = (itemName: string): boolean => {
-        const normalizedItemName = normalizeExerciseName(itemName)
-        if (!normalizedItemName || !normalizedCandidate) {
-            return false
-        }
+    const scored = items
+        .filter((item) => item.gifUrl && resolveExerciseDbItemId(item))
+        .map((item) => ({ item, score: scoreMatch(item.name ?? '', candidate) }))
+        .filter(({ score }) => score >= 40)
+        .sort((a, b) => b.score - a.score)
 
-        return (
-            normalizedItemName === normalizedCandidate ||
-            normalizedItemName.includes(normalizedCandidate) ||
-            normalizedCandidate.includes(normalizedItemName)
-        )
+    return scored[0]?.item ?? null
+}
+
+async function searchExerciseDbByExactName(name: string, signal: AbortSignal): Promise<ExerciseDbItem | null> {
+    const normalized = normalizeExerciseName(name)
+    if (!normalized) {
+        return null
     }
 
-    const exact = items.find((item) => hasReasonableNameMatch(item.name ?? '') && item.gifUrl)
-    if (exact) return exact
-    const firstWithGif = items.find(
-        (item) => item.gifUrl && resolveExerciseDbItemId(item) && hasReasonableNameMatch(item.name ?? ''),
-    )
-    return firstWithGif || null
+    await acquireSlot()
+    try {
+        const response = await fetch(
+            `${EXERCISE_DB_FREE_API_BASE}/exercises/search?q=${encodeURIComponent(name)}&limit=10`,
+            { signal },
+        )
+
+        if (!response.ok) {
+            return null
+        }
+
+        const payload = (await response.json()) as ExerciseDbListResponse
+        const items = Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.data?.exercises)
+                ? payload.data.exercises
+                : []
+
+        const exact = items.find(
+            (item) =>
+                Boolean(item?.gifUrl) &&
+                Boolean(resolveExerciseDbItemId(item ?? null)) &&
+                normalizeExerciseName(item?.name ?? '') === normalized,
+        )
+        return exact ?? null
+    } catch {
+        if (signal.aborted) {
+            return null
+        }
+        return null
+    } finally {
+        releaseSlot()
+    }
 }
 
 export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOptions): UseExerciseGifResult {
@@ -522,7 +549,8 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
     })
     const aliasSignature = (exerciseDbAliases ?? []).join('|')
     const primaryMuscleSignature = normalizeExerciseName(primaryMuscle ?? '')
-    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${directGifUrl}|${fallbackGifUrl}|${primaryMuscleSignature}`
+    const cacheBusterSignature = options?.cacheBuster ?? ''
+    const cacheKey = `${normalizedName}|${exerciseDbId ?? ''}|${exerciseDbName ?? ''}|${aliasSignature}|${directGifUrl}|${fallbackGifUrl}|${primaryMuscleSignature}|${cacheBusterSignature}`
     const cached = useMemo(
         () => (normalizedName ? readExerciseGifCache(cacheKey) : undefined),
         [cacheKey, normalizedName],
@@ -603,23 +631,36 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
             })
 
             try {
-                const byId = exerciseDbId?.trim()
-                    ? await searchExerciseDbById(exerciseDbId, controller.signal)
+                const sanitizedExerciseDbId = sanitizeExerciseDbId(exerciseDbId)
+                let resolutionMode: 'id' | 'alias' | 'fuzzy' | 'none' = 'none'
+
+                const byId = sanitizedExerciseDbId
+                    ? await searchExerciseDbById(sanitizedExerciseDbId, controller.signal)
                     : null
 
-                const candidates = buildQueryCandidates(exerciseName, {
-                    exerciseDbId,
-                    exerciseDbName,
-                    exerciseDbAliases,
-                })
                 let firstResult = byId
+                if (firstResult) {
+                    resolutionMode = 'id'
+                }
 
+                const preferredAlias = getPreferredExerciseDbName(exerciseName)
+                if (!firstResult && preferredAlias) {
+                    firstResult = await searchExerciseDbByExactName(preferredAlias, controller.signal)
+                    if (firstResult) {
+                        resolutionMode = 'alias'
+                    }
+                }
+
+                const candidates = getExerciseDbQueryCandidates(exerciseName)
                 if (!firstResult) {
                     firstResult = await searchExerciseDbByCandidates(candidates, controller.signal)
+                    if (firstResult) {
+                        resolutionMode = 'fuzzy'
+                    }
                 }
 
                 const resolvedExerciseDbId = resolveExerciseDbItemId(firstResult)
-                const resolvedByCandidate = !byId && Boolean(resolvedExerciseDbId)
+                const resolvedByCandidate = resolutionMode !== 'id' && Boolean(resolvedExerciseDbId)
 
                 const resolved: ExerciseGifData = {
                     gifUrl: resolveGuaranteedGifUrl({
@@ -645,6 +686,21 @@ export function useExerciseGif(exerciseName: string, options?: UseExerciseGifOpt
                 })
 
                 writeExerciseGifCache(cacheKey, resolved)
+
+                if (import.meta.env.DEV) {
+                    const diagnosticCandidate =
+                        (resolutionMode === 'alias' ? preferredAlias : undefined) ?? candidates[0] ?? ''
+                    const score = firstResult?.name ? scoreMatch(firstResult.name, diagnosticCandidate) : undefined
+                    console.log(
+                        `[GIF RESOLVED] "${exerciseName}" → "${firstResult?.name}" (score: ${score ?? 'n/a'})`,
+                        {
+                            candidate: diagnosticCandidate,
+                            resolvedId: resolvedExerciseDbId,
+                            gifUrl: resolved.gifUrl,
+                        },
+                    )
+                }
+
                 setState({ ...resolved, isLoading: false })
             } catch (error) {
                 if (!controller.signal.aborted) {
