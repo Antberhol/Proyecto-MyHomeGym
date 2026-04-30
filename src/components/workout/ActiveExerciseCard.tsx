@@ -72,16 +72,11 @@ export function ActiveExerciseCard({
     const { t } = useTranslation()
     const [gifCacheBuster, setGifCacheBuster] = useState<number>(0)
 
-    if (!activeRoutineExercise) {
-        return null
-    }
-
-    const previousSession = previousSessionByExercise[activeRoutineExercise.ejercicioId]
-
-    const exercise = activeRoutineExercise.ejercicio
-    const exerciseName = exercise?.nombre || t('training.exerciseCard.exercise')
+    const exercise = activeRoutineExercise?.ejercicio
+    const exerciseName = exercise?.nombre ?? t('training.exerciseCard.exercise')
 
     const cacheKey = useMemo(() => {
+        if (!activeRoutineExercise) return ''
         const normalizedName = normalizeExerciseName(exerciseName)
         const exerciseDbId = exercise?.exerciseDbId ?? ''
         const exerciseDbName = exercise?.exerciseDbName ?? ''
@@ -91,7 +86,7 @@ export function ActiveExerciseCard({
         const primaryMuscleSignature = normalizeExerciseName(exercise?.grupoMuscularPrimario ?? '')
 
         return `${normalizedName}|${exerciseDbId}|${exerciseDbName}|${aliasSignature}|${directGifUrl}|${fallbackGifUrl}|${primaryMuscleSignature}|${gifCacheBuster}`
-    }, [exercise, exerciseName, gifCacheBuster])
+    }, [activeRoutineExercise, exercise, exerciseName, gifCacheBuster])
 
     const { gifUrl: resolvedGifUrl, isLoading: gifIsLoading } = useExerciseGif(exerciseName, {
         exerciseId: exercise?.id,
@@ -101,9 +96,15 @@ export function ActiveExerciseCard({
         gifUrl: exercise?.gifUrl,
         fallbackGifUrl: exercise?.imagenUrl,
         grupoMuscularPrimario: exercise?.grupoMuscularPrimario,
-        enabled: true,
+        enabled: Boolean(activeRoutineExercise),
         cacheBuster: gifCacheBuster,
     })
+
+    if (!activeRoutineExercise) {
+        return null
+    }
+
+    const previousSession = previousSessionByExercise[activeRoutineExercise.ejercicioId]
 
     return (
         <div className="space-y-4 bg-gym-card border border-gym-border rounded-xl p-4">
@@ -283,8 +284,8 @@ export function ActiveExerciseCard({
                                                         updateSetData(activeRoutineExercise.id, serieNumero, 'type', typeOption)
                                                     }
                                                     className={`h-8 rounded border text-[11px] font-semibold transition ${isActive
-                                                            ? SET_TYPE_STYLES[typeOption]
-                                                            : 'border-slate-300 text-slate-500 dark:border-slate-600 dark:text-slate-300'
+                                                        ? SET_TYPE_STYLES[typeOption]
+                                                        : 'border-slate-300 text-slate-500 dark:border-slate-600 dark:text-slate-300'
                                                         }`}
                                                     title={typeOption}
                                                 >

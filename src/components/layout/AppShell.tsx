@@ -154,8 +154,8 @@ export function AppShell() {
                         setLangDropdownOpen(false)
                       }}
                       className={`flex w-full items-center gap-2 px-4 py-2 text-sm transition hover:bg-gym-card-2 first:rounded-t-xl last:rounded-b-xl ${currentLanguage === option.code
-                          ? 'font-semibold text-gym-yellow'
-                          : 'text-gym-text-base'
+                        ? 'font-semibold text-gym-yellow'
+                        : 'text-gym-text-base'
                         }`}
                     >
                       <span>{option.flag}</span>
