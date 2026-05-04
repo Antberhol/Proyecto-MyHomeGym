@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton'
 import { Button } from '../components/design-system/Button'
 import { useLanguage } from '../context/useLanguage'
@@ -8,6 +9,8 @@ import { exportAllDataJson, exportSummaryPdf, exportTrainingsCsv, importAllDataJ
 import { resyncExerciseGifMappings } from '../lib/bootstrap'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications'
+import { profileRepository } from '../repositories/profileRepository'
+import type { UnitSystem } from '../types/models'
 
 async function clearAllData() {
     await settingsRepository.clearAllData()
@@ -20,6 +23,22 @@ export function ConfiguracionPage() {
     const [isResyncingGifs, setIsResyncingGifs] = useState(false)
     const importCsvInputRef = useRef<HTMLInputElement>(null)
     const importJsonInputRef = useRef<HTMLInputElement>(null)
+    const profile = useLiveQuery(() => profileRepository.getProfile(), [])
+    const unitSystem: UnitSystem = profile?.unitSystem ?? 'metric'
+
+    const handleChangeUnitSystem = async (next: UnitSystem) => {
+        try {
+            const updated = await profileRepository.updateUnitSystem(next)
+            if (!updated) {
+                setStatusMessage(t('settings.units.noProfile'))
+                return
+            }
+
+            setStatusMessage(t('settings.units.updated'))
+        } catch (error) {
+            setStatusMessage(error instanceof Error ? error.message : t('settings.units.updateFailed'))
+        }
+    }
 
     const handleClearData = async () => {
         const confirmed = window.confirm('¿Seguro que quieres borrar todos los datos locales de la app?')
@@ -194,6 +213,35 @@ export function ConfiguracionPage() {
                         }}
                     >
                         🇬🇧 {t('settings.english')}
+                    </Button>
+                </div>
+            </section>
+
+            <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+                <h2 className="mb-2 text-lg font-semibold">{t('settings.units.title')}</h2>
+                <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
+                    {t('settings.units.description')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        type="button"
+                        variant={unitSystem === 'metric' ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                            void handleChangeUnitSystem('metric')
+                        }}
+                    >
+                        {t('settings.units.metric')}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={unitSystem === 'imperial' ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                            void handleChangeUnitSystem('imperial')
+                        }}
+                    >
+                        {t('settings.units.imperial')}
                     </Button>
                 </div>
             </section>

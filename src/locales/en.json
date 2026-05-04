@@ -25,6 +25,13 @@
         "edit": "Edit",
         "retry": "Retry"
     },
+    "a11y": {
+        "noImageAvailable": "No image available",
+        "noImageFor": "No image available for {{name}}",
+        "exerciseGifAlt": "GIF of {{name}}",
+        "streakBadgeTitle": "Current streak: {{days}} consecutive days",
+        "streakBadgeAria": "Streak of {{days}} days and {{weeks}} weeks. {{total}} total workouts."
+    },
     "numberStepper": {
         "valueLabel": "value",
         "decreaseAria": "Decrease {{label}}",
@@ -39,6 +46,12 @@
         "profile": "Profile",
         "settings": "Settings",
         "home": "Home"
+    },
+    "units": {
+        "kg": "kg",
+        "lb": "lb",
+        "cm": "cm",
+        "in": "in"
     },
     "bodyDiagram": {
         "title": "Body diagram",
@@ -487,6 +500,15 @@
         "english": "English",
         "languageChangedEs": "Language changed to Spanish.",
         "languageChangedEn": "Language changed to English.",
+        "units": {
+            "title": "Units",
+            "description": "Choose how weight and body measurements are displayed.",
+            "metric": "Metric (kg, cm)",
+            "imperial": "Imperial (lb, in)",
+            "updated": "Units updated.",
+            "updateFailed": "Could not update units.",
+            "noProfile": "No profile found to save units."
+        },
         "notificationsTitle": "Notifications",
         "notificationsDescription": "Enable local reminders to stay consistent with training.",
         "enableNotifications": "Enable notifications",
@@ -591,6 +613,12 @@
                 "dropset": "Dropset",
                 "failure": "Failure"
             },
+            "feedback": {
+                "saved": "Session saved: {{sets}} sets logged, volume {{volumeKg}} kg, {{prs}} new PRs.",
+                "shareSuccess": "Summary shared successfully.",
+                "shareDownloaded": "Summary image downloaded.",
+                "shareFailed": "Could not share the summary. Check permissions or install html2canvas."
+            },
             "startRest": "Start rest ({{seconds}}s)",
             "recentHistory": "Recent exercise history",
             "noHistory": "There are no previous sessions for this exercise yet."
@@ -689,8 +717,8 @@
             "formTitle": "Edit profile data",
             "fields": {
                 "nombre": "Name",
-                "pesoCorporal": "Body weight (kg)",
-                "altura": "Height (cm)"
+                "pesoCorporal": "Body weight",
+                "altura": "Height"
             },
             "saveButton": "Save changes",
             "cancelButton": "Cancel",
@@ -701,13 +729,13 @@
         "form": {
             "sectionTitle": "Log new measurement",
             "fields": {
-                "pesoCorporal": "Body weight (kg)",
-                "cintura": "Waist (cm)",
-                "pecho": "Chest (cm)",
-                "diametroPierna": "Leg diameter (cm)",
-                "biceps": "Biceps (cm)",
-                "hombros": "Shoulders (cm)",
-                "pantorrilla": "Calf (cm)"
+                "pesoCorporal": "Body weight",
+                "cintura": "Waist",
+                "pecho": "Chest",
+                "diametroPierna": "Leg diameter",
+                "biceps": "Biceps",
+                "hombros": "Shoulders",
+                "pantorrilla": "Calf"
             },
             "submitButton": "Save measurement",
             "invalidWeight": "Enter a valid body weight.",

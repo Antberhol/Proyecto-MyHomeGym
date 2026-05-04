@@ -2,6 +2,8 @@ export type DifficultyLevel = 'basico' | 'intermedio' | 'avanzado'
 export type DevelopmentLevel = 'basico' | 'medio' | 'avanzado' | 'experto'
 export type ThemePreference = 'light' | 'dark' | 'system' | 'auto-time'
 
+export type UnitSystem = 'metric' | 'imperial'
+
 export type SyncEntityType =
   | 'training'
   | 'routine'
@@ -32,6 +34,7 @@ export interface SyncQueueItem {
 export interface UserProfile extends SyncMetadata {
   id: string
   nombre?: string
+  unitSystem?: UnitSystem
   pesoCorporal: number
   altura: number
   cintura?: number

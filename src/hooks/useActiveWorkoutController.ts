@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import type {
     ActiveExercisePrTarget,
@@ -92,6 +93,7 @@ function normalizeMuscleGroupForShare(group?: string): string {
 }
 
 export function useActiveWorkoutController() {
+    const { t } = useTranslation()
     useAudioFeedback()
     useHaptic()
 
@@ -358,6 +360,10 @@ export function useActiveWorkoutController() {
         setView('selection')
     }
 
+    const clearLastSavedMessage = useCallback(() => {
+        setLastSavedMessage('')
+    }, [])
+
     const addFreeExerciseDraft = () => {
         if (!freeExerciseId) return
 
@@ -600,7 +606,11 @@ export function useActiveWorkoutController() {
         })
 
         setLastSavedMessage(
-            `Sesión guardada: ${performed.length} series registradas, volumen ${volumenTotal.toFixed(0)} kg, ${prsCreated} PRs nuevos.`,
+            t('training.feedback.saved', {
+                sets: performed.length,
+                volumeKg: volumenTotal.toFixed(0),
+                prs: prsCreated,
+            }),
         )
 
         setSetData({})
@@ -648,9 +658,13 @@ export function useActiveWorkoutController() {
 
         try {
             const status = await shareWorkoutResult(sharePreviewData)
-            setLastSavedMessage(status === 'shared' ? 'Resumen compartido con éxito.' : 'Imagen del resumen descargada.')
+            setLastSavedMessage(
+                status === 'shared'
+                    ? t('training.feedback.shareSuccess')
+                    : t('training.feedback.shareDownloaded'),
+            )
         } catch {
-            setLastSavedMessage('No se pudo compartir el resumen. Instala html2canvas o revisa permisos del dispositivo.')
+            setLastSavedMessage(t('training.feedback.shareFailed'))
         }
     }
 
@@ -675,6 +689,7 @@ export function useActiveWorkoutController() {
         freeExercisesDraft,
         trainingSummary,
         lastSavedMessage,
+        clearLastSavedMessage,
         sharePreviewData,
         sessionSeconds,
         sessionRunning,

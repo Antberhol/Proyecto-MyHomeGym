@@ -43,7 +43,7 @@ export function DashboardPage() {
 
   const totalVolume = weekTrainings.reduce((acc, item) => acc + item.volumenTotal, 0)
   const totalMinutes = weekTrainings.reduce((acc, item) => acc + item.duracionMinutos, 0)
-  
+
 
   const achievements = [
     { id: 'first', label: t('dashboard.achievements.firstSession'), unlocked: totalTrainings >= 1 },

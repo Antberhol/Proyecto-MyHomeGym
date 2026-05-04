@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Calculator, Share2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { WorkoutShareCard } from '../components/share/WorkoutShareCard'
 import { PlateCalculatorModal } from '../components/tools/PlateCalculatorModal'
@@ -29,6 +31,7 @@ export function EntrenarPage() {
     freeExercisesDraft,
     trainingSummary,
     lastSavedMessage,
+    clearLastSavedMessage,
     sharePreviewData,
     sessionSeconds,
     sessionRunning,
@@ -60,9 +63,41 @@ export function EntrenarPage() {
     closePlateCalculator,
   } = useActiveWorkoutController()
 
+  useEffect(() => {
+    if (!lastSavedMessage) return
+
+    const timeoutId = window.setTimeout(() => {
+      clearLastSavedMessage()
+    }, 3500)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [clearLastSavedMessage, lastSavedMessage])
+
+  const toast = (
+    <AnimatePresence>
+      {lastSavedMessage ? (
+        <motion.div
+          key={lastSavedMessage}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="fixed left-1/2 top-4 z-50 w-[min(92vw,560px)] -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 shadow dark:border-slate-700 dark:bg-gym-cardDark dark:text-slate-200"
+          role="status"
+          aria-live="polite"
+        >
+          {lastSavedMessage}
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  )
+
   if (view === 'selection') {
     return (
       <div className="space-y-6">
+        {toast}
         <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
           <h1 className="text-2xl font-bold">{t('training.pageTitle')}</h1>
         </header>
@@ -78,13 +113,10 @@ export function EntrenarPage() {
   if (view === 'summary' && trainingSummary) {
     return (
       <div className="space-y-6">
+        {toast}
         <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
           <h1 className="text-2xl font-bold">{t('training.summary.title')}</h1>
         </header>
-
-        {lastSavedMessage && (
-          <p className="rounded-lg bg-white p-3 text-sm text-slate-700 shadow dark:bg-gym-cardDark dark:text-slate-200">{lastSavedMessage}</p>
-        )}
 
         <div className="w-full space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gym-cardDark">
           <div className="flex items-center justify-between">
@@ -161,6 +193,7 @@ export function EntrenarPage() {
 
   return (
     <div className="space-y-6">
+      {toast}
       <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">{t('training.registerTitle')}</h1>

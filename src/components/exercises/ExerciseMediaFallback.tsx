@@ -8,9 +8,8 @@ interface ExerciseMediaFallbackProps {
 }
 
 export function ExerciseMediaFallback({ className = '', label, showPulse = false }: ExerciseMediaFallbackProps) {
-    const { i18n } = useTranslation()
-    const isSpanish = i18n.language.toLowerCase().startsWith('es')
-    const resolvedLabel = label ?? (isSpanish ? 'Sin imagen disponible' : 'No image available')
+    const { t } = useTranslation()
+    const resolvedLabel = label ?? t('a11y.noImageAvailable')
 
     return (
         <div

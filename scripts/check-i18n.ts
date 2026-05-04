@@ -56,7 +56,7 @@ async function main() {
 
     if (missingInEn.length === 0 && missingInEs.length === 0) {
         // eslint-disable-next-line no-console
-        console.log(`i18n OK: ${esKeys.size} keys match between es.json and en.json`) 
+        console.log(`i18n OK: ${esKeys.size} keys match between es.json and en.json`)
         return
     }
 

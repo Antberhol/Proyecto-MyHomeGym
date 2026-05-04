@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EXERCISE_GIF_PLACEHOLDER, useExerciseGif } from '../../hooks/useExerciseGif'
 import { ExerciseMediaFallback } from './ExerciseMediaFallback'
 
@@ -32,6 +33,7 @@ export function ExerciseThumbnail({
     fallbackLabel,
     showFallbackPulse = false,
 }: ExerciseThumbnailProps) {
+    const { t } = useTranslation()
     // Keep IntersectionObserver as a visibility gate, but fetch only after user interaction.
     const containerRef = useRef<HTMLDivElement>(null)
     const [isVisible, setIsVisible] = useState(false)
@@ -103,8 +105,8 @@ export function ExerciseThumbnail({
             {imageStatus === 'error' && (
                 <div
                     className="absolute inset-0 z-20"
-                    title={`Sin imagen disponible para ${nombre}`}
-                    aria-label={`Sin imagen disponible para ${nombre}`}
+                    title={t('a11y.noImageFor', { name: nombre })}
+                    aria-label={t('a11y.noImageFor', { name: nombre })}
                 >
                     <ExerciseMediaFallback
                         className="absolute inset-0 rounded-none"
@@ -115,7 +117,7 @@ export function ExerciseThumbnail({
             )}
             <img
                 src={resolvedGifUrl}
-                alt={`GIF de ${nombre}`}
+                alt={t('a11y.exerciseGifAlt', { name: nombre })}
                 className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
                     }`}
                 loading="lazy"

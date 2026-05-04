@@ -1,5 +1,5 @@
 import { db } from '../lib/db'
-import type { BodyMeasurement, UserProfile } from '../types/models'
+import type { BodyMeasurement, UnitSystem, UserProfile } from '../types/models'
 
 export const profileRepository = {
     async getProfile(): Promise<UserProfile | undefined> {
@@ -25,6 +25,23 @@ export const profileRepository = {
             pesoCorporal: input.pesoCorporal,
             altura: input.altura,
             imc,
+            updatedAt: new Date().toISOString(),
+            isSynced: false,
+        }
+
+        await db.putUserProfile(updatedProfile)
+        return updatedProfile
+    },
+
+    async updateUnitSystem(unitSystem: UnitSystem): Promise<UserProfile | undefined> {
+        const currentProfile = await db.getFirstUserProfile()
+        if (!currentProfile) {
+            return undefined
+        }
+
+        const updatedProfile: UserProfile = {
+            ...currentProfile,
+            unitSystem,
             updatedAt: new Date().toISOString(),
             isSynced: false,
         }
