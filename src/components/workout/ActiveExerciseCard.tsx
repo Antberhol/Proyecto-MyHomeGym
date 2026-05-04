@@ -272,7 +272,9 @@ export function ActiveExerciseCard({
                                     }
                                 />
                                 <div className="space-y-1">
-                                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Tipo</span>
+                                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                        {t('training.exerciseCard.setTypeLabel')}
+                                    </span>
                                     <div className="grid grid-cols-4 gap-1">
                                         {(Object.keys(SET_TYPE_LABELS) as WorkoutSetType[]).map((typeOption) => {
                                             const isActive = currentSetType === typeOption
@@ -283,11 +285,15 @@ export function ActiveExerciseCard({
                                                     onClick={() =>
                                                         updateSetData(activeRoutineExercise.id, serieNumero, 'type', typeOption)
                                                     }
+                                                    aria-pressed={isActive}
+                                                    aria-label={t('training.exerciseCard.setTypeOptionAria', {
+                                                        type: t(`training.exerciseCard.setTypes.${typeOption}`),
+                                                    })}
                                                     className={`h-8 rounded border text-[11px] font-semibold transition ${isActive
                                                         ? SET_TYPE_STYLES[typeOption]
                                                         : 'border-slate-300 text-slate-500 dark:border-slate-600 dark:text-slate-300'
                                                         }`}
-                                                    title={typeOption}
+                                                    title={t(`training.exerciseCard.setTypes.${typeOption}`)}
                                                 >
                                                     {SET_TYPE_LABELS[typeOption]}
                                                 </button>

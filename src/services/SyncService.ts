@@ -1,7 +1,14 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { subscribeTrainingSaved } from '../lib/events'
+import { subscribeSyncOperationEnqueued, subscribeTrainingSaved } from '../lib/events'
 import { db } from '../lib/db'
-import type { RegisteredTraining } from '../types/models'
+import type {
+    BodyMeasurement,
+    Exercise,
+    PersonalRecord,
+    RegisteredTraining,
+    Routine,
+    RoutineExercise,
+} from '../types/models'
 import type { AuthUser } from './authService'
 import { firebaseFirestore, isFirebaseConfigured } from './firebase'
 import { useSyncStore } from '../stores/sync-store'
@@ -19,6 +26,14 @@ interface CloudBackupDoc {
 
 interface PendingTrainingPayload {
     trainingId: string
+}
+
+function safeJsonParse<T>(value: string): T | undefined {
+    try {
+        return JSON.parse(value) as T
+    } catch {
+        return undefined
+    }
 }
 
 function sanitizeFirestoreValue<T>(value: T): T {
@@ -44,6 +59,7 @@ const INITIAL_SYNC_KEY_PREFIX = 'myhomegym-cloud-initial-sync:'
 class SyncService {
     private user: AuthUser | null = null
     private unsubscribeTrainingSaved?: () => void
+    private unsubscribeSyncEnqueued?: () => void
     private started = false
 
     private formatSyncError(error: unknown, fallback: string) {
@@ -87,6 +103,16 @@ class SyncService {
             void this.handleTrainingSaved(detail.trainingId)
         })
 
+        this.unsubscribeSyncEnqueued = subscribeSyncOperationEnqueued(() => {
+            if (!this.user) return
+            if (!navigator.onLine) {
+                useSyncStore.getState().setStatus('offline')
+                return
+            }
+
+            void this.flushQueue()
+        })
+
         window.addEventListener('online', this.onConnectivityChange)
         window.addEventListener('offline', this.onConnectivityChange)
         this.onConnectivityChange()
@@ -98,6 +124,9 @@ class SyncService {
 
         this.unsubscribeTrainingSaved?.()
         this.unsubscribeTrainingSaved = undefined
+
+        this.unsubscribeSyncEnqueued?.()
+        this.unsubscribeSyncEnqueued = undefined
 
         window.removeEventListener('online', this.onConnectivityChange)
         window.removeEventListener('offline', this.onConnectivityChange)
@@ -244,7 +273,7 @@ class SyncService {
             (item) => item.entrenamientoId === trainingId,
         )
 
-        const trainingRef = doc(firebaseFirestore, 'users', this.user.uid, 'trainings', trainingId)
+        const trainingRef = doc(firebaseFirestore, 'users', this.user.uid, 'training', trainingId)
         const sanitizedTrainingPayload = sanitizeFirestoreValue({
             training,
             performed,
@@ -258,6 +287,103 @@ class SyncService {
         )
 
         await db.updateTrainingSyncState(trainingId, true, new Date().toISOString())
+    }
+
+    private async pushRoutine(routineId: string) {
+        if (!this.user || !firebaseFirestore) return
+
+        const routine = await db.getRoutineById(routineId)
+        if (!routine) return
+
+        const uploadedAt = new Date().toISOString()
+        const routineRef = doc(firebaseFirestore, 'users', this.user.uid, 'routine', routineId)
+        const sanitizedRoutinePayload = sanitizeFirestoreValue({
+            routine,
+            uploadedAt,
+        } satisfies { routine: Routine; uploadedAt: string })
+
+        await setDoc(routineRef, sanitizedRoutinePayload, { merge: true })
+        await db.updateRoutineSyncState(routineId, true, uploadedAt)
+    }
+
+    private async pushRoutineExercise(routineExerciseId: string) {
+        if (!this.user || !firebaseFirestore) return
+
+        const routineExercise = await db.getRoutineExerciseById(routineExerciseId)
+        if (!routineExercise) return
+
+        const uploadedAt = new Date().toISOString()
+        const routineExerciseRef = doc(
+            firebaseFirestore,
+            'users',
+            this.user.uid,
+            'routineExercise',
+            routineExerciseId,
+        )
+        const sanitizedPayload = sanitizeFirestoreValue({
+            routineExercise,
+            uploadedAt,
+        } satisfies { routineExercise: RoutineExercise; uploadedAt: string })
+
+        await setDoc(routineExerciseRef, sanitizedPayload, { merge: true })
+        await db.updateRoutineExerciseSyncState(routineExerciseId, true, uploadedAt)
+    }
+
+    private async pushExercise(exerciseId: string) {
+        if (!this.user || !firebaseFirestore) return
+
+        const exercise = await db.getExerciseById(exerciseId)
+        if (!exercise) return
+
+        const uploadedAt = new Date().toISOString()
+        const exerciseRef = doc(firebaseFirestore, 'users', this.user.uid, 'exercise', exerciseId)
+        const sanitizedPayload = sanitizeFirestoreValue({
+            exercise,
+            uploadedAt,
+        } satisfies { exercise: Exercise; uploadedAt: string })
+
+        await setDoc(exerciseRef, sanitizedPayload, { merge: true })
+        await db.updateExerciseSyncState(exerciseId, true, uploadedAt)
+    }
+
+    private async pushBodyMeasurement(measurementId: string) {
+        if (!this.user || !firebaseFirestore) return
+
+        const bodyMeasurement = await db.getBodyMeasurementById(measurementId)
+        if (!bodyMeasurement) return
+
+        const uploadedAt = new Date().toISOString()
+        const measurementRef = doc(
+            firebaseFirestore,
+            'users',
+            this.user.uid,
+            'bodyMeasurement',
+            measurementId,
+        )
+        const sanitizedPayload = sanitizeFirestoreValue({
+            bodyMeasurement,
+            uploadedAt,
+        } satisfies { bodyMeasurement: BodyMeasurement; uploadedAt: string })
+
+        await setDoc(measurementRef, sanitizedPayload, { merge: true })
+        await db.updateBodyMeasurementSyncState(measurementId, true, uploadedAt)
+    }
+
+    private async pushPersonalRecord(personalRecordId: string) {
+        if (!this.user || !firebaseFirestore) return
+
+        const pr = await db.getPersonalRecordById(personalRecordId)
+        if (!pr) return
+
+        const uploadedAt = new Date().toISOString()
+        const prRef = doc(firebaseFirestore, 'users', this.user.uid, 'pr', personalRecordId)
+        const sanitizedPayload = sanitizeFirestoreValue({
+            pr,
+            uploadedAt,
+        } satisfies { pr: PersonalRecord; uploadedAt: string })
+
+        await setDoc(prRef, sanitizedPayload, { merge: true })
+        await db.updatePersonalRecordSyncState(personalRecordId, true, uploadedAt)
     }
 
     private async flushQueue() {
@@ -275,8 +401,19 @@ class SyncService {
             for (const operation of pending) {
                 try {
                     if (operation.entityType === 'training') {
-                        const payload = JSON.parse(operation.payload) as PendingTrainingPayload
-                        await this.pushTraining(payload.trainingId)
+                        const parsed = safeJsonParse<PendingTrainingPayload>(operation.payload)
+                        const trainingId = parsed?.trainingId || operation.entityId
+                        await this.pushTraining(trainingId)
+                    } else if (operation.entityType === 'routine') {
+                        await this.pushRoutine(operation.entityId)
+                    } else if (operation.entityType === 'routineExercise') {
+                        await this.pushRoutineExercise(operation.entityId)
+                    } else if (operation.entityType === 'exercise') {
+                        await this.pushExercise(operation.entityId)
+                    } else if (operation.entityType === 'bodyMeasurement') {
+                        await this.pushBodyMeasurement(operation.entityId)
+                    } else if (operation.entityType === 'pr') {
+                        await this.pushPersonalRecord(operation.entityId)
                     }
 
                     await db.markSyncOperationDone(operation.id)

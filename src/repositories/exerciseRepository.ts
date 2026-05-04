@@ -11,11 +11,39 @@ export const exerciseRepository = {
     },
 
     async createExercise(exercise: Exercise): Promise<string> {
-        return db.addExercise(exercise)
+        const now = new Date().toISOString()
+        const id = await db.addExercise({
+            ...exercise,
+            updatedAt: exercise.updatedAt ?? now,
+            isSynced: false,
+        })
+
+        await db.enqueueSyncOperation({
+            entityType: 'exercise',
+            entityId: id,
+            payload: '{}',
+        })
+
+        return id
     },
 
     async updateExercise(exerciseId: string, changes: Partial<Exercise>): Promise<number> {
-        return db.updateExercise(exerciseId, changes)
+        const now = new Date().toISOString()
+        const updated = await db.updateExercise(exerciseId, {
+            ...changes,
+            updatedAt: changes.updatedAt ?? now,
+            isSynced: false,
+        })
+
+        if (updated > 0) {
+            await db.enqueueSyncOperation({
+                entityType: 'exercise',
+                entityId: exerciseId,
+                payload: '{}',
+            })
+        }
+
+        return updated
     },
 
     async deleteExercise(exerciseId: string): Promise<void> {

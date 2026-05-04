@@ -25,6 +25,11 @@
         "edit": "Edit",
         "retry": "Retry"
     },
+    "numberStepper": {
+        "valueLabel": "value",
+        "decreaseAria": "Decrease {{label}}",
+        "increaseAria": "Increase {{label}}"
+    },
     "nav": {
         "dashboard": "Dashboard",
         "train": "Train",
@@ -34,6 +39,16 @@
         "profile": "Profile",
         "settings": "Settings",
         "home": "Home"
+    },
+    "bodyDiagram": {
+        "title": "Body diagram",
+        "subtitle": "Review muscle balance by period.",
+        "range": {
+            "aria": "Select time range",
+            "week": "Week",
+            "month": "Month",
+            "total": "All time"
+        }
     },
     "sync": {
         "noCloud": "No cloud",
@@ -174,7 +189,9 @@
     "sortableExerciseList": {
         "exerciseNotFound": "Exercise not found",
         "summary": "{{series}} sets · {{reps}} reps · {{rest}}s rest",
-        "dragExerciseAria": "Drag exercise"
+        "dragExerciseAria": "Drag exercise",
+        "moveUpAria": "Move exercise up",
+        "moveDownAria": "Move exercise down"
     },
     "onboarding": {
         "title": "Welcome to MyHomeGym project",
@@ -566,6 +583,14 @@
             "repsShort": "reps",
             "rpeLabel": "RPE",
             "rpePlaceholder": "RPE (1-10)",
+            "setTypeLabel": "Type",
+            "setTypeOptionAria": "Set type: {{type}}",
+            "setTypes": {
+                "normal": "Normal",
+                "warmup": "Warm-up",
+                "dropset": "Dropset",
+                "failure": "Failure"
+            },
             "startRest": "Start rest ({{seconds}}s)",
             "recentHistory": "Recent exercise history",
             "noHistory": "There are no previous sessions for this exercise yet."

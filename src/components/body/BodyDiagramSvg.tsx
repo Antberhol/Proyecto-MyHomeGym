@@ -14,6 +14,7 @@ interface BodyDiagramSvgProps {
     selectedGroup: string | null
     onSelectGroup: (group: string) => void
     highlightedColors?: [string, string, string, string]
+    ariaLabel?: string
 }
 
 function levelToFrequency(level: MuscleLevel): number {
@@ -138,9 +139,9 @@ function buildExerciseData(view: 'frontal' | 'posterior', levelByMuscle: Record<
 export function BodyDiagramSvg({
     view,
     levelByMuscle,
-    selectedGroup: _selectedGroup,
     onSelectGroup,
     highlightedColors,
+    ariaLabel,
 }: BodyDiagramSvgProps) {
     const containerRef = useRef<HTMLDivElement | null>(null)
     const instanceRef = useRef<BodyHighlighterInstance | null>(null)
@@ -193,5 +194,5 @@ export function BodyDiagramSvg({
         }
     }, [])
 
-    return <div ref={containerRef} className="mx-auto w-full" />
+    return <div ref={containerRef} className="mx-auto w-full" role="img" aria-label={ariaLabel} />
 }

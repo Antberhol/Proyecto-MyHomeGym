@@ -1,3 +1,6 @@
+import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
+
 interface NumberStepperProps {
     value: number
     onChange: (nextValue: number) => void
@@ -19,6 +22,10 @@ export function NumberStepper({
     id,
     decimals,
 }: NumberStepperProps) {
+    const { t } = useTranslation()
+    const reactId = useId()
+    const inputId = id ?? `number-stepper-${reactId}`
+
     const clampValue = (nextValue: number) => {
         const withMin = Math.max(min, nextValue)
         if (typeof max === 'number') {
@@ -53,7 +60,7 @@ export function NumberStepper({
     return (
         <div className="space-y-1">
             {label && (
-                <label htmlFor={id} className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                <label htmlFor={inputId} className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                     {label}
                 </label>
             )}
@@ -62,12 +69,12 @@ export function NumberStepper({
                     type="button"
                     onClick={decrement}
                     className="rounded-l-xl text-2xl font-bold text-slate-700 active:scale-[0.98] dark:text-slate-100"
-                    aria-label={`Disminuir ${label ?? 'valor'}`}
+                    aria-label={t('numberStepper.decreaseAria', { label: label ?? t('numberStepper.valueLabel') })}
                 >
                     -
                 </button>
                 <input
-                    id={id}
+                    id={inputId}
                     type="number"
                     value={Number.isFinite(value) && value !== 0 ? value : ''}
                     onChange={(event) => handleInputChange(event.target.value)}
@@ -79,7 +86,7 @@ export function NumberStepper({
                     type="button"
                     onClick={increment}
                     className="rounded-r-xl text-2xl font-bold text-slate-700 active:scale-[0.98] dark:text-slate-100"
-                    aria-label={`Aumentar ${label ?? 'valor'}`}
+                    aria-label={t('numberStepper.increaseAria', { label: label ?? t('numberStepper.valueLabel') })}
                 >
                     +
                 </button>

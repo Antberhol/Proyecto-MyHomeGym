@@ -24,6 +24,7 @@ const EntrenarPage = lazy(() => import('./pages/Entrenar').then((module) => ({ d
 const MisRutinasPage = lazy(() => import('./pages/MisRutinas').then((module) => ({ default: module.MisRutinasPage })))
 const PerfilPage = lazy(() => import('./pages/Perfil').then((module) => ({ default: module.PerfilPage })))
 const ProgresoPage = lazy(() => import('./pages/Progreso').then((module) => ({ default: module.ProgresoPage })))
+const DiagramaCorporalPage = lazy(() => import('./pages/DiagramaCorporal').then((module) => ({ default: module.DiagramaCorporalPage })))
 const ConfiguracionPage = lazy(() => import('./pages/Configuracion').then((module) => ({ default: module.ConfiguracionPage })))
 
 function AppRouter() {
@@ -38,6 +39,7 @@ function AppRouter() {
             <Route path="/catalogo" element={<CatalogoPage />} />
             <Route path="/catalogo/:id" element={<ExerciseDetailPage />} />
             <Route path="/progreso" element={<ProgresoPage />} />
+            <Route path="/diagrama-corporal" element={<DiagramaCorporalPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -196,6 +196,7 @@ function SortableItem({
                     type="button"
                     onClick={() => onMove(item.id, 'up')}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                    aria-label={t('sortableExerciseList.moveUpAria')}
                 >
                     ↑
                 </button>
@@ -203,6 +204,7 @@ function SortableItem({
                     type="button"
                     onClick={() => onMove(item.id, 'down')}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                    aria-label={t('sortableExerciseList.moveDownAria')}
                 >
                     ↓
                 </button>

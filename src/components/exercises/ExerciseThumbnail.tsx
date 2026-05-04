@@ -14,20 +14,23 @@ interface ExerciseThumbnailProps {
     exerciseDbAliases?: string[]
     className?: string
     forceFetchGif?: boolean
+    fallbackLabel?: string
+    showFallbackPulse?: boolean
 }
 
 export function ExerciseThumbnail({
     exerciseId,
     nombre,
     grupoMuscularPrimario,
-    equipoNecesario: _equipoNecesario,
     gifUrl: exerciseGifUrl,
     imagenUrl,
     exerciseDbId,
     exerciseDbName,
     exerciseDbAliases,
-    fallbackLabel?: string
-    showFallbackPulse?: boolean
+    className = '',
+    forceFetchGif,
+    fallbackLabel,
+    showFallbackPulse = false,
 }: ExerciseThumbnailProps) {
     // Keep IntersectionObserver as a visibility gate, but fetch only after user interaction.
     const containerRef = useRef<HTMLDivElement>(null)
@@ -42,9 +45,7 @@ export function ExerciseThumbnail({
         let timeoutId: ReturnType<typeof setTimeout> | undefined
 
         const observer = new IntersectionObserver(
-    fallbackLabel,
-    showFallbackPulse = false,
-}: ExerciseThumbnailProps) {
+            (entries) => {
                 if (entries[0]?.isIntersecting) {
                     timeoutId = setTimeout(() => setIsVisible(true), 200)
                 } else {
@@ -78,13 +79,12 @@ export function ExerciseThumbnail({
         grupoMuscularPrimario,
         enabled: shouldFetchGif,
     })
-    const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+    const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+    const [errorUrl, setErrorUrl] = useState<string | null>(null)
+    const imageStatus: 'loading' | 'loaded' | 'error' =
+        loadedUrl === resolvedGifUrl ? 'loaded' : errorUrl === resolvedGifUrl ? 'error' : 'loading'
 
     const shouldShowSkeleton = imageStatus === 'loading' || (shouldFetchGif && isLoading)
-
-    useEffect(() => {
-        setImageStatus('loading')
-    }, [resolvedGifUrl])
 
     return (
         <div
@@ -106,7 +106,11 @@ export function ExerciseThumbnail({
                     title={`Sin imagen disponible para ${nombre}`}
                     aria-label={`Sin imagen disponible para ${nombre}`}
                 >
-                    <ExerciseMediaFallback className="absolute inset-0 rounded-none" />
+                    <ExerciseMediaFallback
+                        className="absolute inset-0 rounded-none"
+                        label={fallbackLabel}
+                        showPulse={showFallbackPulse}
+                    />
                 </div>
             )}
             <img
@@ -115,8 +119,13 @@ export function ExerciseThumbnail({
                 className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
                     }`}
                 loading="lazy"
-                onLoad={() => setImageStatus('loaded')}
-                onError={() => setImageStatus('error')}
+                onLoad={() => {
+                    setLoadedUrl(resolvedGifUrl)
+                    setErrorUrl(null)
+                }}
+                onError={() => {
+                    setErrorUrl(resolvedGifUrl)
+                }}
                 aria-hidden={imageStatus !== 'loaded'}
             />
         </div>

@@ -38,6 +38,18 @@ export const profileRepository = {
     },
 
     async createBodyMeasurement(measurement: BodyMeasurement): Promise<string> {
-        return db.addBodyMeasurement(measurement)
+        const id = await db.addBodyMeasurement({
+            ...measurement,
+            isSynced: false,
+            updatedAt: measurement.updatedAt ?? measurement.fechaRegistro,
+        })
+
+        await db.enqueueSyncOperation({
+            entityType: 'bodyMeasurement',
+            entityId: id,
+            payload: '{}',
+        })
+
+        return id
     },
 }

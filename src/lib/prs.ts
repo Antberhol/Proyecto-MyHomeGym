@@ -10,7 +10,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
         .reduce((best, item) => Math.max(best, item.valor), 0)
 
     if (peso > maxPeso) {
-        await db.addPersonalRecord({
+        const id = await db.addPersonalRecord({
             id: crypto.randomUUID(),
             ejercicioId: exerciseId,
             tipo: 'peso_maximo',
@@ -18,6 +18,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
             fecha: fechaIso,
             detalle: `${peso}kg x ${reps} reps`,
         })
+        await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
         created += 1
     }
 
@@ -27,7 +28,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
         .reduce((best, item) => Math.max(best, item.valor), 0)
 
     if (volumenSerie > maxVolumenSerie) {
-        await db.addPersonalRecord({
+        const id = await db.addPersonalRecord({
             id: crypto.randomUUID(),
             ejercicioId: exerciseId,
             tipo: 'volumen_serie',
@@ -35,6 +36,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
             fecha: fechaIso,
             detalle: `${peso}kg x ${reps} reps`,
         })
+        await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
         created += 1
     }
 
@@ -44,7 +46,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
         .reduce((best, item) => Math.max(best, item.valor), 0)
 
     if (reps > maxRepsAtWeight) {
-        await db.addPersonalRecord({
+        const id = await db.addPersonalRecord({
             id: crypto.randomUUID(),
             ejercicioId: exerciseId,
             tipo: 'reps_mismo_peso',
@@ -52,6 +54,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
             fecha: fechaIso,
             detalle: sameWeightKey,
         })
+        await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
         created += 1
     }
 
@@ -69,7 +72,7 @@ export async function registerTrainingVolumePr(volumenTotal: number, fechaIso: s
         return 0
     }
 
-    await db.addPersonalRecord({
+    const id = await db.addPersonalRecord({
         id: crypto.randomUUID(),
         ejercicioId: globalExerciseId,
         tipo: 'volumen_total',
@@ -77,6 +80,8 @@ export async function registerTrainingVolumePr(volumenTotal: number, fechaIso: s
         fecha: fechaIso,
         detalle: 'Volumen total de sesión',
     })
+
+    await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
 
     return 1
 }

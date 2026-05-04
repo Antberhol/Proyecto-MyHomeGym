@@ -20,14 +20,20 @@ export function DashboardPage() {
   const [setDraftById, setSetDraftById] = useState<Record<string, { reps: string; weight: string }>>({})
   const streaks = useStreaks()
   const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
-  const trainings = useLiveQuery(() => progressRepository.listTrainings(), []) ?? []
+  const recentTrainings = useLiveQuery(() => progressRepository.listTrainingsRecent(90), []) ?? []
+  const totalTrainings = useLiveQuery(() => progressRepository.countTrainings(), []) ?? 0
+  const totalVolumeAllTime = useLiveQuery(() => progressRepository.sumTrainingVolumeAllTime(), []) ?? 0
   const routines = useLiveQuery(() => progressRepository.listRoutines(), []) ?? []
   const prs = useLiveQuery(() => progressRepository.listPersonalRecords(), []) ?? []
   const exercises = useLiveQuery(() => progressRepository.listExercises(), []) ?? []
   const routineExercises = useLiveQuery(() => progressRepository.listRoutineExercises(), []) ?? []
-  const performedExercises = useLiveQuery(() => progressRepository.listPerformedExercises(), []) ?? []
+  const performedExercises = useLiveQuery(() => {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 90)
+    return progressRepository.listPerformedExercisesSince(cutoff.toISOString())
+  }, []) ?? []
 
-  const weekTrainings = trainings.filter((training) => {
+  const weekTrainings = recentTrainings.filter((training) => {
     const trainingDate = new Date(training.fecha)
     const now = new Date()
     const weekAgo = new Date(now)
@@ -37,8 +43,7 @@ export function DashboardPage() {
 
   const totalVolume = weekTrainings.reduce((acc, item) => acc + item.volumenTotal, 0)
   const totalMinutes = weekTrainings.reduce((acc, item) => acc + item.duracionMinutos, 0)
-  const totalTrainings = trainings.length
-  const totalVolumeAllTime = trainings.reduce((acc, item) => acc + item.volumenTotal, 0)
+  
 
   const achievements = [
     { id: 'first', label: t('dashboard.achievements.firstSession'), unlocked: totalTrainings >= 1 },
@@ -58,7 +63,7 @@ export function DashboardPage() {
   )
 
   const buildTrainingData = (trainingId: string): TrainingData | null => {
-    const training = trainings.find((item) => item.id === trainingId)
+    const training = recentTrainings.find((item) => item.id === trainingId)
     if (!training) return null
 
     const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise.nombre]))
@@ -326,11 +331,11 @@ export function DashboardPage() {
 
       <section className="rounded-xl bg-gym-card border border-gym-border p-4">
         <h2 className="mb-3 font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('dashboard.recentSessions.title')}</h2>
-        {trainings.length === 0 ? (
+        {recentTrainings.length === 0 ? (
           <p className="text-sm text-gym-text-dim">{t('dashboard.recentSessions.empty')}</p>
         ) : (
           <ul className="space-y-2">
-            {trainings
+            {recentTrainings
               .slice()
               .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
               .slice(0, 5)

@@ -28,16 +28,26 @@ const DEFAULT_MUSCLE_ANALYTICS: MuscleAnalytics = {
     abductor: { volume: 0, daysTrained: 0 },
 }
 
-export function useWeeklyMuscleAnalytics(): MuscleAnalytics {
+export type MuscleAnalyticsRange = 'week' | 'month' | 'total'
+
+function rangeToSinceIso(range: MuscleAnalyticsRange): string | null {
+    if (range === 'total') return null
+
+    const days = range === 'month' ? 30 : 7
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+    return since.toISOString()
+}
+
+export function useMuscleAnalytics(range: MuscleAnalyticsRange = 'week'): MuscleAnalytics {
     const [analytics, setAnalytics] = useState<MuscleAnalytics>(DEFAULT_MUSCLE_ANALYTICS)
     const requestIdRef = useRef(0)
 
     const rawData = useLiveQuery(async () => {
-        const since = new Date()
-        since.setDate(since.getDate() - 7)
+        const sinceIso = rangeToSinceIso(range)
 
         const [sets, exercises] = await Promise.all([
-            progressRepository.listPerformedExercisesSince(since.toISOString()),
+            sinceIso ? progressRepository.listPerformedExercisesSince(sinceIso) : progressRepository.listPerformedExercises(),
             progressRepository.listExercises(),
         ])
 
@@ -53,7 +63,7 @@ export function useWeeklyMuscleAnalytics(): MuscleAnalytics {
                 grupoMuscularPrimario: exercise.grupoMuscularPrimario,
             })),
         }
-    }, [])
+    }, [range])
 
     const worker = useMemo(
         () => new Worker(new URL('../workers/analytics.worker.ts', import.meta.url), { type: 'module' }),
@@ -99,4 +109,8 @@ export function useWeeklyMuscleAnalytics(): MuscleAnalytics {
     }, [rawData, worker])
 
     return analytics
+}
+
+export function useWeeklyMuscleAnalytics(): MuscleAnalytics {
+    return useMuscleAnalytics('week')
 }

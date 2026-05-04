@@ -2,7 +2,13 @@ export type DifficultyLevel = 'basico' | 'intermedio' | 'avanzado'
 export type DevelopmentLevel = 'basico' | 'medio' | 'avanzado' | 'experto'
 export type ThemePreference = 'light' | 'dark' | 'system' | 'auto-time'
 
-export type SyncEntityType = 'training'
+export type SyncEntityType =
+  | 'training'
+  | 'routine'
+  | 'routineExercise'
+  | 'exercise'
+  | 'bodyMeasurement'
+  | 'pr'
 export type SyncQueueStatus = 'pending' | 'failed'
 
 export interface SyncMetadata {

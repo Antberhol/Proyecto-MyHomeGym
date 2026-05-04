@@ -121,6 +121,7 @@ export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
                         selectedGroup={selectedGroup}
                         onSelectGroup={setSelectedGroup}
                         highlightedColors={HEAT_COLORS}
+                        ariaLabel={t('muscleHeatmap.views.front')}
                     />
                 </div>
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
@@ -131,6 +132,7 @@ export function MuscleHeatmap({ muscleAnalytics }: MuscleHeatmapProps) {
                         selectedGroup={selectedGroup}
                         onSelectGroup={setSelectedGroup}
                         highlightedColors={HEAT_COLORS}
+                        ariaLabel={t('muscleHeatmap.views.back')}
                     />
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Exercise } from '../../types/models'
 import { useExerciseGif } from '../../hooks/useExerciseGif'
@@ -24,11 +24,10 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
         grupoMuscularPrimario: exercise.grupoMuscularPrimario,
         enabled: shouldFetchGif,
     })
-    const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
-
-    useEffect(() => {
-        setImageStatus('loading')
-    }, [gifUrl])
+    const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+    const [errorUrl, setErrorUrl] = useState<string | null>(null)
+    const imageStatus: 'loading' | 'loaded' | 'error' =
+        loadedUrl === gifUrl ? 'loaded' : errorUrl === gifUrl ? 'error' : 'loading'
 
     const language = i18n.language.toLowerCase().startsWith('es') ? 'es' : 'en'
 
@@ -108,8 +107,13 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
                         className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
                             }`}
                         loading="lazy"
-                        onLoad={() => setImageStatus('loaded')}
-                        onError={() => setImageStatus('error')}
+                        onLoad={() => {
+                            setLoadedUrl(gifUrl)
+                            setErrorUrl(null)
+                        }}
+                        onError={() => {
+                            setErrorUrl(gifUrl)
+                        }}
                         aria-hidden={imageStatus !== 'loaded'}
                     />
 

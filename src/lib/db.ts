@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { emitSyncOperationEnqueued } from './events'
 import type {
   BodyMeasurement,
   Exercise,
@@ -88,6 +89,10 @@ class GymDatabase extends Dexie {
     return this.rutinas.toArray()
   }
 
+  getRoutineById(routineId: string) {
+    return this.rutinas.get(routineId)
+  }
+
   addRoutine(routine: Routine) {
     return this.rutinas.add({
       ...routine,
@@ -114,6 +119,10 @@ class GymDatabase extends Dexie {
 
   getAllRoutineExercises() {
     return this.rutinaEjercicios.toArray()
+  }
+
+  getRoutineExerciseById(routineExerciseId: string) {
+    return this.rutinaEjercicios.get(routineExerciseId)
   }
 
   getRoutineExercisesByRoutineId(routineId: string) {
@@ -222,6 +231,20 @@ class GymDatabase extends Dexie {
     return this.entrenamientosRegistrados.toArray()
   }
 
+  getTrainingsSince(sinceIso: string) {
+    return this.entrenamientosRegistrados.where('fecha').aboveOrEqual(sinceIso).toArray()
+  }
+
+  getTrainingsCount() {
+    return this.entrenamientosRegistrados.count()
+  }
+
+  getTrainingsTotalVolume() {
+    return this.entrenamientosRegistrados.toArray().then((trainings) => {
+      return trainings.reduce((acc, training) => acc + (training.volumenTotal ?? 0), 0)
+    })
+  }
+
   updateTraining(trainingId: string, changes: Partial<RegisteredTraining>) {
     return this.entrenamientosRegistrados.update(trainingId, changes)
   }
@@ -270,6 +293,10 @@ class GymDatabase extends Dexie {
     return this.medidasCorporalesHistorico.toArray()
   }
 
+  getBodyMeasurementById(measurementId: string) {
+    return this.medidasCorporalesHistorico.get(measurementId)
+  }
+
   deleteBodyMeasurement(measurementId: string) {
     return this.medidasCorporalesHistorico.delete(measurementId)
   }
@@ -284,6 +311,10 @@ class GymDatabase extends Dexie {
 
   getAllPersonalRecords() {
     return this.prs.toArray()
+  }
+
+  getPersonalRecordById(personalRecordId: string) {
+    return this.prs.get(personalRecordId)
   }
 
   getPersonalRecordsByExercise(exerciseId: string) {
@@ -305,7 +336,7 @@ class GymDatabase extends Dexie {
   }) {
     const now = new Date().toISOString()
 
-    return this.pendingSyncQueue.put({
+    const record: SyncQueueItem = {
       id: crypto.randomUUID(),
       entityType: input.entityType,
       entityId: input.entityId,
@@ -313,7 +344,10 @@ class GymDatabase extends Dexie {
       createdAt: now,
       status: 'pending',
       retryCount: 0,
-    })
+    }
+
+    emitSyncOperationEnqueued({ entityType: input.entityType, entityId: input.entityId })
+    return this.pendingSyncQueue.put(record)
   }
 
   getPendingSyncOperations() {
@@ -351,6 +385,41 @@ class GymDatabase extends Dexie {
         }),
       ),
     )
+  }
+
+  async updateRoutineSyncState(routineId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.rutinas.update(routineId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
+  }
+
+  async updateRoutineExerciseSyncState(routineExerciseId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.rutinaEjercicios.update(routineExerciseId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
+  }
+
+  async updateExerciseSyncState(exerciseId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.ejerciciosCatalogo.update(exerciseId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
+  }
+
+  async updateBodyMeasurementSyncState(measurementId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.medidasCorporalesHistorico.update(measurementId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
+  }
+
+  async updatePersonalRecordSyncState(personalRecordId: string, isSynced: boolean, syncedAtIso: string) {
+    await this.prs.update(personalRecordId, {
+      isSynced,
+      lastSyncedAt: syncedAtIso,
+    })
   }
 
   clearPersonalRecords() {

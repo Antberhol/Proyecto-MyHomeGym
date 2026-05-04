@@ -18,6 +18,20 @@ export const progressRepository = {
         return db.getAllTrainings()
     },
 
+    async listTrainingsRecent(days: number): Promise<RegisteredTraining[]> {
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - Math.max(0, days))
+        return db.getTrainingsSince(cutoff.toISOString())
+    },
+
+    async countTrainings(): Promise<number> {
+        return db.getTrainingsCount()
+    },
+
+    async sumTrainingVolumeAllTime(): Promise<number> {
+        return db.getTrainingsTotalVolume()
+    },
+
     async listTrainingsUntil(maxDateIso: string): Promise<RegisteredTraining[]> {
         return db.getTrainingsBeforeOrEqual(maxDateIso)
     },
