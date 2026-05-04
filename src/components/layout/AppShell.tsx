@@ -129,10 +129,11 @@ export function AppShell() {
                 onClick={() => setLangDropdownOpen((prev) => !prev)}
                 aria-haspopup="listbox"
                 aria-expanded={langDropdownOpen}
-                className="flex items-center gap-1 rounded-lg border border-gym-border bg-gym-card px-3 py-2 text-xs font-semibold"
+                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/60 px-3 py-2 text-sm font-semibold text-slate-800 backdrop-blur transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+                aria-label={currentLanguage === 'es' ? 'Español' : 'English'}
               >
                 <span>{currentLanguage === 'es' ? '🇪🇸' : '🇬🇧'}</span>
-                <span>{currentLanguage.toUpperCase()}</span>
+                <span className="sr-only">{currentLanguage === 'es' ? 'Español' : 'English'}</span>
               </button>
 
               {langDropdownOpen && (

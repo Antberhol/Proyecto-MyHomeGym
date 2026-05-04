@@ -161,22 +161,22 @@ export function CatalogoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="mobile-sticky-header sticky top-0 z-10 bg-white/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
-        <h1 className="text-2xl font-bold">{t('catalog.title')}</h1>
+    <div className="space-y-6 text-slate-900 dark:text-slate-100">
+      <header className="mobile-sticky-header sticky top-0 z-10 bg-slate-50/80 pb-3 pt-4 backdrop-blur-md dark:bg-slate-900/80">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('catalog.title')}</h1>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/50 md:grid-cols-5">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('catalog.searchPlaceholder')}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
         />
         <select
           value={muscleFilter}
           onChange={(event) => setMuscleFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 md:text-sm"
         >
           {muscles.map((muscle) => (
             <option key={muscle} value={muscle}>
@@ -187,7 +187,7 @@ export function CatalogoPage() {
         <select
           value={equipmentFilter}
           onChange={(event) => setEquipmentFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 md:text-sm"
         >
           {equipmentOptions.map((equipment) => (
             <option key={equipment} value={equipment}>
@@ -198,22 +198,22 @@ export function CatalogoPage() {
         <select
           value={difficultyFilter}
           onChange={(event) => setDifficultyFilter(event.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 md:text-sm"
         >
           <option value={ALL_FILTER}>{t('catalog.allLevels')}</option>
           <option value="basico">{t('catalog.levelBasic')}</option>
           <option value="intermedio">{t('catalog.levelIntermediate')}</option>
           <option value="avanzado">{t('catalog.levelAdvanced')}</option>
         </select>
-        <p className="self-center text-sm text-slate-500 dark:text-slate-300">{t('catalog.results', { count: filteredExercises.length })}</p>
+        <p className="self-center text-sm text-slate-600 dark:text-slate-300">{t('catalog.results', { count: filteredExercises.length })}</p>
       </div>
 
       <div>
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredExercises.map((exercise) => (
             <article
               key={exercise.id}
-              className="mb-3 cursor-pointer rounded-xl bg-white p-4 shadow transition hover:shadow-md dark:bg-gym-cardDark"
+              className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-800 dark:hover:shadow-slate-900/50"
               onClick={() => {
                 if (editingExerciseId !== exercise.id) {
                   navigate(`/catalogo/${exercise.id}`)
@@ -233,9 +233,9 @@ export function CatalogoPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="font-semibold">{exercise.nombre}</h2>
+                      <h2 className="font-semibold text-slate-900 dark:text-slate-100">{exercise.nombre}</h2>
                       <p className="text-xs text-slate-600 dark:text-slate-300">{t('catalog.target')}: {exercise.grupoMuscularPrimario}</p>
-                      <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:text-slate-200">
                         ⓘ {t('catalog.tapForInfo')}
                       </p>
                     </div>
@@ -248,7 +248,7 @@ export function CatalogoPage() {
                               event.stopPropagation()
                               startEditExercise(exercise.id)
                             }}
-                            className="rounded-md border border-slate-300 px-3 py-2 text-xs"
+                            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                           >
                             {t('catalog.edit')}
                           </button>
@@ -258,7 +258,7 @@ export function CatalogoPage() {
                               event.stopPropagation()
                               void deleteCustomExercise(exercise.id)
                             }}
-                            className="rounded-md border border-slate-300 px-3 py-2 text-xs text-red-600"
+                            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-red-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-red-300 dark:hover:bg-slate-700"
                           >
                             {t('catalog.delete')}
                           </button>
@@ -274,25 +274,25 @@ export function CatalogoPage() {
                   <input
                     value={editNombre}
                     onChange={(event) => setEditNombre(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
                     placeholder={t('catalog.namePlaceholder')}
                   />
                   <input
                     value={editGrupoMuscular}
                     onChange={(event) => setEditGrupoMuscular(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
                     placeholder={t('catalog.musclePlaceholder')}
                   />
                   <input
                     value={editEquipo}
                     onChange={(event) => setEditEquipo(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
                     placeholder={t('catalog.equipmentPlaceholder')}
                   />
                   <select
                     value={editNivel}
                     onChange={(event) => setEditNivel(event.target.value as 'basico' | 'intermedio' | 'avanzado')}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 md:text-sm"
                   >
                     <option value="basico">{t('catalog.levelBasic')}</option>
                     <option value="intermedio">{t('catalog.levelIntermediate')}</option>
@@ -301,7 +301,7 @@ export function CatalogoPage() {
                   <textarea
                     value={editInstrucciones}
                     onChange={(event) => setEditInstrucciones(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
                     placeholder={t('catalog.instructionsPlaceholder')}
                     rows={2}
                   />
@@ -312,7 +312,7 @@ export function CatalogoPage() {
                         event.stopPropagation()
                         void saveExerciseEdits()
                       }}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                     >
                       {t('catalog.save')}
                     </button>
@@ -322,7 +322,7 @@ export function CatalogoPage() {
                         event.stopPropagation()
                         cancelEditExercise()
                       }}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                     >
                       {t('catalog.cancel')}
                     </button>
@@ -334,27 +334,27 @@ export function CatalogoPage() {
         </div>
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-        <h2 className="mb-3 text-lg font-semibold">{t('catalog.createCustomTitle')}</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">{t('catalog.createCustomTitle')}</h2>
         <form onSubmit={onCreateCustom} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             {...form.register('nombre')}
             placeholder={t('catalog.namePlaceholder')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
           />
           <input
             {...form.register('grupoMuscularPrimario')}
             placeholder={t('catalog.musclePlaceholder')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
           />
           <input
             {...form.register('equipoNecesario')}
             placeholder={t('catalog.equipmentPlaceholder')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:text-sm"
           />
           <select
             {...form.register('nivelDificultad')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 md:text-sm"
           >
             <option value="basico">{t('catalog.levelBasic')}</option>
             <option value="intermedio">{t('catalog.levelIntermediate')}</option>
@@ -363,9 +363,9 @@ export function CatalogoPage() {
           <textarea
             {...form.register('instrucciones')}
             placeholder={t('catalog.instructionsPlaceholder')}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:col-span-2 md:text-sm"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 md:col-span-2 md:text-sm"
           />
-          <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
+          <button type="submit" className="rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white md:col-span-2">
             {t('catalog.saveExercise')}
           </button>
         </form>

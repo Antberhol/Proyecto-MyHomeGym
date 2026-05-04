@@ -26,8 +26,8 @@ export function ExerciseThumbnail({
     exerciseDbId,
     exerciseDbName,
     exerciseDbAliases,
-    className = 'h-16 w-24',
-    forceFetchGif = false,
+    fallbackLabel?: string
+    showFallbackPulse?: boolean
 }: ExerciseThumbnailProps) {
     // Keep IntersectionObserver as a visibility gate, but fetch only after user interaction.
     const containerRef = useRef<HTMLDivElement>(null)
@@ -42,7 +42,9 @@ export function ExerciseThumbnail({
         let timeoutId: ReturnType<typeof setTimeout> | undefined
 
         const observer = new IntersectionObserver(
-            (entries) => {
+    fallbackLabel,
+    showFallbackPulse = false,
+}: ExerciseThumbnailProps) {
                 if (entries[0]?.isIntersecting) {
                     timeoutId = setTimeout(() => setIsVisible(true), 200)
                 } else {
