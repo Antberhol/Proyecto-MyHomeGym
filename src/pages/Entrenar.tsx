@@ -26,6 +26,7 @@ export function EntrenarPage() {
     activeExerciseHistory,
     activeExerciseSuggestedWeight,
     activeExercisePrTarget,
+    exerciseNotes,
     freeExerciseId,
     freeSeriesCount,
     freeExercisesDraft,
@@ -59,6 +60,7 @@ export function EntrenarPage() {
     moveFreeExerciseDraft,
     removeFreeSet,
     updateFreeSetData,
+    updateExerciseNote,
     openPlateCalculator,
     closePlateCalculator,
   } = useActiveWorkoutController()
@@ -159,6 +161,20 @@ export function EntrenarPage() {
               </div>
             </div>
           )}
+
+          {trainingSummary.exerciseNotes.length > 0 ? (
+            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <h3 className="mb-2 text-sm font-semibold">{t('training.summary.exerciseNotes')}</h3>
+              <ul className="space-y-2 text-sm">
+                {trainingSummary.exerciseNotes.map((entry) => (
+                  <li key={entry.exerciseId} className="rounded border border-slate-200 p-2 dark:border-slate-700">
+                    <p className="font-semibold">{entry.name}</p>
+                    <p className="text-slate-600 dark:text-slate-300">{entry.note}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div>
             <h3 className="mb-2 text-sm font-semibold">{t('training.summary.breakdownByExercise')}</h3>
@@ -284,12 +300,14 @@ export function EntrenarPage() {
               activeExerciseHistory={activeExerciseHistory}
               activeExerciseSuggestedWeight={activeExerciseSuggestedWeight}
               activeExercisePrTarget={activeExercisePrTarget}
+              exerciseNotes={exerciseNotes}
               onPrevious={() => setActiveExerciseIndex((current) => Math.max(0, current - 1))}
               onNext={() => setActiveExerciseIndex((current) => Math.min(selectedRoutineExercises.length - 1, current + 1))}
               onApplySuggestedWeight={applySuggestedWeight}
               onStartRestTimer={startRestTimer}
               getSetValue={getSetValue}
               updateSetData={updateSetData}
+              onUpdateExerciseNote={updateExerciseNote}
             />
           </div>
         )}

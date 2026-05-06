@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { emitWorkoutTimerFinished } from '../lib/events'
+import { scheduleRestTimerNotification } from '../lib/notifications'
 
 interface UseWorkoutTimerOptions {
     initialSessionSeconds?: number
     initialSessionRunning?: boolean
     initialRestSeconds?: number
+    restNotificationsEnabled?: boolean
 }
 
 export function formatClock(totalSeconds: number): string {
@@ -54,6 +56,9 @@ export function useWorkoutTimer(options: UseWorkoutTimerOptions = {}) {
 
     const startRestTimer = (seconds: number) => {
         setRestSeconds(Math.max(0, seconds))
+        if (options.restNotificationsEnabled) {
+            scheduleRestTimerNotification(seconds)
+        }
     }
 
     const resetTimers = () => {

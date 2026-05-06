@@ -1,9 +1,30 @@
 import { db } from './db'
 import { calculateSetVolume } from '../utils/calculations'
+import type { PerformedExercise } from '../types/models'
 
-export async function registerSetPrs(exerciseId: string, peso: number, reps: number, fechaIso: string): Promise<number> {
+function buildSetDetail(peso: number, reps: number, rpe?: number): string {
+    const base = `${peso}kg x ${reps} reps`
+    if (typeof rpe === 'number' && rpe > 0) {
+        return `${base} @ RPE ${rpe}`
+    }
+    return base
+}
+
+export async function registerSetPrs(
+    exerciseId: string,
+    peso: number,
+    reps: number,
+    fechaIso: string,
+    type?: PerformedExercise['type'],
+    rpe?: number,
+): Promise<number> {
+    if (type === 'warmup') {
+        return 0
+    }
+
     const history = await db.getPersonalRecordsByExercise(exerciseId)
     let created = 0
+    const detail = buildSetDetail(peso, reps, rpe)
 
     const maxPeso = history
         .filter((item) => item.tipo === 'peso_maximo')
@@ -16,7 +37,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
             tipo: 'peso_maximo',
             valor: peso,
             fecha: fechaIso,
-            detalle: `${peso}kg x ${reps} reps`,
+            detalle,
         })
         await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
         created += 1
@@ -34,7 +55,7 @@ export async function registerSetPrs(exerciseId: string, peso: number, reps: num
             tipo: 'volumen_serie',
             valor: volumenSerie,
             fecha: fechaIso,
-            detalle: `${peso}kg x ${reps} reps`,
+            detalle,
         })
         await db.enqueueSyncOperation({ entityType: 'pr', entityId: id, payload: '{}' })
         created += 1

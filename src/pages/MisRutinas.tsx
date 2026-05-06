@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
+import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
@@ -8,12 +10,16 @@ import { ExerciseSelectorModal } from '../components/exercises/ExerciseSelectorM
 import { SortableExerciseList } from '../components/routines/SortableExerciseList'
 import { SwipeToDeleteItem } from '../components/ui/SwipeToDeleteItem'
 import { routineAdminRepository } from '../repositories/routineAdminRepository'
+import { exerciseRepository } from '../repositories/exerciseRepository'
+import { routineFolderRepository } from '../repositories/routineFolderRepository'
+import type { Routine } from '../types/models'
 
 const routineSchema = z.object({
   nombre: z.string().min(2).max(80),
   descripcion: z.string().max(200).optional(),
   diasSemana: z.string().min(1),
   color: z.string().min(4).max(20),
+  folderId: z.string().optional(),
 })
 
 type RoutineForm = z.infer<typeof routineSchema>
@@ -97,11 +103,69 @@ const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   },
 ]
 
+function FolderDropZone({
+  id,
+  title,
+  color,
+  action,
+  children,
+}: {
+  id: string
+  title: string
+  color?: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`rounded-xl border border-gym-border bg-gym-card p-4 ${isOver ? 'ring-2 ring-gym-yellow/50' : ''}`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color || '#6b7280' }} />
+          <h3 className="text-sm font-semibold text-gym-text-bright">{title}</h3>
+        </div>
+        {action ? <div>{action}</div> : null}
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function DraggableRoutineCard({ routine, children }: { routine: Routine; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useDraggable({
+    id: routine.id,
+    data: { folderId: routine.folderId ?? '' },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function MisRutinasPage() {
   const { t } = useTranslation()
   const routines = useLiveQuery(() => routineAdminRepository.listRoutines(), []) ?? []
   const exercises = useLiveQuery(() => routineAdminRepository.listExercises(), []) ?? []
   const routineExercises = useLiveQuery(() => routineAdminRepository.listRoutineExercises(), []) ?? []
+  const routineFolders = useLiveQuery(() => routineFolderRepository.listFolders(), []) ?? []
+  const usageFrequencyMap = useLiveQuery(() => exerciseRepository.getUsageFrequencyMap(), [])
+  const usageFrequencyById = useMemo(() => {
+    const entries = usageFrequencyMap ? Array.from(usageFrequencyMap.entries()) : []
+    return Object.fromEntries(entries)
+  }, [usageFrequencyMap])
   const [selectedRoutineId, setSelectedRoutineId] = useState<string>('')
   const [editingRoutineId, setEditingRoutineId] = useState<string>('')
   const [editRoutineNombre, setEditRoutineNombre] = useState('')
@@ -113,6 +177,11 @@ export function MisRutinasPage() {
   const [templateToast, setTemplateToast] = useState('')
   const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState('')
   const [confirmDeleteRoutineExerciseId, setConfirmDeleteRoutineExerciseId] = useState('')
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
+  const [editingFolderId, setEditingFolderId] = useState('')
+  const [folderNombre, setFolderNombre] = useState('')
+  const [folderDescripcion, setFolderDescripcion] = useState('')
+  const [folderColor, setFolderColor] = useState('#F5C518')
   const [series, setSeries] = useState<number>(4)
   const [repeticiones, setRepeticiones] = useState<string>('8-12')
   const [descansoSegundos, setDescansoSegundos] = useState<number>(90)
@@ -125,6 +194,7 @@ export function MisRutinasPage() {
     defaultValues: {
       color: '#E63946',
       diasSemana: 'lunes,miercoles,viernes',
+      folderId: '',
     },
   })
 
@@ -140,11 +210,12 @@ export function MisRutinasPage() {
         .filter(Boolean),
       activa: true,
       color: values.color,
+      folderId: values.folderId || undefined,
       createdAt: now,
       updatedAt: now,
     })
 
-    form.reset({ color: '#E63946', diasSemana: 'lunes,miercoles,viernes' })
+    form.reset({ color: '#E63946', diasSemana: 'lunes,miercoles,viernes', folderId: '' })
   })
 
   const toggleRoutineStatus = async (routineId: string, activa: boolean) => {
@@ -192,6 +263,91 @@ export function MisRutinasPage() {
     })
 
     setEditingRoutineId('')
+  }
+
+  const openCreateFolder = () => {
+    setEditingFolderId('')
+    setFolderNombre('')
+    setFolderDescripcion('')
+    setFolderColor('#F5C518')
+    setIsFolderModalOpen(true)
+  }
+
+  const openEditFolder = (folderId: string) => {
+    const folder = routineFolders.find((item) => item.id === folderId)
+    if (!folder) return
+
+    setEditingFolderId(folderId)
+    setFolderNombre(folder.nombre)
+    setFolderDescripcion(folder.descripcion ?? '')
+    setFolderColor(folder.color)
+    setIsFolderModalOpen(true)
+  }
+
+  const saveFolder = async () => {
+    const now = new Date().toISOString()
+    if (editingFolderId) {
+      await routineFolderRepository.updateFolder(editingFolderId, {
+        nombre: folderNombre.trim() || t('routines.folders.defaultName'),
+        descripcion: folderDescripcion.trim() || undefined,
+        color: folderColor,
+        updatedAt: now,
+      })
+    } else {
+      await routineFolderRepository.createFolder({
+        id: crypto.randomUUID(),
+        nombre: folderNombre.trim() || t('routines.folders.defaultName'),
+        descripcion: folderDescripcion.trim() || undefined,
+        color: folderColor,
+        orden: routineFolders.length + 1,
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
+
+    setIsFolderModalOpen(false)
+  }
+
+  const deleteFolder = async (folderId: string) => {
+    await routineFolderRepository.deleteFolder(folderId)
+    const routinesToUpdate = routines.filter((routine) => routine.folderId === folderId)
+    await Promise.all(
+      routinesToUpdate.map((routine) => routineAdminRepository.updateRoutine(routine.id, { folderId: undefined })),
+    )
+    setIsFolderModalOpen(false)
+  }
+
+  const groupedRoutines = useMemo(() => {
+    const foldersById = new Map(routineFolders.map((folder) => [folder.id, folder]))
+    const grouped = new Map<string, Routine[]>()
+    for (const folder of routineFolders) {
+      grouped.set(folder.id, [])
+    }
+    grouped.set('uncategorized', [])
+
+    for (const routine of routines) {
+      if (routine.folderId && foldersById.has(routine.folderId)) {
+        grouped.get(routine.folderId)?.push(routine)
+      } else {
+        grouped.get('uncategorized')?.push(routine)
+      }
+    }
+
+    return grouped
+  }, [routineFolders, routines])
+
+  const handleFolderDrop = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) return
+
+    const routineId = String(active.id)
+    const targetFolderId = String(over.id)
+    const nextFolderId = targetFolderId === 'uncategorized' ? undefined : targetFolderId
+
+    await routineAdminRepository.updateRoutine(routineId, {
+      folderId: nextFolderId,
+      updatedAt: new Date().toISOString(),
+    })
   }
 
   const selectedRoutineExercises = useMemo(() => {
@@ -405,123 +561,289 @@ export function MisRutinasPage() {
             {...form.register('color')}
             className="h-10 w-full rounded-lg border border-slate-300"
           />
+          <select
+            {...form.register('folderId')}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+          >
+            <option value="">{t('routines.folders.noFolder')}</option>
+            {routineFolders
+              .slice()
+              .sort((a, b) => a.orden - b.orden)
+              .map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.nombre}
+                </option>
+              ))}
+          </select>
           <button type="submit" className="rounded-lg bg-gym-primary px-4 py-3 text-sm font-semibold text-white md:col-span-2">
             {t('routines.createRoutine')}
           </button>
         </form>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {routines.map((routine) => (
-          <SwipeToDeleteItem
-            key={routine.id}
-            onDelete={() => setConfirmDeleteRoutineId(routine.id)}
-            disabled={editingRoutineId === routine.id}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{t('routines.folders.title')}</h2>
+        <button
+          type="button"
+          onClick={openCreateFolder}
+          className="rounded-lg border border-gym-border px-3 py-2 text-xs font-semibold text-gym-text-base"
+        >
+          {t('routines.folders.create')}
+        </button>
+      </div>
+
+      <DndContext onDragEnd={handleFolderDrop}>
+        <div className="space-y-4">
+          {routineFolders
+            .slice()
+            .sort((a, b) => a.orden - b.orden)
+            .map((folder) => (
+              <FolderDropZone
+                key={folder.id}
+                id={folder.id}
+                title={folder.nombre}
+                color={folder.color}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => openEditFolder(folder.id)}
+                    className="text-xs text-gym-text-dim"
+                  >
+                    {t('common.edit')}
+                  </button>
+                }
+              >
+                {(groupedRoutines.get(folder.id) ?? []).map((routine) => (
+                  <DraggableRoutineCard key={routine.id} routine={routine}>
+                    <SwipeToDeleteItem
+                      onDelete={() => setConfirmDeleteRoutineId(routine.id)}
+                      disabled={editingRoutineId === routine.id}
+                    >
+                      <article className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="font-semibold">{routine.nombre}</h3>
+                          <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
+                        </div>
+
+                        {editingRoutineId === routine.id ? (
+                          <div className="space-y-2">
+                            <input
+                              value={editRoutineNombre}
+                              onChange={(event) => setEditRoutineNombre(event.target.value)}
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                              placeholder={t('routines.namePlaceholder')}
+                            />
+                            <input
+                              value={editRoutineDescripcion}
+                              onChange={(event) => setEditRoutineDescripcion(event.target.value)}
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                              placeholder={t('routines.descriptionPlaceholder')}
+                            />
+                            <input
+                              value={editRoutineDiasSemana}
+                              onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                              placeholder={t('routines.daysPlaceholder')}
+                            />
+                            <input
+                              type="color"
+                              value={editRoutineColor}
+                              onChange={(event) => setEditRoutineColor(event.target.value)}
+                              className="h-10 w-full rounded-lg border border-slate-300"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void saveRoutineEdits()}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                              >
+                                {t('common.save')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelEditRoutine}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                              >
+                                {t('common.cancel')}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || t('common.noDescription')}</p>
+                            <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
+                          </>
+                        )}
+
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRoutineId(routine.id)}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                          >
+                            {t('routines.manageExercises')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startEditRoutine(routine.id)}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                          >
+                            {t('common.edit')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                          >
+                            {routine.activa ? t('routines.deactivate') : t('routines.activate')}
+                          </button>
+                        </div>
+
+                        {confirmDeleteRoutineId === routine.id ? (
+                          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 dark:border-red-900/40 dark:bg-red-900/20">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void deleteRoutine(routine.id)
+                              }}
+                              className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+                            >
+                              {t('routines.confirmDelete')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteRoutineId('')}
+                              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                            >
+                              {t('routines.cancelDelete')}
+                            </button>
+                          </div>
+                        ) : null}
+                      </article>
+                    </SwipeToDeleteItem>
+                  </DraggableRoutineCard>
+                ))}
+              </FolderDropZone>
+            ))}
+
+          <FolderDropZone
+            id="uncategorized"
+            title={t('routines.folders.uncategorized')}
+            color="#6b7280"
           >
-            <article className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold">{routine.nombre}</h3>
-                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
-              </div>
-
-              {editingRoutineId === routine.id ? (
-                <div className="space-y-2">
-                  <input
-                    value={editRoutineNombre}
-                    onChange={(event) => setEditRoutineNombre(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder={t('routines.namePlaceholder')}
-                  />
-                  <input
-                    value={editRoutineDescripcion}
-                    onChange={(event) => setEditRoutineDescripcion(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder={t('routines.descriptionPlaceholder')}
-                  />
-                  <input
-                    value={editRoutineDiasSemana}
-                    onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
-                    placeholder={t('routines.daysPlaceholder')}
-                  />
-                  <input
-                    type="color"
-                    value={editRoutineColor}
-                    onChange={(event) => setEditRoutineColor(event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-300"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void saveRoutineEdits()}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
-                    >
-                      {t('common.save')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEditRoutine}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || t('common.noDescription')}</p>
-                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
-                </>
-              )}
-
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRoutineId(routine.id)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+            {(groupedRoutines.get('uncategorized') ?? []).map((routine) => (
+              <DraggableRoutineCard key={routine.id} routine={routine}>
+                <SwipeToDeleteItem
+                  onDelete={() => setConfirmDeleteRoutineId(routine.id)}
+                  disabled={editingRoutineId === routine.id}
                 >
-                  {t('routines.manageExercises')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => startEditRoutine(routine.id)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
-                >
-                  {t('common.edit')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
-                >
-                  {routine.activa ? t('routines.deactivate') : t('routines.activate')}
-                </button>
-              </div>
+                  <article className="rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="font-semibold">{routine.nombre}</h3>
+                      <span className="h-4 w-4 rounded-full" style={{ backgroundColor: routine.color }} />
+                    </div>
 
-              {confirmDeleteRoutineId === routine.id ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 dark:border-red-900/40 dark:bg-red-900/20">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void deleteRoutine(routine.id)
-                    }}
-                    className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    {t('routines.confirmDelete')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteRoutineId('')}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
-                  >
-                    {t('routines.cancelDelete')}
-                  </button>
-                </div>
-              ) : null}
-            </article>
-          </SwipeToDeleteItem>
-        ))}
-      </section>
+                    {editingRoutineId === routine.id ? (
+                      <div className="space-y-2">
+                        <input
+                          value={editRoutineNombre}
+                          onChange={(event) => setEditRoutineNombre(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                          placeholder={t('routines.namePlaceholder')}
+                        />
+                        <input
+                          value={editRoutineDescripcion}
+                          onChange={(event) => setEditRoutineDescripcion(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                          placeholder={t('routines.descriptionPlaceholder')}
+                        />
+                        <input
+                          value={editRoutineDiasSemana}
+                          onChange={(event) => setEditRoutineDiasSemana(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                          placeholder={t('routines.daysPlaceholder')}
+                        />
+                        <input
+                          type="color"
+                          value={editRoutineColor}
+                          onChange={(event) => setEditRoutineColor(event.target.value)}
+                          className="h-10 w-full rounded-lg border border-slate-300"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void saveRoutineEdits()}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                          >
+                            {t('common.save')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditRoutine}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-500 dark:text-slate-300">{routine.descripcion || t('common.noDescription')}</p>
+                        <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{routine.diasSemana.join(' · ')}</p>
+                      </>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRoutineId(routine.id)}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                      >
+                        {t('routines.manageExercises')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEditRoutine(routine.id)}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                      >
+                        {t('common.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleRoutineStatus(routine.id, routine.activa)}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                      >
+                        {routine.activa ? t('routines.deactivate') : t('routines.activate')}
+                      </button>
+                    </div>
+
+                    {confirmDeleteRoutineId === routine.id ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 dark:border-red-900/40 dark:bg-red-900/20">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void deleteRoutine(routine.id)
+                          }}
+                          className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+                        >
+                          {t('routines.confirmDelete')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteRoutineId('')}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+                        >
+                          {t('routines.cancelDelete')}
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                </SwipeToDeleteItem>
+              </DraggableRoutineCard>
+            ))}
+          </FolderDropZone>
+        </div>
+      </DndContext>
 
       {selectedRoutineId && (
         <section className="space-y-4 rounded-xl bg-white p-4 shadow dark:bg-gym-cardDark">
@@ -578,13 +900,16 @@ export function MisRutinasPage() {
               id: item.id,
               nombre: item.nombre,
               grupoMuscularPrimario: item.grupoMuscularPrimario,
+              gruposMuscularesSecundarios: item.gruposMuscularesSecundarios,
               equipoNecesario: item.equipoNecesario,
+              tipoEjercicio: item.tipoEjercicio,
               imagenUrl: item.imagenUrl,
               exerciseDbId: item.exerciseDbId,
               exerciseDbName: item.exerciseDbName,
               exerciseDbAliases: item.exerciseDbAliases,
             }))}
             selectedIds={selectedRoutineExercises.map((item) => item.ejercicioId)}
+            usageFrequencyById={usageFrequencyById}
             onConfirm={(exerciseIds) => {
               void addExercisesToRoutine(exerciseIds)
             }}
@@ -627,6 +952,66 @@ export function MisRutinasPage() {
           )}
         </section>
       )}
+
+      {isFolderModalOpen ? (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl dark:bg-gym-cardDark">
+            <h3 className="text-lg font-semibold">
+              {editingFolderId ? t('routines.folders.editTitle') : t('routines.folders.newTitle')}
+            </h3>
+            <div className="mt-3 space-y-3">
+              <input
+                value={folderNombre}
+                onChange={(event) => setFolderNombre(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                placeholder={t('routines.folders.namePlaceholder')}
+              />
+              <input
+                value={folderDescripcion}
+                onChange={(event) => setFolderDescripcion(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 md:text-sm"
+                placeholder={t('routines.folders.descriptionPlaceholder')}
+              />
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-300">
+                  {t('routines.folders.colorLabel')}
+                </label>
+                <input
+                  type="color"
+                  value={folderColor}
+                  onChange={(event) => setFolderColor(event.target.value)}
+                  className="mt-2 h-10 w-full rounded-lg border border-slate-300"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void saveFolder()}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+              >
+                {t('common.save')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFolderModalOpen(false)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium"
+              >
+                {t('common.cancel')}
+              </button>
+              {editingFolderId ? (
+                <button
+                  type="button"
+                  onClick={() => void deleteFolder(editingFolderId)}
+                  className="rounded-lg border border-red-300 bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+                >
+                  {t('routines.folders.delete')}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {templateToast ? (
         <div className="fixed bottom-6 right-4 z-20 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 shadow-lg dark:border-emerald-900/40 dark:bg-emerald-900/30 dark:text-emerald-300">

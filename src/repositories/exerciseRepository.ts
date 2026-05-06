@@ -6,6 +6,14 @@ export const exerciseRepository = {
         return db.getAllExercisesCatalog()
     },
 
+    async getUsageFrequencyMap(): Promise<Map<string, number>> {
+        const performed = await db.getAllPerformedExercises()
+        return performed.reduce((acc, item) => {
+            acc.set(item.ejercicioId, (acc.get(item.ejercicioId) ?? 0) + 1)
+            return acc
+        }, new Map<string, number>())
+    },
+
     async getExerciseById(exerciseId: string): Promise<Exercise | undefined> {
         return db.getExerciseById(exerciseId)
     },

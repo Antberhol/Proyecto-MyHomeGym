@@ -3,10 +3,12 @@ import { emitSyncOperationEnqueued } from './events'
 import type {
   BodyMeasurement,
   Exercise,
+  NotificationSettings,
   PerformedExercise,
   PersonalRecord,
   RegisteredTraining,
   Routine,
+  RoutineFolder,
   RoutineExercise,
   SyncEntityType,
   SyncQueueItem,
@@ -17,12 +19,14 @@ class GymDatabase extends Dexie {
   private userProfile!: Table<UserProfile, string>
   private ejerciciosCatalogo!: Table<Exercise, string>
   private rutinas!: Table<Routine, string>
+  private rutinaCarpetas!: Table<RoutineFolder, string>
   private rutinaEjercicios!: Table<RoutineExercise, string>
   private entrenamientosRegistrados!: Table<RegisteredTraining, string>
   private ejerciciosRealizados!: Table<PerformedExercise, string>
   private medidasCorporalesHistorico!: Table<BodyMeasurement, string>
   private prs!: Table<PersonalRecord, string>
   private pendingSyncQueue!: Table<SyncQueueItem, string>
+  private notificationSettings!: Table<(NotificationSettings & { id: string }), string>
 
   constructor() {
     super('gym_offline_db')
@@ -83,6 +87,20 @@ class GymDatabase extends Dexie {
       prs: 'id, ejercicioId, tipo, fecha, updatedAt, isSynced, ownerUid',
       pendingSyncQueue: 'id, entityType, entityId, status, createdAt',
     })
+
+    this.version(6).stores({
+      userProfile: 'id, nombre, updatedAt, isSynced, ownerUid',
+      ejerciciosCatalogo: 'id, nombre, grupoMuscularPrimario, nivelDificultad, equipoNecesario, esPersonalizado, updatedAt, isSynced, ownerUid',
+      rutinas: 'id, nombre, activa, folderId, updatedAt, isSynced, ownerUid',
+      rutinaCarpetas: 'id, nombre, orden, updatedAt',
+      rutinaEjercicios: 'id, rutinaId, ejercicioId, orden, rpe, updatedAt, isSynced, ownerUid',
+      entrenamientosRegistrados: 'id, rutinaId, fecha, completado, updatedAt, isSynced, ownerUid',
+      ejerciciosRealizados: 'id, entrenamientoId, ejercicioId, fecha, rpe, updatedAt, isSynced, ownerUid, [ejercicioId+fecha]',
+      medidasCorporalesHistorico: 'id, fechaRegistro, updatedAt, isSynced, ownerUid',
+      prs: 'id, ejercicioId, tipo, fecha, updatedAt, isSynced, ownerUid',
+      pendingSyncQueue: 'id, entityType, entityId, status, createdAt',
+      notificationSettings: 'id',
+    })
   }
 
   getAllRoutines() {
@@ -91,6 +109,26 @@ class GymDatabase extends Dexie {
 
   getRoutineById(routineId: string) {
     return this.rutinas.get(routineId)
+  }
+
+  getAllRoutineFolders() {
+    return this.rutinaCarpetas.toArray()
+  }
+
+  addRoutineFolder(folder: RoutineFolder) {
+    return this.rutinaCarpetas.add({
+      ...folder,
+      updatedAt: folder.updatedAt ?? new Date().toISOString(),
+      isSynced: folder.isSynced ?? false,
+    })
+  }
+
+  updateRoutineFolder(folderId: string, changes: Partial<RoutineFolder>) {
+    return this.rutinaCarpetas.update(folderId, changes)
+  }
+
+  deleteRoutineFolder(folderId: string) {
+    return this.rutinaCarpetas.delete(folderId)
   }
 
   addRoutine(routine: Routine) {
@@ -217,6 +255,31 @@ class GymDatabase extends Dexie {
 
   getPerformedExercisesSince(sinceIso: string) {
     return this.ejerciciosRealizados.where('fecha').aboveOrEqual(sinceIso).toArray()
+  }
+
+  getPerformedExercisesByExerciseAndDateRange(exerciseId: string, from?: string, to?: string) {
+    if (from && to) {
+      return this.ejerciciosRealizados
+        .where('[ejercicioId+fecha]')
+        .between([exerciseId, from], [exerciseId, to], true, true)
+        .toArray()
+    }
+
+    if (from) {
+      return this.ejerciciosRealizados
+        .where('[ejercicioId+fecha]')
+        .between([exerciseId, from], [exerciseId, Dexie.maxKey], true, true)
+        .toArray()
+    }
+
+    if (to) {
+      return this.ejerciciosRealizados
+        .where('[ejercicioId+fecha]')
+        .between([exerciseId, Dexie.minKey], [exerciseId, to], true, true)
+        .toArray()
+    }
+
+    return this.ejerciciosRealizados.where('ejercicioId').equals(exerciseId).toArray()
   }
 
   bulkAddPerformedExercises(items: PerformedExercise[]) {
@@ -430,6 +493,14 @@ class GymDatabase extends Dexie {
     return this.prs.bulkAdd(items)
   }
 
+  getNotificationSettings() {
+    return this.notificationSettings.get('default')
+  }
+
+  saveNotificationSettings(settings: NotificationSettings) {
+    return this.notificationSettings.put({ id: 'default', ...settings })
+  }
+
   async clearAllData() {
     await this.transaction(
       'rw',
@@ -437,24 +508,28 @@ class GymDatabase extends Dexie {
         this.userProfile,
         this.ejerciciosCatalogo,
         this.rutinas,
+        this.rutinaCarpetas,
         this.rutinaEjercicios,
         this.entrenamientosRegistrados,
         this.ejerciciosRealizados,
         this.medidasCorporalesHistorico,
         this.prs,
         this.pendingSyncQueue,
+        this.notificationSettings,
       ],
       async () => {
         await Promise.all([
           this.userProfile.clear(),
           this.ejerciciosCatalogo.clear(),
           this.rutinas.clear(),
+          this.rutinaCarpetas.clear(),
           this.rutinaEjercicios.clear(),
           this.entrenamientosRegistrados.clear(),
           this.ejerciciosRealizados.clear(),
           this.medidasCorporalesHistorico.clear(),
           this.prs.clear(),
           this.pendingSyncQueue.clear(),
+          this.notificationSettings.clear(),
         ])
       },
     )
@@ -464,11 +539,13 @@ class GymDatabase extends Dexie {
     userProfile: UserProfile[]
     ejerciciosCatalogo: Exercise[]
     rutinas: Routine[]
+    rutinaCarpetas: RoutineFolder[]
     rutinaEjercicios: RoutineExercise[]
     entrenamientosRegistrados: RegisteredTraining[]
     ejerciciosRealizados: PerformedExercise[]
     medidasCorporalesHistorico: BodyMeasurement[]
     prs: PersonalRecord[]
+    notificationSettings?: Array<NotificationSettings & { id: string }>
   }) {
     await this.transaction(
       'rw',
@@ -476,34 +553,42 @@ class GymDatabase extends Dexie {
         this.userProfile,
         this.ejerciciosCatalogo,
         this.rutinas,
+        this.rutinaCarpetas,
         this.rutinaEjercicios,
         this.entrenamientosRegistrados,
         this.ejerciciosRealizados,
         this.medidasCorporalesHistorico,
         this.prs,
         this.pendingSyncQueue,
+        this.notificationSettings,
       ],
       async () => {
         await Promise.all([
           this.userProfile.clear(),
           this.ejerciciosCatalogo.clear(),
           this.rutinas.clear(),
+          this.rutinaCarpetas.clear(),
           this.rutinaEjercicios.clear(),
           this.entrenamientosRegistrados.clear(),
           this.ejerciciosRealizados.clear(),
           this.medidasCorporalesHistorico.clear(),
           this.prs.clear(),
           this.pendingSyncQueue.clear(),
+          this.notificationSettings.clear(),
         ])
 
         if (payload.userProfile.length > 0) await this.userProfile.bulkAdd(payload.userProfile)
         if (payload.ejerciciosCatalogo.length > 0) await this.ejerciciosCatalogo.bulkAdd(payload.ejerciciosCatalogo)
         if (payload.rutinas.length > 0) await this.rutinas.bulkAdd(payload.rutinas)
+        if (payload.rutinaCarpetas.length > 0) await this.rutinaCarpetas.bulkAdd(payload.rutinaCarpetas)
         if (payload.rutinaEjercicios.length > 0) await this.rutinaEjercicios.bulkAdd(payload.rutinaEjercicios)
         if (payload.entrenamientosRegistrados.length > 0) await this.entrenamientosRegistrados.bulkAdd(payload.entrenamientosRegistrados)
         if (payload.ejerciciosRealizados.length > 0) await this.ejerciciosRealizados.bulkAdd(payload.ejerciciosRealizados)
         if (payload.medidasCorporalesHistorico.length > 0) await this.medidasCorporalesHistorico.bulkAdd(payload.medidasCorporalesHistorico)
         if (payload.prs.length > 0) await this.prs.bulkAdd(payload.prs)
+        if (payload.notificationSettings && payload.notificationSettings.length > 0) {
+          await this.notificationSettings.bulkAdd(payload.notificationSettings)
+        }
       },
     )
   }
@@ -513,31 +598,37 @@ class GymDatabase extends Dexie {
       userProfile,
       ejerciciosCatalogo,
       rutinas,
+      rutinaCarpetas,
       rutinaEjercicios,
       entrenamientosRegistrados,
       ejerciciosRealizados,
       medidasCorporalesHistorico,
       prs,
+      notificationSettings,
     ] = await Promise.all([
       this.userProfile.toArray(),
       this.ejerciciosCatalogo.toArray(),
       this.rutinas.toArray(),
+      this.rutinaCarpetas.toArray(),
       this.rutinaEjercicios.toArray(),
       this.entrenamientosRegistrados.toArray(),
       this.ejerciciosRealizados.toArray(),
       this.medidasCorporalesHistorico.toArray(),
       this.prs.toArray(),
+      this.notificationSettings.toArray(),
     ])
 
     return {
       userProfile,
       ejerciciosCatalogo,
       rutinas,
+      rutinaCarpetas,
       rutinaEjercicios,
       entrenamientosRegistrados,
       ejerciciosRealizados,
       medidasCorporalesHistorico,
       prs,
+      notificationSettings,
     }
   }
 

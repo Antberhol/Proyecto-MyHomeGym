@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { sendLocalNotification } from '../lib/notifications'
+import { scheduleStreakWarning, sendLocalNotification } from '../lib/notifications'
 import { progressRepository } from '../repositories/progressRepository'
+import { settingsRepository } from '../repositories/settingsRepository'
 
 export interface StreaksData {
     currentDayStreak: number
@@ -133,19 +134,27 @@ export function useStreaks(): StreaksData {
         }
     }, [])
 
+    const notificationSettings = useLiveQuery(() => settingsRepository.getNotificationSettings(), [])
+
     useEffect(() => {
         if (!data) return
         if (typeof window === 'undefined') return
         if (!('Notification' in window)) return
         if (Notification.permission !== 'granted') return
+        if (!notificationSettings?.streakWarningEnabled) return
 
         if (data.currentDayStreak < 3 || data.trainedToday) return
 
         const now = new Date()
-        if (now.getHours() < 19) return
-
         const todayKey = toLocalDateKey(now.toISOString())
         if (window.localStorage.getItem(STREAK_WARNING_STORAGE_KEY) === todayKey) {
+            return
+        }
+
+        const warningHour = notificationSettings.streakWarningHour ?? 19
+        if (now.getHours() < warningHour) {
+            scheduleStreakWarning(data.currentDayStreak, warningHour)
+            window.localStorage.setItem(STREAK_WARNING_STORAGE_KEY, todayKey)
             return
         }
 
@@ -158,7 +167,7 @@ export function useStreaks(): StreaksData {
         } catch {
             // Ignore runtime notification errors; permission and API availability are checked above.
         }
-    }, [data])
+    }, [data, notificationSettings])
 
     if (!data) return EMPTY_STREAKS
 

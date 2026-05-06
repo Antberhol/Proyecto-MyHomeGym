@@ -9,7 +9,9 @@ export type SyncEntityType =
   | 'routine'
   | 'routineExercise'
   | 'exercise'
+  | 'customExercise'
   | 'bodyMeasurement'
+  | 'measurement'
   | 'pr'
 export type SyncQueueStatus = 'pending' | 'failed'
 
@@ -51,6 +53,7 @@ export interface Exercise extends SyncMetadata {
   descripcion: string
   grupoMuscularPrimario: string
   gruposMuscularesSecundarios: string[]
+  tipoEjercicio?: 'fuerza' | 'cardio' | 'movilidad' | 'estiramiento'
   nivelDificultad: DifficultyLevel
   equipoNecesario: string
   gifUrl?: string
@@ -71,6 +74,17 @@ export interface Routine extends SyncMetadata {
   diasSemana: string[]
   activa: boolean
   color: string
+  folderId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RoutineFolder extends SyncMetadata {
+  id: string
+  nombre: string
+  descripcion?: string
+  color: string
+  orden: number
   createdAt: string
   updatedAt: string
 }
@@ -130,4 +144,10 @@ export interface PersonalRecord extends SyncMetadata {
   valor: number
   fecha: string
   detalle: string
+}
+
+export interface NotificationSettings {
+  streakWarningEnabled: boolean
+  streakWarningHour: number
+  restTimerNotificationEnabled: boolean
 }

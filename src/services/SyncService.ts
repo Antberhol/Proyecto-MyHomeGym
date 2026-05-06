@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
 import { subscribeSyncOperationEnqueued, subscribeTrainingSaved } from '../lib/events'
 import { db } from '../lib/db'
 import type {
@@ -178,6 +178,7 @@ class SyncService {
             const hasSyncedBefore = window.localStorage.getItem(this.initialSyncKey) === 'done'
             if (!hasSyncedBefore) {
                 await this.pullCloudBackupToLocal()
+                await this.pullCloudCollectionsToLocal()
                 window.localStorage.setItem(this.initialSyncKey, 'done')
             }
 
@@ -222,6 +223,58 @@ class SyncService {
             sanitizedBackupDoc,
             { merge: true },
         )
+    }
+
+    private async pullCloudCollectionsToLocal() {
+        if (!this.user || !firebaseFirestore) return
+
+        const routinesRef = collection(firebaseFirestore, 'users', this.user.uid, 'routine')
+        const exercisesRef = collection(firebaseFirestore, 'users', this.user.uid, 'exercise')
+
+        const [routinesSnap, exercisesSnap] = await Promise.all([
+            getDocs(routinesRef),
+            getDocs(exercisesRef),
+        ])
+
+        const cloudRoutines = routinesSnap.docs
+            .map((docSnap) => docSnap.data() as { routine?: Routine })
+            .map((payload) => payload.routine)
+            .filter((item): item is Routine => Boolean(item))
+
+        const cloudExercises = exercisesSnap.docs
+            .map((docSnap) => docSnap.data() as { exercise?: Exercise })
+            .map((payload) => payload.exercise)
+            .filter((item): item is Exercise => Boolean(item))
+
+        const localRoutines = await db.getAllRoutines()
+        const localExercises = await db.getAllExercisesCatalog()
+
+        const localRoutineMap = new Map(localRoutines.map((item) => [item.id, item]))
+        const localExerciseMap = new Map(localExercises.map((item) => [item.id, item]))
+
+        for (const routine of cloudRoutines) {
+            const local = localRoutineMap.get(routine.id)
+            if (!local || (routine.updatedAt ?? '') > (local.updatedAt ?? '')) {
+                if (local) {
+                    await db.updateRoutine(routine.id, routine)
+                } else {
+                    await db.addRoutine(routine)
+                }
+            }
+        }
+
+        for (const exercise of cloudExercises) {
+            const local = localExerciseMap.get(exercise.id)
+            if (!local || (exercise.updatedAt ?? '') > (local.updatedAt ?? '')) {
+                if (local) {
+                    await db.updateExercise(exercise.id, exercise)
+                } else {
+                    await db.addExercise(exercise)
+                }
+            }
+        }
+
+        useSyncStore.getState().setRoutinesSynced(true)
     }
 
     private async handleTrainingSaved(trainingId: string) {
@@ -410,7 +463,11 @@ class SyncService {
                         await this.pushRoutineExercise(operation.entityId)
                     } else if (operation.entityType === 'exercise') {
                         await this.pushExercise(operation.entityId)
+                    } else if (operation.entityType === 'customExercise') {
+                        await this.pushExercise(operation.entityId)
                     } else if (operation.entityType === 'bodyMeasurement') {
+                        await this.pushBodyMeasurement(operation.entityId)
+                    } else if (operation.entityType === 'measurement') {
                         await this.pushBodyMeasurement(operation.entityId)
                     } else if (operation.entityType === 'pr') {
                         await this.pushPersonalRecord(operation.entityId)
@@ -446,6 +503,10 @@ class SyncService {
             useSyncStore.getState().setStatus(navigator.onLine ? 'error' : 'offline')
             useSyncStore.getState().setLastError(this.formatSyncError(error, 'Error general de sincronización'))
         }
+    }
+
+    async processSyncQueue() {
+        await this.flushQueue()
     }
 }
 

@@ -2,10 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { StreakBadge } from '../components/StreakBadge'
 import { MuscleHeatmap } from '../components/body/MuscleHeatmap'
 import { MuscleDistributionChart } from '../components/MuscleDistributionChart'
+import { WorkoutFeedItem } from '../components/stats/WorkoutFeedItem'
 import { useStreaks } from '../hooks/useStreaks'
+import { useWorkoutStats } from '../hooks/useWorkoutStats'
 import { db } from '../lib/db'
 import { useWeeklyMuscleAnalytics } from '../hooks/useWeeklyMuscleAnalytics'
 import { progressRepository } from '../repositories/progressRepository'
@@ -19,8 +22,10 @@ export function DashboardPage() {
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
   const [setDraftById, setSetDraftById] = useState<Record<string, { reps: string; weight: string }>>({})
   const streaks = useStreaks()
+  const workoutStats = useWorkoutStats()
   const weeklyMuscleAnalytics = useWeeklyMuscleAnalytics()
   const recentTrainings = useLiveQuery(() => progressRepository.listTrainingsRecent(90), []) ?? []
+  const recentWorkoutBundles = useLiveQuery(() => progressRepository.listRecentWorkouts(5), []) ?? []
   const totalTrainings = useLiveQuery(() => progressRepository.countTrainings(), []) ?? 0
   const totalVolumeAllTime = useLiveQuery(() => progressRepository.sumTrainingVolumeAllTime(), []) ?? 0
   const routines = useLiveQuery(() => progressRepository.listRoutines(), []) ?? []
@@ -56,6 +61,14 @@ export function DashboardPage() {
     .slice()
     .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha))
     .slice(0, 5)
+
+  const prsCountByDate = useMemo(() => {
+    const grouped = new Map<string, number>()
+    for (const pr of prs) {
+      grouped.set(pr.fecha, (grouped.get(pr.fecha) ?? 0) + 1)
+    }
+    return grouped
+  }, [prs])
 
   const exerciseNameById = useMemo(
     () => new Map(exercises.map((exercise) => [exercise.id, exercise.nombre])),
@@ -265,6 +278,16 @@ export function DashboardPage() {
     },
   ]
 
+  const feedVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 8 },
+    show: { opacity: 1, y: 0 },
+  }
+
   return (
     <div className="space-y-6">
       <header className="mobile-sticky-header sticky top-0 z-10 bg-gym-bg-dark border-b border-gym-border pb-3 pt-4">
@@ -328,6 +351,41 @@ export function DashboardPage() {
           </article>
         ))}
       </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <article className="rounded-xl border border-gym-border bg-gym-card p-4">
+          <div className="text-xs uppercase tracking-wider text-gym-text-muted">{t('dashboard.stats.totalSessions')}</div>
+          <div className="mt-1 font-display text-3xl tracking-wide text-gym-yellow">{workoutStats.totalWorkouts.toLocaleString()}</div>
+        </article>
+        <article className="rounded-xl border border-gym-border bg-gym-card p-4">
+          <div className="text-xs uppercase tracking-wider text-gym-text-muted">{t('dashboard.stats.totalSetsWeek')}</div>
+          <div className="mt-1 font-display text-3xl tracking-wide text-gym-yellow">{workoutStats.totalSetsThisWeek.toLocaleString()}</div>
+        </article>
+        <article className="rounded-xl border border-gym-border bg-gym-card p-4">
+          <div className="text-xs uppercase tracking-wider text-gym-text-muted">{t('dashboard.stats.avgDuration30d')}</div>
+          <div className="mt-1 font-display text-3xl tracking-wide text-gym-yellow">{workoutStats.avgDurationMinutes.toLocaleString()} {t('dashboard.common.minAbbrev')}</div>
+        </article>
+      </div>
+
+      <section className="rounded-xl bg-gym-card border border-gym-border p-4">
+        <h2 className="mb-3 font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('dashboard.activityFeed.title')}</h2>
+        {recentWorkoutBundles.length === 0 ? (
+          <p className="text-sm text-gym-text-dim">{t('dashboard.activityFeed.empty')}</p>
+        ) : (
+          <motion.div variants={feedVariants} initial="hidden" animate="show" className="grid grid-cols-1 gap-3">
+            {recentWorkoutBundles.map((bundle) => (
+              <motion.div key={bundle.training.id} variants={itemVariants}>
+                <WorkoutFeedItem
+                  training={bundle.training}
+                  exercises={bundle.exercises}
+                  exerciseCatalog={exercises}
+                  prsCount={prsCountByDate.get(bundle.training.fecha) ?? 0}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </section>
 
       <section className="rounded-xl bg-gym-card border border-gym-border p-4">
         <h2 className="mb-3 font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('dashboard.recentSessions.title')}</h2>

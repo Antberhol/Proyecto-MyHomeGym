@@ -101,6 +101,23 @@
             "placeholder": "Escribe aquí tus observaciones para este ejercicio...",
             "save": "Guardar nota",
             "saved": "Guardado"
+        },
+        "progress": {
+            "title": "Mi progreso",
+            "range": {
+                "4w": "4 semanas",
+                "3m": "3 meses",
+                "1y": "1 año",
+                "all": "Todo"
+            },
+            "empty": "Aún no has registrado este ejercicio.",
+            "maxWeight": "Peso máximo por sesión",
+            "oneRm": "1RM estimado",
+            "recentSessions": "Sesiones recientes",
+            "sets": "series",
+            "maxSet": "Máximo: {{weight}}kg × {{reps}}",
+            "prsTitle": "PRs del ejercicio",
+            "noPrs": "No hay PRs registrados para este ejercicio."
         }
     },
     "dashboard": {
@@ -132,10 +149,21 @@
             "trainedMinutes": "Minutos entrenados",
             "totalVolume7d": "Volumen total (7d)",
             "routines": "Rutinas",
+            "totalSessions": "Total sesiones",
+            "totalSetsWeek": "Series esta semana",
+            "avgDuration30d": "Tiempo medio (30d)",
             "context": {
                 "thisWeek": "esta semana",
                 "totalAvailable": "disponibles"
             }
+        },
+        "activityFeed": {
+            "title": "Actividad reciente",
+            "empty": "Aún no hay actividad registrada.",
+            "today": "Hoy",
+            "yesterday": "Ayer",
+            "daysAgo": "hace {{count}} días",
+            "prBadge": "🏆 {{count}} PR"
         },
         "recentSessions": {
             "title": "Sesiones recientes",
@@ -202,6 +230,12 @@
         "title": "Seleccionar ejercicios",
         "searchPlaceholder": "Buscar ejercicio...",
         "allGroup": "Todos",
+        "mostUsed": "Más usados",
+        "typeAll": "Tipo: todos",
+        "typeStrength": "Fuerza",
+        "typeCardio": "Cardio",
+        "typeMobility": "Movilidad",
+        "typeStretching": "Estiramiento",
         "add": "Añadir",
         "added": "Añadido",
         "emptyWithFilters": "No hay ejercicios con esos filtros.",
@@ -577,6 +611,7 @@
             "sets": "Series",
             "newPrs": "PRs nuevos",
             "sharePreview": "Vista previa para compartir",
+            "exerciseNotes": "Notas por ejercicio",
             "breakdownByExercise": "Desglose por ejercicio",
             "noBreakdown": "No hubo series registradas para mostrar desglose.",
             "setsLower": "series",
@@ -605,6 +640,12 @@
             "repsShort": "reps",
             "rpeLabel": "RPE",
             "rpePlaceholder": "RPE (1-10)",
+            "rpeToggle": "RPE",
+            "setTypeToggle": "Cambiar tipo de serie ({{type}})",
+            "previousInline": "Anterior: {{weight}}kg × {{reps}}",
+            "copyPrevious": "Copiar",
+            "exerciseNotesLabel": "Notas del ejercicio",
+            "exerciseNotesPlaceholder": "Añade una nota para este ejercicio...",
             "setTypeLabel": "Tipo",
             "setTypeOptionAria": "Tipo de serie: {{type}}",
             "setTypes": {
@@ -664,6 +705,19 @@
         "noExercises": "Esta rutina todavía no tiene ejercicios asignados.",
         "confirmDelete": "Confirmar borrado",
         "cancelDelete": "Cancelar",
+        "folders": {
+            "title": "Carpetas",
+            "create": "+ Carpeta",
+            "newTitle": "Nueva carpeta",
+            "editTitle": "Editar carpeta",
+            "namePlaceholder": "Nombre de carpeta",
+            "descriptionPlaceholder": "Descripción",
+            "colorLabel": "Color",
+            "delete": "Eliminar",
+            "noFolder": "Sin categoría",
+            "defaultName": "Carpeta",
+            "uncategorized": "Sin categoría"
+        },
         "templates": {
             "title": "Plantillas de inicio",
             "description": "Crea una rutina base con ejercicios recomendados en un clic.",

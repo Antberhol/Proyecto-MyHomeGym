@@ -18,6 +18,7 @@ import { registerSetPrs, registerTrainingVolumePr } from '../lib/prs'
 import { shareWorkoutResult } from '../lib/shareWorkoutResult'
 import { routineRepository } from '../repositories/routineRepository'
 import { workoutRepository } from '../repositories/workoutRepository'
+import { settingsRepository } from '../repositories/settingsRepository'
 import type { PerformedExercise } from '../types/models'
 import { calculateSetVolume } from '../utils/calculations'
 import type { WorkoutShareData } from '../components/share/WorkoutShareCard'
@@ -39,6 +40,11 @@ interface TrainingSummary {
     totalVolume: number
     setCount: number
     prsCreated: number
+    exerciseNotes: Array<{
+        exerciseId: string
+        name: string
+        note: string
+    }>
     byExercise: Array<{
         exerciseId: string
         name: string
@@ -113,6 +119,7 @@ export function useActiveWorkoutController() {
     const exercisesData = useLiveQuery(() => routineRepository.listExercises(), [])
     const performedExercisesData = useLiveQuery(() => routineRepository.listPerformedExercises(), [])
     const prsData = useLiveQuery(() => routineRepository.listPersonalRecords(), [])
+    const notificationSettings = useLiveQuery(() => settingsRepository.getNotificationSettings(), [])
 
     const routines = useMemo(() => routinesData ?? [], [routinesData])
     const routineExercises = useMemo(() => routineExercisesData ?? [], [routineExercisesData])
@@ -129,6 +136,7 @@ export function useActiveWorkoutController() {
     const [freeSeriesCount, setFreeSeriesCount] = useState(3)
     const [freeExercisesDraft, setFreeExercisesDraft] = useState<FreeExerciseDraft[]>([])
     const [isPlateCalculatorOpen, setIsPlateCalculatorOpen] = useState(false)
+    const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({})
 
     const {
         sessionSeconds,
@@ -144,6 +152,7 @@ export function useActiveWorkoutController() {
         initialSessionSeconds: persistedSession?.sessionSeconds ?? 0,
         initialSessionRunning: false,
         initialRestSeconds: 0,
+        restNotificationsEnabled: notificationSettings?.restTimerNotificationEnabled ?? false,
     })
 
     const form = useForm<TrainingFormInput, undefined, TrainingFormOutput>({
@@ -188,7 +197,11 @@ export function useActiveWorkoutController() {
     const activeRoutineExercise = selectedRoutineExercises[activeExerciseIndex]
 
     const previousSessionByExercise = useMemo(() => {
+        const nowIso = new Date().toISOString()
         const grouped = performedExercises.reduce<Record<string, PerformedExercise[]>>((acc, item) => {
+            if (item.fecha >= nowIso) {
+                return acc
+            }
             if (!acc[item.ejercicioId]) {
                 acc[item.ejercicioId] = []
             }
@@ -232,7 +245,9 @@ export function useActiveWorkoutController() {
                 .map(([fecha, sets]) => {
                     const sortedSets = sets.slice().sort((a, b) => a.serieNumero - b.serieNumero)
                     const volume = sortedSets.reduce(
-                        (total, set) => total + calculateSetVolume(set.pesoUtilizado, set.repeticionesRealizadas),
+                        (total, set) => (set.type === 'warmup'
+                            ? total
+                            : total + calculateSetVolume(set.pesoUtilizado, set.repeticionesRealizadas)),
                         0,
                     )
                     return {
@@ -553,6 +568,7 @@ export function useActiveWorkoutController() {
         const performed = selectedRoutineExercises.length > 0 ? performedFromRoutine : performedFromFree
 
         const volumenCalculado = performed.reduce((total, item) => {
+            if (item.type === 'warmup') return total
             return total + calculateSetVolume(item.pesoUtilizado, item.repeticionesRealizadas)
         }, 0)
 
@@ -575,14 +591,23 @@ export function useActiveWorkoutController() {
 
         let prsCreated = 0
         for (const item of performed) {
-            prsCreated += await registerSetPrs(item.ejercicioId, item.pesoUtilizado, item.repeticionesRealizadas, now)
+            prsCreated += await registerSetPrs(
+                item.ejercicioId,
+                item.pesoUtilizado,
+                item.repeticionesRealizadas,
+                now,
+                item.type,
+                item.rpe,
+            )
         }
         prsCreated += await registerTrainingVolumePr(volumenTotal, now)
 
         const byExerciseMap = performed.reduce<Record<string, { volume: number; sets: number }>>((acc, item) => {
             const current = acc[item.ejercicioId] ?? { volume: 0, sets: 0 }
             acc[item.ejercicioId] = {
-                volume: current.volume + calculateSetVolume(item.pesoUtilizado, item.repeticionesRealizadas),
+                volume: item.type === 'warmup'
+                    ? current.volume
+                    : current.volume + calculateSetVolume(item.pesoUtilizado, item.repeticionesRealizadas),
                 sets: current.sets + 1,
             }
             return acc
@@ -597,11 +622,23 @@ export function useActiveWorkoutController() {
             }))
             .sort((a, b) => b.volume - a.volume)
 
+        const exerciseNotesSummary = Object.entries(exerciseNotes)
+            .map(([exerciseId, note]) => {
+                if (!note.trim()) return null
+                return {
+                    exerciseId,
+                    name: exercises.find((exercise) => exercise.id === exerciseId)?.nombre || 'Ejercicio',
+                    note: note.trim(),
+                }
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null)
+
         setTrainingSummary({
             durationMinutes: values.duracionMinutos,
             totalVolume: volumenTotal,
             setCount: performed.length,
             prsCreated,
+            exerciseNotes: exerciseNotesSummary,
             byExercise,
         })
 
@@ -617,6 +654,7 @@ export function useActiveWorkoutController() {
         setFreeExercisesDraft([])
         setFreeExerciseId('')
         setFreeSeriesCount(3)
+        setExerciseNotes({})
         setRestSeconds(0)
         setActiveExerciseIndex(0)
         clearSession()
@@ -671,6 +709,13 @@ export function useActiveWorkoutController() {
     const openPlateCalculator = () => setIsPlateCalculatorOpen(true)
     const closePlateCalculator = () => setIsPlateCalculatorOpen(false)
 
+    const updateExerciseNote = (exerciseId: string, note: string) => {
+        setExerciseNotes((current) => ({
+            ...current,
+            [exerciseId]: note,
+        }))
+    }
+
     return {
         form,
         view,
@@ -684,6 +729,7 @@ export function useActiveWorkoutController() {
         activeExerciseSuggestedWeight,
         activeExercisePrTarget,
         setData,
+        exerciseNotes,
         freeExerciseId,
         freeSeriesCount,
         freeExercisesDraft,
@@ -717,6 +763,7 @@ export function useActiveWorkoutController() {
         moveFreeExerciseDraft,
         removeFreeSet,
         updateFreeSetData,
+        updateExerciseNote,
         openPlateCalculator,
         closePlateCalculator,
     }

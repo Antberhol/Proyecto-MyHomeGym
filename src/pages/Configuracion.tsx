@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -10,7 +10,7 @@ import { resyncExerciseGifMappings } from '../lib/bootstrap'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications'
 import { profileRepository } from '../repositories/profileRepository'
-import type { UnitSystem } from '../types/models'
+import type { NotificationSettings, UnitSystem } from '../types/models'
 
 async function clearAllData() {
     await settingsRepository.clearAllData()
@@ -24,7 +24,19 @@ export function ConfiguracionPage() {
     const importCsvInputRef = useRef<HTMLInputElement>(null)
     const importJsonInputRef = useRef<HTMLInputElement>(null)
     const profile = useLiveQuery(() => profileRepository.getProfile(), [])
+    const storedNotificationSettings = useLiveQuery(() => settingsRepository.getNotificationSettings(), [])
     const unitSystem: UnitSystem = profile?.unitSystem ?? 'metric'
+    const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+        streakWarningEnabled: true,
+        streakWarningHour: 19,
+        restTimerNotificationEnabled: true,
+    })
+
+    useEffect(() => {
+        if (storedNotificationSettings) {
+            setNotificationSettings(storedNotificationSettings)
+        }
+    }, [storedNotificationSettings])
 
     const handleChangeUnitSystem = async (next: UnitSystem) => {
         try {
@@ -50,8 +62,8 @@ export function ConfiguracionPage() {
 
     const handleEnableNotifications = async () => {
         try {
-            const permission = await requestNotificationPermission()
-            if (permission === 'granted') {
+            const granted = await requestNotificationPermission()
+            if (granted) {
                 setStatusMessage('Notificaciones habilitadas correctamente.')
             } else {
                 setStatusMessage('Notificaciones no habilitadas. Revisa permisos del navegador.')
@@ -59,6 +71,15 @@ export function ConfiguracionPage() {
         } catch (error) {
             setStatusMessage(error instanceof Error ? error.message : 'No se pudo solicitar permisos.')
         }
+    }
+
+    const updateNotificationSettings = async (changes: Partial<NotificationSettings>) => {
+        const next = {
+            ...notificationSettings,
+            ...changes,
+        }
+        setNotificationSettings(next)
+        await settingsRepository.saveNotificationSettings(next)
     }
 
     const handleTestNotification = () => {
@@ -251,6 +272,42 @@ export function ConfiguracionPage() {
                 <p className="mb-3 text-sm text-slate-500 dark:text-slate-300">
                     {t('settings.notificationsDescription')}
                 </p>
+                <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                        <span>{t('settings.notifications.streakWarning')}</span>
+                        <input
+                            type="checkbox"
+                            checked={notificationSettings.streakWarningEnabled}
+                            onChange={(event) => {
+                                void updateNotificationSettings({ streakWarningEnabled: event.target.checked })
+                            }}
+                        />
+                    </label>
+                    <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                        <span>{t('settings.notifications.restTimer')}</span>
+                        <input
+                            type="checkbox"
+                            checked={notificationSettings.restTimerNotificationEnabled}
+                            onChange={(event) => {
+                                void updateNotificationSettings({ restTimerNotificationEnabled: event.target.checked })
+                            }}
+                        />
+                    </label>
+                    <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                        <span>{t('settings.notifications.streakHour')}</span>
+                        <input
+                            type="number"
+                            min={0}
+                            max={23}
+                            value={notificationSettings.streakWarningHour}
+                            onChange={(event) => {
+                                const value = Number(event.target.value)
+                                void updateNotificationSettings({ streakWarningHour: Number.isFinite(value) ? value : 19 })
+                            }}
+                            className="w-16 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                    </label>
+                </div>
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"

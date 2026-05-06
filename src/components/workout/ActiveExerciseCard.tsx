@@ -21,6 +21,7 @@ interface ActiveExerciseCardProps {
     activeExerciseHistory: ExerciseHistoryEntry[]
     activeExerciseSuggestedWeight: number | null
     activeExercisePrTarget: ActiveExercisePrTarget | null
+    exerciseNotes: Record<string, string>
     onPrevious: () => void
     onNext: () => void
     onApplySuggestedWeight: () => void
@@ -32,6 +33,7 @@ interface ActiveExerciseCardProps {
         field: keyof SetData,
         value: number | WorkoutSetType,
     ) => void
+    onUpdateExerciseNote: (exerciseId: string, note: string) => void
 }
 
 const SET_TYPE_LABELS: Record<WorkoutSetType, string> = {
@@ -42,10 +44,18 @@ const SET_TYPE_LABELS: Record<WorkoutSetType, string> = {
 }
 
 const SET_TYPE_STYLES: Record<WorkoutSetType, string> = {
-    normal: 'border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200',
-    warmup: 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
-    dropset: 'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-900 dark:bg-orange-950/20 dark:text-orange-300',
-    failure: 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300',
+    normal: 'border-gym-border text-gym-text-dim bg-gym-card-2',
+    warmup: 'border-gym-yellow text-gym-yellow bg-gym-yellow/10',
+    dropset: 'border-gym-primary text-gym-primary bg-gym-primary/10',
+    failure: 'border-gym-danger text-gym-danger bg-gym-danger/10',
+}
+
+const SET_TYPE_ORDER: WorkoutSetType[] = ['normal', 'warmup', 'dropset', 'failure']
+
+function nextSetType(current: WorkoutSetType): WorkoutSetType {
+    const index = SET_TYPE_ORDER.indexOf(current)
+    if (index < 0) return 'normal'
+    return SET_TYPE_ORDER[(index + 1) % SET_TYPE_ORDER.length]
 }
 
 function normalizeGifUrl(url: string): string {
@@ -62,15 +72,18 @@ export function ActiveExerciseCard({
     activeExerciseHistory,
     activeExerciseSuggestedWeight,
     activeExercisePrTarget,
+    exerciseNotes,
     onPrevious,
     onNext,
     onApplySuggestedWeight,
     onStartRestTimer,
     getSetValue,
     updateSetData,
+    onUpdateExerciseNote,
 }: ActiveExerciseCardProps) {
     const { t } = useTranslation()
     const [gifCacheBuster, setGifCacheBuster] = useState<number>(0)
+    const [expandedRpe, setExpandedRpe] = useState<Record<string, boolean>>({})
 
     const exercise = activeRoutineExercise?.ejercicio
     const exerciseName = exercise?.nombre ?? t('training.exerciseCard.exercise')
@@ -242,13 +255,40 @@ export function ActiveExerciseCard({
                     )
 
                     return (
-                        <div key={key} className={`rounded-md p-2 ${SET_TYPE_STYLES[currentSetType]}`}>
-                            <p className="mb-2 text-xs font-medium">{t('training.exerciseCard.setNumber', { number: serieNumero })}</p>
-                            {previousSet && (
-                                <p className="mb-2 text-[11px] text-slate-600 dark:text-slate-300">
-                                    {t('training.exerciseCard.previousSet')}: {previousSet.repeticionesRealizadas} {t('training.exerciseCard.repsShort')} · {previousSet.pesoUtilizado} kg
-                                </p>
-                            )}
+                        <div key={key} className="rounded-md border border-gym-border bg-gym-card-2 p-3">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            updateSetData(
+                                                activeRoutineExercise.id,
+                                                serieNumero,
+                                                'type',
+                                                nextSetType(currentSetType),
+                                            )
+                                        }
+                                        className={`h-7 w-7 rounded-full border text-[11px] font-semibold ${SET_TYPE_STYLES[currentSetType]}`}
+                                        title={t(`training.exerciseCard.setTypes.${currentSetType}`)}
+                                        aria-label={t('training.exerciseCard.setTypeToggle', {
+                                            type: t(`training.exerciseCard.setTypes.${currentSetType}`),
+                                        })}
+                                    >
+                                        {SET_TYPE_LABELS[currentSetType]}
+                                    </button>
+                                    <p className="text-xs font-medium text-gym-text-base">
+                                        {t('training.exerciseCard.setNumber', { number: serieNumero })}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onStartRestTimer(activeRoutineExercise.descansoSegundos)}
+                                    className="rounded border border-gym-border px-2 py-1 text-[11px] text-gym-text-base"
+                                >
+                                    {t('training.exerciseCard.startRest', { seconds: activeRoutineExercise.descansoSegundos })}
+                                </button>
+                            </div>
+
                             <div className="grid grid-cols-1 gap-2">
                                 <NumberStepper
                                     id={`${key}-reps`}
@@ -271,76 +311,76 @@ export function ActiveExerciseCard({
                                         updateSetData(activeRoutineExercise.id, serieNumero, 'peso', value)
                                     }
                                 />
-                                <div className="space-y-1">
-                                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                                        {t('training.exerciseCard.setTypeLabel')}
-                                    </span>
-                                    <div className="grid grid-cols-4 gap-1">
-                                        {(Object.keys(SET_TYPE_LABELS) as WorkoutSetType[]).map((typeOption) => {
-                                            const isActive = currentSetType === typeOption
-                                            return (
-                                                <button
-                                                    key={typeOption}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        updateSetData(activeRoutineExercise.id, serieNumero, 'type', typeOption)
-                                                    }
-                                                    aria-pressed={isActive}
-                                                    aria-label={t('training.exerciseCard.setTypeOptionAria', {
-                                                        type: t(`training.exerciseCard.setTypes.${typeOption}`),
-                                                    })}
-                                                    className={`h-8 rounded border text-[11px] font-semibold transition ${isActive
-                                                        ? SET_TYPE_STYLES[typeOption]
-                                                        : 'border-slate-300 text-slate-500 dark:border-slate-600 dark:text-slate-300'
-                                                        }`}
-                                                    title={t(`training.exerciseCard.setTypes.${typeOption}`)}
-                                                >
-                                                    {SET_TYPE_LABELS[typeOption]}
-                                                </button>
-                                            )
-                                        })}
+
+                                {previousSet ? (
+                                    <div className="flex items-center justify-between rounded border border-gym-border bg-gym-card px-2 py-1 text-[11px] text-gym-text-muted">
+                                        <span>
+                                            {t('training.exerciseCard.previousInline', {
+                                                reps: previousSet.repeticionesRealizadas,
+                                                weight: previousSet.pesoUtilizado,
+                                            })}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                updateSetData(activeRoutineExercise.id, serieNumero, 'reps', previousSet.repeticionesRealizadas)
+                                                updateSetData(activeRoutineExercise.id, serieNumero, 'peso', previousSet.pesoUtilizado)
+                                            }}
+                                            className="rounded border border-gym-border px-2 py-0.5 text-[10px] text-gym-text-base"
+                                        >
+                                            {t('training.exerciseCard.copyPrevious')}
+                                        </button>
                                     </div>
+                                ) : null}
+
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setExpandedRpe((currentState) => ({
+                                                ...currentState,
+                                                [key]: !currentState[key],
+                                            }))
+                                        }
+                                        className="text-[11px] font-semibold text-gym-text-base"
+                                    >
+                                        {t('training.exerciseCard.rpeToggle')}
+                                    </button>
+                                    <OneRepMaxBadge weight={current.peso} reps={current.reps} />
                                 </div>
-                                <div className="space-y-1">
-                                    <label htmlFor={`${key}-rpe`} className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                                        {t('training.exerciseCard.rpeLabel')}
-                                    </label>
-                                    <input
+
+                                {expandedRpe[key] ? (
+                                    <NumberStepper
                                         id={`${key}-rpe`}
-                                        type="number"
+                                        label={t('training.exerciseCard.rpeLabel')}
+                                        value={current.rpe ?? 0}
+                                        step={0.5}
                                         min={1}
                                         max={10}
-                                        step={0.5}
-                                        value={current.rpe ?? ''}
-                                        placeholder="7.5"
-                                        onChange={(event) =>
-                                            updateSetData(
-                                                activeRoutineExercise.id,
-                                                serieNumero,
-                                                'rpe',
-                                                Number(event.target.value) || 0,
-                                            )
+                                        decimals={1}
+                                        onChange={(value) =>
+                                            updateSetData(activeRoutineExercise.id, serieNumero, 'rpe', value)
                                         }
-                                        className={`h-9 w-full rounded border px-2 text-xs ${(current.rpe ?? 0) >= 9
-                                            ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'
-                                            : (current.rpe ?? 0) >= 6
-                                                ? 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300'
-                                                : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300'
-                                            }`}
                                     />
-                                </div>
-                                <OneRepMaxBadge weight={current.peso} reps={current.reps} />
+                                ) : null}
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => onStartRestTimer(activeRoutineExercise.descansoSegundos)}
-                                className="mt-2 w-full rounded border border-slate-300 px-2 py-1 text-[11px]"
-                            >
-                                {t('training.exerciseCard.startRest', { seconds: activeRoutineExercise.descansoSegundos })}
-                            </button>
                         </div>
                     )
                 })}
+            </div>
+
+            <div className="rounded-lg border border-gym-border bg-gym-card-2 p-3">
+                <label htmlFor={`${activeRoutineExercise.id}-notes`} className="text-xs font-semibold text-gym-text-muted">
+                    {t('training.exerciseCard.exerciseNotesLabel')}
+                </label>
+                <input
+                    id={`${activeRoutineExercise.id}-notes`}
+                    type="text"
+                    value={exerciseNotes[activeRoutineExercise.ejercicioId] ?? ''}
+                    onChange={(event) => onUpdateExerciseNote(activeRoutineExercise.ejercicioId, event.target.value)}
+                    placeholder={t('training.exerciseCard.exerciseNotesPlaceholder')}
+                    className="mt-2 h-10 w-full rounded-lg border border-gym-border bg-gym-card px-3 text-sm text-gym-text-base"
+                />
             </div>
 
             <div className="rounded-lg border border-slate-200 p-2 dark:border-slate-700">

@@ -1,14 +1,19 @@
 import { doc, getDoc } from 'firebase/firestore'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button } from '../components/design-system/Button'
 import { Card } from '../components/design-system/Card'
 import { ExerciseMediaFallback } from '../components/exercises/ExerciseMediaFallback'
+import { StrengthProgressChart } from '../components/stats/StrengthProgressChart'
 import { getPreferredExerciseDbName } from '../constants/exerciseDbAliases'
 import { useExerciseDetail } from '../hooks/useExerciseDetail'
 import { exerciseRepository } from '../repositories/exerciseRepository'
+import { progressRepository } from '../repositories/progressRepository'
 import { firebaseFirestore, isFirebaseConfigured } from '../services/firebase'
+import { estimateOneRmEpley } from '../utils/calculations'
 import type { Exercise } from '../types/models'
 
 function ExerciseDetailSkeleton() {
@@ -38,6 +43,7 @@ export function ExerciseDetailPage() {
     const [noteSaved, setNoteSaved] = useState(false)
     const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
     const [retryCount, setRetryCount] = useState(0)
+    const [rangeKey, setRangeKey] = useState<'4w' | '3m' | '1y' | 'all'>('4w')
 
     useEffect(() => {
         const run = async () => {
@@ -93,6 +99,72 @@ export function ExerciseDetailPage() {
         exercise?.exerciseDbName ??
         exercise?.exerciseDbAliases?.[0] ??
         (exercise ? getPreferredExerciseDbName(exercise.nombre) : undefined)
+
+    const dateRange = useMemo(() => {
+        const now = new Date()
+        if (rangeKey === 'all') return { from: undefined, to: undefined }
+
+        const from = new Date(now)
+        if (rangeKey === '4w') {
+            from.setDate(from.getDate() - 28)
+        } else if (rangeKey === '3m') {
+            from.setMonth(from.getMonth() - 3)
+        } else if (rangeKey === '1y') {
+            from.setFullYear(from.getFullYear() - 1)
+        }
+
+        return { from: from.toISOString(), to: now.toISOString() }
+    }, [rangeKey])
+
+    const exerciseHistory = useLiveQuery(
+        () => (exercise ? progressRepository.getExerciseHistory(exercise.id, dateRange.from, dateRange.to) : Promise.resolve([])),
+        [exercise?.id, dateRange.from, dateRange.to],
+    ) ?? []
+
+    const exercisePrs = useLiveQuery(
+        () => (exercise ? progressRepository.getExercisePrs(exercise.id) : Promise.resolve([])),
+        [exercise?.id],
+    ) ?? []
+
+    const sessionHistory = useMemo(() => {
+        const grouped = exerciseHistory.reduce<Record<string, typeof exerciseHistory>>((acc, item) => {
+            if (!acc[item.fecha]) {
+                acc[item.fecha] = []
+            }
+            acc[item.fecha].push(item)
+            return acc
+        }, {})
+
+        return Object.entries(grouped)
+            .map(([fecha, sets]) => {
+                const sorted = sets.slice().sort((a, b) => b.pesoUtilizado - a.pesoUtilizado)
+                const maxSet = sorted[0]
+                return {
+                    fecha,
+                    setsCount: sets.length,
+                    maxWeight: maxSet?.pesoUtilizado ?? 0,
+                    repsAtMax: maxSet?.repeticionesRealizadas ?? 0,
+                }
+            })
+            .sort((a, b) => +new Date(a.fecha) - +new Date(b.fecha))
+    }, [exerciseHistory])
+
+    const maxWeightSeries = useMemo(
+        () => sessionHistory.map((item) => ({
+            label: new Date(item.fecha).toLocaleDateString(i18n.language),
+            weight: item.maxWeight,
+        })),
+        [i18n.language, sessionHistory],
+    )
+
+    const oneRmSeries = useMemo(
+        () => sessionHistory.map((item) => ({
+            label: new Date(item.fecha).toLocaleDateString(i18n.language),
+            oneRm: estimateOneRmEpley(item.maxWeight, item.repsAtMax),
+            weight: item.maxWeight,
+        })),
+        [i18n.language, sessionHistory],
+    )
 
     const detail = useExerciseDetail(exercise?.nombre ?? '', {
         exerciseId: exercise?.id,
@@ -348,6 +420,94 @@ export function ExerciseDetailPage() {
                             Limpiar caché de este ejercicio
                         </button>
                     </details>
+                )}
+            </Card>
+
+            <Card className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-lg font-semibold">{t('exerciseDetail.progress.title')}</h2>
+                    <div className="flex flex-wrap gap-2">
+                        {[{ key: '4w', label: t('exerciseDetail.progress.range.4w') },
+                        { key: '3m', label: t('exerciseDetail.progress.range.3m') },
+                        { key: '1y', label: t('exerciseDetail.progress.range.1y') },
+                        { key: 'all', label: t('exerciseDetail.progress.range.all') }].map((option) => (
+                            <button
+                                key={option.key}
+                                type="button"
+                                onClick={() => setRangeKey(option.key as '4w' | '3m' | '1y' | 'all')}
+                                className={`rounded-full border px-3 py-1 text-xs font-medium ${rangeKey === option.key
+                                    ? 'border-gym-yellow text-gym-yellow bg-gym-yellow/10'
+                                    : 'border-gym-border text-gym-text-dim'
+                                    }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {sessionHistory.length === 0 ? (
+                    <div className="rounded-lg border border-gym-border bg-gym-card-2 p-4 text-sm text-gym-text-dim">
+                        {t('exerciseDetail.progress.empty')}
+                    </div>
+                ) : (
+                    <>
+                        <div className="bg-gym-card border border-gym-border rounded-xl p-4">
+                            <h3 className="font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('exerciseDetail.progress.maxWeight')}</h3>
+                            <div className="h-56 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={maxWeightSeries}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+                                        <XAxis dataKey="label" tick={{ fill: '#888888', fontSize: 11 }} axisLine={{ stroke: '#2A2A2A' }} />
+                                        <YAxis tick={{ fill: '#888888', fontSize: 11 }} axisLine={{ stroke: '#2A2A2A' }} />
+                                        <Tooltip />
+                                        <Line dataKey="weight" stroke="#F5C518" strokeWidth={2} dot={{ fill: '#F5C518', r: 3 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="font-display tracking-wider uppercase text-gym-text-bright text-lg">{t('exerciseDetail.progress.oneRm')}</h3>
+                            <StrengthProgressChart data={oneRmSeries} />
+                        </div>
+
+                        <div>
+                            <h3 className="mb-2 text-sm font-semibold">{t('exerciseDetail.progress.recentSessions')}</h3>
+                            <ul className="space-y-2">
+                                {sessionHistory.slice(-10).reverse().map((session) => (
+                                    <li key={session.fecha} className="rounded-lg border border-gym-border bg-gym-card-2 p-3 text-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gym-text-bright">{new Date(session.fecha).toLocaleDateString(i18n.language)}</span>
+                                            <span className="text-gym-text-dim">{session.setsCount} {t('exerciseDetail.progress.sets')}</span>
+                                        </div>
+                                        <div className="mt-1 text-gym-text-dim">
+                                            {t('exerciseDetail.progress.maxSet', { weight: session.maxWeight, reps: session.repsAtMax })}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 className="mb-2 text-sm font-semibold">{t('exerciseDetail.progress.prsTitle')}</h3>
+                            {exercisePrs.length === 0 ? (
+                                <p className="text-sm text-gym-text-dim">{t('exerciseDetail.progress.noPrs')}</p>
+                            ) : (
+                                <ul className="space-y-2 text-sm">
+                                    {exercisePrs.map((pr) => (
+                                        <li key={pr.id} className="rounded-lg border border-gym-border bg-gym-card-2 p-3">
+                                            <div className="flex items-center justify-between">
+                                                <span>{t(`progress.pr.type.${pr.tipo}`, { defaultValue: pr.tipo })}</span>
+                                                <span>{new Date(pr.fecha).toLocaleDateString(i18n.language)}</span>
+                                            </div>
+                                            <div className="mt-1 text-gym-text-dim">{pr.valor.toFixed(1)} · {pr.detalle}</div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </>
                 )}
             </Card>
         </div>

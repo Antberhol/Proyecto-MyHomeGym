@@ -92,6 +92,23 @@
             "placeholder": "Write your own notes for this exercise...",
             "save": "Save note",
             "saved": "Saved"
+        },
+        "progress": {
+            "title": "My progress",
+            "range": {
+                "4w": "4 weeks",
+                "3m": "3 months",
+                "1y": "1 year",
+                "all": "All time"
+            },
+            "empty": "You have not logged this exercise yet.",
+            "maxWeight": "Max weight per session",
+            "oneRm": "Estimated 1RM",
+            "recentSessions": "Recent sessions",
+            "sets": "sets",
+            "maxSet": "Max: {{weight}}kg × {{reps}}",
+            "prsTitle": "Exercise PRs",
+            "noPrs": "No PRs have been logged for this exercise yet."
         }
     },
     "dashboard": {
@@ -123,10 +140,21 @@
             "trainedMinutes": "Trained minutes",
             "totalVolume7d": "Total volume (7d)",
             "routines": "Routines",
+            "totalSessions": "Total sessions",
+            "totalSetsWeek": "Sets this week",
+            "avgDuration30d": "Avg time (30d)",
             "context": {
                 "thisWeek": "this week",
                 "totalAvailable": "available"
             }
+        },
+        "activityFeed": {
+            "title": "Recent activity",
+            "empty": "No recent activity yet.",
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "daysAgo": "{{count}} days ago",
+            "prBadge": "🏆 {{count}} PR"
         },
         "recentSessions": {
             "title": "Recent sessions",
@@ -193,6 +221,12 @@
         "title": "Select exercises",
         "searchPlaceholder": "Search exercise...",
         "allGroup": "All",
+        "mostUsed": "Most used",
+        "typeAll": "Type: all",
+        "typeStrength": "Strength",
+        "typeCardio": "Cardio",
+        "typeMobility": "Mobility",
+        "typeStretching": "Stretching",
         "add": "Add",
         "added": "Added",
         "emptyWithFilters": "No exercises match those filters.",
@@ -577,6 +611,7 @@
             "sets": "Sets",
             "newPrs": "New PRs",
             "sharePreview": "Share preview",
+            "exerciseNotes": "Exercise notes",
             "breakdownByExercise": "Breakdown by exercise",
             "noBreakdown": "No logged sets were found to show a breakdown.",
             "setsLower": "sets",
@@ -605,6 +640,12 @@
             "repsShort": "reps",
             "rpeLabel": "RPE",
             "rpePlaceholder": "RPE (1-10)",
+            "rpeToggle": "RPE",
+            "setTypeToggle": "Change set type ({{type}})",
+            "previousInline": "Previous: {{weight}}kg × {{reps}}",
+            "copyPrevious": "Copy",
+            "exerciseNotesLabel": "Exercise notes",
+            "exerciseNotesPlaceholder": "Add a note for this exercise...",
             "setTypeLabel": "Type",
             "setTypeOptionAria": "Set type: {{type}}",
             "setTypes": {
@@ -664,6 +705,19 @@
         "noExercises": "This routine has no assigned exercises yet.",
         "confirmDelete": "Confirm delete",
         "cancelDelete": "Cancel",
+        "folders": {
+            "title": "Folders",
+            "create": "+ Folder",
+            "newTitle": "New folder",
+            "editTitle": "Edit folder",
+            "namePlaceholder": "Folder name",
+            "descriptionPlaceholder": "Description",
+            "colorLabel": "Color",
+            "delete": "Delete",
+            "noFolder": "Uncategorized",
+            "defaultName": "Folder",
+            "uncategorized": "Uncategorized"
+        },
         "templates": {
             "title": "Starter templates",
             "description": "Create a baseline routine with recommended exercises in one click.",
